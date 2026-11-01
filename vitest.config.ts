@@ -1,7 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { WxtVitest } from 'wxt/testing/vitest-plugin';
 
-// eslint-disable-next-line no-restricted-exports -- Vitest の設定ファイルは default export が決まり
 export default defineConfig({
   // 別名 @/ や、拡張の API のにせもの（fake-browser）を WXT の設定から用意する
   plugins: [WxtVitest()],

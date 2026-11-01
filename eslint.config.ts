@@ -6,7 +6,7 @@ import unicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-// eslint-disable-next-line no-restricted-exports -- ESLint の設定ファイルは default export が決まり
+// この設定ファイルは TypeScript で書き、Node 24 が読み込むときに型を取り除いて動かす
 export default defineConfig(
   globalIgnores(['.output/', '.wxt/', 'coverage/', 'node_modules/']),
   js.configs.recommended,
@@ -81,18 +81,29 @@ export default defineConfig(
         },
         // 外の決まりで形が決まる名前（文言のキー、HTTP のヘッダなど）は確かめない
         { selector: 'objectLiteralProperty', format: null },
-        { selector: 'typeProperty', modifiers: ['requiresQuotes'], format: null },
+        {
+          selector: ['typeProperty', 'objectLiteralMethod'],
+          modifiers: ['requiresQuotes'],
+          format: null,
+        },
         { selector: 'import', format: null },
       ],
     },
   },
   {
-    // 設定ファイルなどの JS は型を使った検査をしない
+    // JS のファイルは型を使った検査をしない
     files: ['**/*.{js,mjs,cjs}'],
     extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    // 道具の設定ファイルは Node で動く。道具の決まりで default export が要り、
+    // 設定の形が null を求めることもある（naming-convention の format: null など）
+    files: ['*.config.{ts,mts,js,mjs,cjs}'],
     languageOptions: { globals: globals.node },
-    // 道具の設定の形が null を求めることがある（naming-convention の format: null など）
-    rules: { 'unicorn/no-null': 'off' },
+    rules: {
+      'no-restricted-exports': 'off',
+      'unicorn/no-null': 'off',
+    },
   },
   {
     // WXT の入口は default export が決まり

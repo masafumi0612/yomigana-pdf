@@ -1,7 +1,6 @@
 import { defineConfig } from 'wxt';
 
 // 設定の一覧：https://wxt.dev/api/config.html
-// eslint-disable-next-line no-restricted-exports -- WXT の設定ファイルは default export が決まり
 export default defineConfig({
   // `@/text/split` のような別名を src/ から引けるようにするため、コードは src/ に置く
   srcDir: 'src',
