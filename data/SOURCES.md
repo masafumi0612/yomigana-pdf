@@ -67,10 +67,11 @@ mkdir -p ~/dev/furigana-data/joyo ~/dev/furigana-data/mext
 cd ~/dev/furigana-data
 curl -o joyo/joyokanjihyo_20101130.pdf https://www.bunka.go.jp/kokugo_nihongo/sisaku/joho/joho/kijun/naikaku/pdf/joyokanjihyo_20101130.pdf
 curl -o mext/onkun-wakefuri-h29.pdf https://www.mext.go.jp/a_menu/shotou/new-cs/__icsFiles/afieldfile/2017/05/15/1385768.pdf
-git clone https://github.com/scriptin/kanji-frequency /tmp/kanji-frequency
-git -C /tmp/kanji-frequency checkout 62df9362
 mkdir -p scriptin
-# リポジトリの中から aozora_characters.csv・wikipedia_characters.csv・LICENSE.txt を scriptin/ に写す
+SCRIPTIN=https://raw.githubusercontent.com/scriptin/kanji-frequency/62df93626e51a61c3dec58b51bfa20bef79491d7
+curl -o scriptin/aozora_characters.csv "$SCRIPTIN/data/aozora_characters.csv"
+curl -o scriptin/wikipedia_characters.csv "$SCRIPTIN/data/wikipedia_characters.csv"
+curl -o scriptin/LICENSE.txt "$SCRIPTIN/LICENSE.txt"
 sha256sum joyo/*.pdf mext/*.pdf scriptin/*   # 上の表と同じか確かめる
 ```
 
