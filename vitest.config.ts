@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // 網羅率の決まりは、読みの処理だけに掛ける。ほかは測るだけ
-      include: ['src/**/*.ts'],
+      include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/entrypoints/**'],
       reporter: ['text', 'html'],
       thresholds: {

@@ -65,6 +65,14 @@ export default defineConfig(
         { selector: 'default', format: ['camelCase'], leadingUnderscore: 'allow' },
         { selector: 'variable', modifiers: ['const'], format: ['camelCase', 'UPPER_CASE'] },
         { selector: 'typeLike', format: ['PascalCase'] },
+        // Preact の部品（関数）は PascalCase で書く
+        { selector: 'function', format: ['camelCase', 'PascalCase'] },
+        {
+          selector: 'variable',
+          modifiers: ['const'],
+          types: ['function'],
+          format: ['camelCase', 'PascalCase'],
+        },
         {
           selector: 'variable',
           types: ['boolean'],
@@ -72,7 +80,8 @@ export default defineConfig(
           prefix: ['is', 'has'],
         },
         // 外の決まりで形が決まる名前（文言のキー、HTTP のヘッダなど）は確かめない
-        { selector: ['objectLiteralProperty', 'typeProperty'], format: null },
+        { selector: 'objectLiteralProperty', format: null },
+        { selector: 'typeProperty', modifiers: ['requiresQuotes'], format: null },
         { selector: 'import', format: null },
       ],
     },

@@ -4,16 +4,17 @@
 /** かっこ内（scope）に使える部品の名前。リポジトリ全体の作業はかっこ内を付けない */
 const SCOPES = ['viewer', 'ruby', 'text', 'pdf', 'settings', 'options', 'ci', 'deps', 'docs'];
 
+/** @type {import('@commitlint/types').UserConfig} */
 // eslint-disable-next-line no-restricted-exports -- commitlint の設定ファイルは default export が決まり
 export default {
   extends: ['@commitlint/config-conventional'],
   plugins: [
     {
       rules: {
-        // 英語の「Add ○○」に合わせて「〜を追加」で終える。「〜する」で終えない
+        // 英語の「Add ○○」に合わせて「〜を追加」で終える。「〜する」「〜した」などで終えない
         'subject-no-suru': ({ subject }) => [
-          !/する$/u.test(subject ?? ''),
-          '説明は「〜を追加」「〜を修正」の形で書き、「〜する」で終えない',
+          !/(する|した|します|しました)$/u.test(subject ?? ''),
+          '説明は「〜を追加」「〜を修正」の形で書き、「〜する」「〜した」で終えない',
         ],
       },
     },
