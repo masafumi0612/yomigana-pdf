@@ -1,0 +1,32 @@
+name: 不具合の報告
+description: うまく動かないこと、ルビの読みや位置がおかしいことを知らせる
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        報告ありがとうございます。
+        **PDF の URL や中身、お子さんの名前などの個人情報は書かないでください。** この欄は誰でも読めます。
+  - type: textarea
+    id: what
+    attributes:
+      label: 何が起きたか
+      description: 例：「図鑑」の「鑑」に「かがみ」とルビが付いた
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: どうすると起きるか
+      description: 例：縦書きの PDF を開いて、段階を「3年まで」にした
+  - type: textarea
+    id: expected
+    attributes:
+      label: どうなってほしかったか
+  - type: textarea
+    id: report-info
+    attributes:
+      label: 報告用の情報
+      description: 設定画面に「報告用の情報をコピー」があれば、押してここに貼り付けてください（PDF の URL や本文は入りません）。なければ、Chrome の版と拡張の版を書いてください
+
+      render: text

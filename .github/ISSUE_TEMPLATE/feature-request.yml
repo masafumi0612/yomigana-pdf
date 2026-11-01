@@ -1,0 +1,19 @@
+name: 要望
+description: あったらうれしい機能や、使いにくいところを知らせる
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **PDF の URL や中身、お子さんの名前などの個人情報は書かないでください。** この欄は誰でも読めます。
+  - type: textarea
+    id: situation
+    attributes:
+      label: どんな場面で困っているか
+      description: 例：プリントの表の中の字にルビが付かない
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: どうなるとうれしいか
