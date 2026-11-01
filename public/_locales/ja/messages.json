@@ -1,0 +1,10 @@
+{
+  "manifest_ext_name": {
+    "message": "よみがなPDF",
+    "description": "拡張機能の名前。Chrome の拡張機能の一覧とストアに出る"
+  },
+  "manifest_ext_description": {
+    "message": "ブラウザで開いた PDF の漢字に、よみがな（ルビ）を自動で付けます。",
+    "description": "拡張機能の短い説明。Chrome の拡張機能の一覧に出る（132字まで）"
+  }
+}

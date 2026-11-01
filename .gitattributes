@@ -1,0 +1,9 @@
+# 改行は LF にそろえる（Windows で書いても、リポジトリには LF で入る）
+* text=auto eol=lf
+
+# テキストとして扱わないもの
+*.pdf binary
+*.png binary
+*.ico binary
+*.woff2 binary
+*.zip binary
