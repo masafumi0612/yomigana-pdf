@@ -1,0 +1,61 @@
+name: 読みの間違い
+description: ルビの読みが間違っている、付いてほしい字に付かない・付かなくてよい字に付く
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        報告ありがとうございます。いただいた例は、同じ間違いが二度と起きないように、テストの例として使います。
+        **PDF の URL や中身、お子さんの名前などの個人情報は書かないでください。** この欄は誰でも読めます。
+        人の名前の読みは、辞書だけでは決められません。右クリックの「読みを直す」で直してください。
+  - type: input
+    id: word
+    attributes:
+      label: 言葉
+      description: ルビが間違っていた言葉。前後の数文字もあると助かります（例：「図鑑をひらいた」の「図鑑」）
+    validations:
+      required: true
+  - type: input
+    id: shown
+    attributes:
+      label: 付いた読み
+      description: 例：ずかがみ（ルビが付かなかったときは「なし」）
+    validations:
+      required: true
+  - type: input
+    id: correct
+    attributes:
+      label: 正しい読み
+      description: 例：ずかん（ルビが付かなくてよいときは「なし」）
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: 選んでいる段階
+      options:
+        - なし（すべての漢字にルビ）
+        - 1年まで
+        - 2年まで
+        - 3年まで
+        - 4年まで
+        - 5年まで
+        - 6年まで
+        - 中1まで（目安）
+        - 中2まで（目安）
+        - 常用漢字すべて
+        - 分からない
+  - type: dropdown
+    id: direction
+    attributes:
+      label: 文字の向き
+      options:
+        - 横書き
+        - 縦書き
+        - 分からない
+  - type: textarea
+    id: report-info
+    attributes:
+      label: 報告用の情報
+      description: 設定画面に「報告用の情報をコピー」があれば、押してここに貼り付けてください（PDF の URL や本文は入りません）。なければ、Chrome の版と拡張の版を書いてください
+      render: text
