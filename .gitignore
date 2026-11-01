@@ -1,0 +1,31 @@
+# 依存とビルド結果
+node_modules/
+.output/
+.wxt/
+dist/
+*.zip
+
+# 作業用
+tmp/
+coverage/
+playwright-report/
+test-results/
+
+# 比べる用に作る Chromium の印刷版（リポジトリに入れない）
+test-pdfs/out/chrome-print/
+
+# 手元だけのテスト用 PDF（無断転載禁止のものがある。絶対に入れない）
+local-only/
+
+# 秘密情報
+.env
+.env.*
+*.pem
+
+# エディタ・OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
