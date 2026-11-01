@@ -106,6 +106,12 @@ export default defineConfig(
     },
   },
   {
+    // 開発用のスクリプトは Node で動き、結果を画面に出す
+    files: ['scripts/**', 'data/**'],
+    languageOptions: { globals: globals.node },
+    rules: { 'no-console': 'off' },
+  },
+  {
     // WXT の入口は default export が決まり
     files: ['src/entrypoints/**'],
     rules: { 'no-restricted-exports': 'off' },
