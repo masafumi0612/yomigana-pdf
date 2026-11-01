@@ -1,0 +1,78 @@
+# PR と main で、整形・Lint・型・テスト・ビルド・依存の確認を回す。
+# main に入ったときは、ストアに出せる zip も作って保存する。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # PR は新しいプッシュが来たら古い実行を止める。main は全部最後まで回す
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Action は版の番号ではなくコミットで固定する（Dependabot が更新する）
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: 依存を入れる
+        run: npm ci
+      - name: 整形の確認
+        run: npm run format:check
+      - name: Lint
+        run: npm run lint
+      - name: 型の確認
+        run: npm run typecheck
+      - name: 単体テスト（網羅率つき）
+        run: npm run test:coverage
+      - name: ビルド
+        run: npm run build
+      - name: 依存のライセンスの確認（拡張に入る部品）
+        run: npm run licenses:check
+      - name: 依存の脆弱性の確認（拡張に入る部品、high 以上で失敗）
+        run: npm audit --omit=dev --audit-level=high
+      - name: zip を作る
+        if: github.event_name == 'push'
+        run: npm run zip
+      - name: zip を保存
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: yomigana-pdf-${{ github.sha }}
+          path: .output/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  commitlint:
+    name: commitlint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # PR のすべてのコミットを確かめるため、履歴をすべて取る
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: 依存を入れる
+        run: npm ci
+      - name: PR のコミットメッセージの確認
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npx --no -- commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
