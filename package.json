@@ -1,0 +1,23 @@
+{
+  "name": "yomigana-pdf",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PDF の漢字によみがな（ルビ）を自動で付ける Chrome 拡張機能",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24.22.1 <25"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "wxt": "0.21.5"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  // WXT が作る設定（strict・noUncheckedIndexedAccess・別名 @/ など）をもとにする
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  }
+}
