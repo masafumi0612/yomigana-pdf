@@ -136,6 +136,32 @@ export const EXPECTATIONS: Readonly<Record<string, Expectation>> = {
     ],
   },
   'scanned-like': { fonts: [], noText: true },
+  'mixed-direction': {
+    fonts: ['NotoSansJP-Bold', 'NotoSansJP-Regular', 'NotoSerifJP-Bold', 'NotoSerifJP-Regular'],
+    vertical: true,
+    horizontal: true,
+    verticalWords: [
+      '窓辺の薔薇',
+      '今日は12月24日です',
+      '大人になってから30年',
+      '辞典で調べました',
+      '図鑑には、薔薇のなかまが15しゅるい',
+      '「図鑑」の「鑑」の読み方',
+      '氏名のらん',
+    ],
+    horizontalWords: [
+      'こくご5年',
+      '組氏名',
+      '11月6日',
+      'ことばのいみ',
+      '窓辺',
+      '辞典',
+      '図鑑',
+      '大人',
+      '今日',
+      'ことばのいみを調べる本',
+    ],
+  },
   // Word で縦書きの文書を PDF にすると、縦書きの印（縦書きのフォント・dir=ttb）が付かない。
   // 字は1字ずつの横書きとして置かれるので、文としては組み直せない（字があることだけ確かめる）
   'word/word-vertical': {
