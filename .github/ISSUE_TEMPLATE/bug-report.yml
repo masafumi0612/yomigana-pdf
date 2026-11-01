@@ -27,5 +27,6 @@ body:
     id: report-info
     attributes:
       label: 報告用の情報
-      description: 設定画面の「報告用の情報をコピー」を押して、ここに貼り付けてください（PDF の URL や本文は入りません）
+      description: 設定画面に「報告用の情報をコピー」があれば、押してここに貼り付けてください（PDF の URL や本文は入りません）。なければ、Chrome の版と拡張の版を書いてください
+
       render: text

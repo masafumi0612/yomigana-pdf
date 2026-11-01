@@ -1,4 +1,4 @@
-# PR と main で、整形・Lint・型・テスト・ビルド・依存の確認を回す。
+# PR と main で、コミットメッセージ・整形・Lint・型・テスト・ビルド・依存の確認を回す。
 # main に入ったときは、ストアに出せる zip も作って保存する。
 name: CI
 
@@ -11,8 +11,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  # PR は新しいプッシュが来たら古い実行を止める。main は全部最後まで回す
+  # PR は新しいプッシュが来たら古い実行を止める。
+  # main はコミットごとに別のグループにして、続けてマージしても実行が取り消されないようにする
+  group: ci-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -20,15 +21,27 @@ jobs:
     name: check
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # CI では Git フックを入れない
+      SKIP_INSTALL_SIMPLE_GIT_HOOKS: '1'
     steps:
       # Action は版の番号ではなくコミットで固定する（Dependabot が更新する）
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # PR のすべてのコミットメッセージを確かめるため、履歴をすべて取る
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
       - name: 依存を入れる
         run: npm ci
+      - name: PR のコミットメッセージの確認
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npx --no -- commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
       - name: 整形の確認
         run: npm run format:check
       - name: Lint
@@ -54,25 +67,3 @@ jobs:
           path: .output/*.zip
           if-no-files-found: error
           retention-days: 30
-
-  commitlint:
-    name: commitlint
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # PR のすべてのコミットを確かめるため、履歴をすべて取る
-          fetch-depth: 0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - name: 依存を入れる
-        run: npm ci
-      - name: PR のコミットメッセージの確認
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: npx --no -- commitlint --from "$BASE_SHA" --to "$HEAD_SHA" --verbose
