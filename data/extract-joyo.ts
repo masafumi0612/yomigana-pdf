@@ -184,9 +184,17 @@ function toKanji(entry: RawEntry, warnings: string[]): JoyoKanji {
   return { char: entry.char, old: entry.old === '' ? undefined : entry.old, on, kun };
 }
 
-// 表では送り仮名を細い字で示しているが、文字の層からはその区別が消える。
-// 例から取り戻す：訓「かこむ」の例「囲む」で、漢字のすぐ後の仮名「む」が読みの終わりと合うので
-// 「かこ.む」とする
+/**
+ * 訓に送り仮名の区切り（`.`）を入れる。
+ *
+ * 表では送り仮名を細い字で示しているが、文字の層からはその区別が消えるので、例から取り戻す。
+ * 訓「かこむ」の例「囲む」で、漢字のすぐ後の仮名「む」が読みの終わりと合うので「かこ.む」とする。
+ *
+ * @param char 漢字1字
+ * @param kun 区切りのない訓（例：かこむ）
+ * @param examples 表の例の語（例：囲む）
+ * @returns 区切りを入れた訓（例：かこ.む）。例から決められなければ、そのまま
+ */
 function splitOkurigana(char: string, kun: string, examples: string[]): string {
   let best = 0;
   for (const example of examples) {
