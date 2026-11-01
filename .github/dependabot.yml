@@ -1,0 +1,32 @@
+# 依存の更新を週1回まとめて PR にする。マージは手で行う。
+# コミットメッセージは「chore: bump …」の形になり、commitlint の決まりに合う
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+    groups:
+      # 開発の道具の小さな更新は1つの PR にまとめる
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Tokyo
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']
