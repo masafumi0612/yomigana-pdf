@@ -3,6 +3,7 @@
 
 # テキストとして扱わないもの
 *.pdf binary
+*.docx binary
 *.png binary
 *.ico binary
 *.woff2 binary

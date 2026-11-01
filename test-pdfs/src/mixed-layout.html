@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>しぜん新聞（縦横まじりの紙面・テスト用）</title>
+    <link rel="stylesheet" href="common.css" />
+    <style>
+      .banner {
+        position: absolute;
+        top: 14mm;
+        left: 22mm;
+        right: 18mm;
+        height: 24mm;
+        border: 2px solid #234;
+        padding: 3mm 6mm;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .banner h1 {
+        font-size: 34px;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: 0.1em;
+      }
+      .banner .sub {
+        font-size: 13px;
+        text-align: right;
+        line-height: 1.6;
+      }
+      .side {
+        position: absolute;
+        top: 14mm;
+        left: 8mm;
+        height: 120mm;
+        font-size: 13px;
+        color: #345;
+      }
+      .dan {
+        position: absolute;
+        right: 18mm;
+        font-size: 16px;
+        line-height: 1.95;
+      }
+      .dan h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 0 14px;
+        line-height: 1.5;
+      }
+      .dan p {
+        text-indent: 1em;
+      }
+      .dan1 {
+        top: 44mm;
+        left: 22mm;
+        height: 110mm;
+        border-bottom: 1px solid #555;
+      }
+      .dan2 {
+        top: 164mm;
+        left: 92mm;
+        height: 116mm;
+      }
+      .fig {
+        position: absolute;
+        top: 164mm;
+        left: 22mm;
+        width: 64mm;
+        height: 112mm;
+        border: 1.5px solid #333;
+        padding: 4mm;
+        font-size: 12px;
+      }
+      .fig .title {
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 3mm;
+      }
+      .fig .map {
+        position: relative;
+        height: 66mm;
+        border: 1px solid #777;
+        background: #f4f8fb;
+      }
+      .fig .box {
+        position: absolute;
+        border: 1px solid #555;
+        background: #fff;
+        padding: 1mm 2mm;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      .fig .river {
+        position: absolute;
+        left: 22mm;
+        top: 0;
+        bottom: 0;
+        width: 10mm;
+        background: #cfe3f1;
+      }
+      .fig .vlabel {
+        position: absolute;
+        left: 24mm;
+        top: 6mm;
+        height: 52mm;
+        font-size: 12px;
+      }
+      .fig .cap {
+        margin-top: 3mm;
+        line-height: 1.6;
+      }
+      .serif {
+        font-family: 'TP Serif', serif;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="side sideways sans">しぜん新聞　第7号　テスト用の架空の新聞</div>
+
+      <div class="banner">
+        <h1>しぜん新聞</h1>
+        <div class="sub sans">第7号<br />3年2組　生き物はかせ係</div>
+      </div>
+
+      <div class="dan dan1 v">
+        <h2>川の生き物を調べたよ</h2>
+        <p>
+          先週の金曜日、学校の近くを流れる小川で、生き物の観察をしました。水は思っていたよりもすきとおっていて、底の石までよく見えました。
+        </p>
+        <p>
+          石をそっと持ち上げると、カワゲラの幼虫が三びき、あわてて走っていきました。ヤゴもつかまえることができました。ヤゴはトンボの子どもで、水の中で一年近くくらすそうです。
+        </p>
+        <p>
+          川のはしの草の根元には、メダカのむれがいました。人のかげが水にうつると、さっと散らばってしまいます。
+        </p>
+      </div>
+
+      <div class="dan dan2 v">
+        <h2>わかったこと</h2>
+        <p>流れが速い場所と、ゆるやかな場所では、すんでいる生き物がちがいました。</p>
+        <p>
+          速い場所の石の下には、平たい体の虫が多く、ゆるやかな場所には、魚やエビのなかまが多くいました。
+        </p>
+        <p>次は、雨の後に水の量がふえたとき、生き物がどこへにげるのかを調べたいです。</p>
+      </div>
+
+      <div class="fig sans">
+        <div class="title">図1　観察した場所</div>
+        <div class="map">
+          <div class="river"></div>
+          <div class="v vlabel serif">小川の流れ</div>
+          <div class="box" style="left: 2mm; top: 4mm">学校</div>
+          <div class="box" style="left: 36mm; top: 12mm">橋</div>
+          <div class="box" style="left: 2mm; top: 30mm">流れが速い</div>
+          <div class="box" style="left: 35mm; top: 44mm">ゆるやか</div>
+          <div class="box" style="left: 6mm; top: 54mm">メダカ</div>
+        </div>
+        <div class="cap">四角の中の言葉は、地図にかいた目印です。青い帯が小川です。</div>
+      </div>
+    </section>
+  </body>
+</html>
