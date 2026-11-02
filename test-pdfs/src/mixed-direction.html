@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>こくごのプリント（縦と横が混ざる紙面・テスト用）</title>
+    <link rel="stylesheet" href="common.css" />
+    <style>
+      /* 1枚の中に、横書きの見出し・縦書きの本文と題・横書きの表・縦中横が混ざるプリント */
+      .head {
+        position: absolute;
+        top: 12mm;
+        left: 16mm;
+        right: 16mm;
+        height: 14mm;
+        border-bottom: 2px solid #333;
+        display: flex;
+        align-items: flex-end;
+        gap: 6mm;
+        padding-bottom: 2mm;
+        font-size: 17px;
+      }
+      .head .subject {
+        font-size: 22px;
+        font-weight: 700;
+        margin-right: 4mm;
+      }
+      .head .blank {
+        display: inline-block;
+        border-bottom: 1px solid #333;
+        height: 1.2em;
+        vertical-align: bottom;
+      }
+      .head .blank.short {
+        width: 12mm;
+      }
+      .head .blank.long {
+        width: 58mm;
+      }
+      .head .date {
+        margin-left: auto;
+        font-size: 13px;
+      }
+
+      .story {
+        position: absolute;
+        top: 34mm;
+        right: 16mm;
+        left: 16mm;
+        height: 140mm;
+        border: 1px solid #555;
+        padding: 6mm 8mm;
+        font-size: 18px;
+        line-height: 2;
+      }
+      .story h1 {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 0 10mm;
+        line-height: 1.5;
+        padding-top: 2em;
+      }
+      .story .by {
+        font-size: 13px;
+        margin-left: 8mm;
+        padding-top: 16em;
+      }
+      .story p {
+        text-indent: 1em;
+      }
+
+      .words {
+        position: absolute;
+        top: 184mm;
+        left: 16mm;
+        width: 92mm;
+        font-size: 14px;
+      }
+      .words .caption {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 2mm;
+      }
+      .words table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      .words th,
+      .words td {
+        border: 1px solid #444;
+        padding: 1.6mm 3mm;
+        text-align: left;
+        line-height: 1.5;
+      }
+      .words th {
+        background: #e8e8e8;
+        font-weight: 700;
+      }
+      .words td:first-child {
+        width: 24mm;
+        font-family: 'TP Serif', serif;
+        font-size: 16px;
+      }
+
+      .questions {
+        position: absolute;
+        top: 184mm;
+        right: 16mm;
+        width: 70mm;
+        height: 96mm;
+        border: 1.5px dashed #666;
+        padding: 4mm 5mm;
+        font-size: 15px;
+        line-height: 1.9;
+      }
+      .questions h2 {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 0 0 3mm;
+      }
+      .questions p {
+        padding-top: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <!-- 横書きの見出し -->
+      <div class="head sans">
+        <span class="subject">こくご</span>
+        <span>５年<span class="blank short"></span>組</span>
+        <span>氏名<span class="blank long"></span></span>
+        <span class="date">11月6日</span>
+      </div>
+
+      <!-- 縦書きの題と本文。二けたの数は縦中横 -->
+      <div class="story v">
+        <h1>窓辺の薔薇</h1>
+        <p class="by sans">文・テスト用に書き下ろし</p>
+        <p>
+          今日は<span class="tcy">12</span>月<span class="tcy">24</span
+          >日です。おばあさんの家の窓辺で、赤い薔薇が一りんさきました。
+        </p>
+        <p>
+          おばあさんは、大人になってから<span class="tcy">30</span
+          >年、この薔薇を育ててきたそうです。冬でも日がよく当たる窓辺が、薔薇のお気に入りの場所です。
+        </p>
+        <p>
+          わたしは、花の名前の由来を辞典で調べました。植物の図鑑には、薔薇のなかまが<span
+            class="tcy"
+            >15</span
+          >しゅるいのっていました。
+        </p>
+        <p>来年の春は、わたしも小さな鉢を一つ、自分の部屋の窓辺で育ててみたいと思います。</p>
+      </div>
+
+      <!-- 横書きの表 -->
+      <div class="words sans">
+        <div class="caption">ことばのいみ</div>
+        <table>
+          <tr>
+            <th>ことば</th>
+            <th>いみ</th>
+          </tr>
+          <tr>
+            <td>窓辺</td>
+            <td>まどのそば</td>
+          </tr>
+          <tr>
+            <td>辞典</td>
+            <td>ことばのいみを調べる本</td>
+          </tr>
+          <tr>
+            <td>図鑑</td>
+            <td>絵や写真で物を調べる本</td>
+          </tr>
+          <tr>
+            <td>大人</td>
+            <td>大きくなった人</td>
+          </tr>
+          <tr>
+            <td>今日</td>
+            <td>この日</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- 縦書きの問題 -->
+      <div class="questions v">
+        <h2>もんだい</h2>
+        <p>一　薔薇がさいたのは、何月何日ですか。</p>
+        <p>二　「図鑑」の「鑑」の読み方を書きましょう。</p>
+        <p>三　氏名のらんに、自分の名前を書きましょう。</p>
+      </div>
+    </section>
+  </body>
+</html>

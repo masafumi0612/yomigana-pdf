@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>もとからルビのある文（テスト用）</title>
+    <link rel="stylesheet" href="common.css" />
+    <style>
+      .vbox {
+        height: 100%;
+        padding: 24mm 22mm;
+        font-size: 20px;
+        line-height: 2.3;
+      }
+      .vbox h1,
+      .hbox h1 {
+        font-size: 26px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .vbox h1 {
+        margin-left: 20px;
+      }
+      .vbox p {
+        text-indent: 1em;
+      }
+      .vbox .label,
+      .hbox .label {
+        font-size: 14px;
+        font-family: 'TP Sans', sans-serif;
+      }
+      .vbox .label {
+        margin-left: 8px;
+        padding-top: 2em;
+      }
+      .hbox {
+        padding: 22mm 22mm;
+        font-size: 18px;
+        line-height: 2.4;
+      }
+      .hbox h1 {
+        margin-bottom: 8px;
+        line-height: 1.8;
+      }
+      .hbox .label {
+        margin-top: 14px;
+        line-height: 1.6;
+      }
+      .hbox p {
+        text-indent: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 1ページめ：縦書き。全部の漢字にルビ／一部だけルビ／語の途中だけルビ が混ざる -->
+    <section class="page">
+      <div class="v vbox">
+        <h1>
+          <ruby>港<rt>みなと</rt></ruby
+          >の<ruby>博物館<rt>はくぶつかん</rt></ruby>
+        </h1>
+        <p class="label">ア　すべての漢字にルビ（総ルビ）</p>
+        <p>
+          <ruby>私<rt>わたし</rt></ruby
+          >は<ruby>夏休<rt>なつやす</rt></ruby
+          >みに、<ruby>港<rt>みなと</rt></ruby
+          >の<ruby>博物館<rt>はくぶつかん</rt></ruby
+          >へ<ruby>行<rt>い</rt></ruby
+          >きました。
+        </p>
+        <p>
+          <ruby>入<rt>い</rt></ruby
+          >り<ruby>口<rt>ぐち</rt></ruby
+          >には、<ruby>大<rt>おお</rt></ruby
+          >きな<ruby>船<rt>ふね</rt></ruby
+          >の<ruby>模型<rt>もけい</rt></ruby
+          >がかざってありました。
+        </p>
+        <p class="label">イ　むずかしい字だけにルビ</p>
+        <p>
+          二階には、昔の<ruby>漁師<rt>りょうし</rt></ruby
+          >が使った道具や、海の<ruby>底<rt>そこ</rt></ruby
+          >から引き上げた<ruby>壺<rt>つぼ</rt></ruby
+          >がならんでいます。
+        </p>
+        <p>
+          係の人が、<ruby>羅針盤<rt>らしんばん</rt></ruby
+          >の使い方を教えてくれました。
+        </p>
+        <p class="label">ウ　語の途中の字だけにルビ</p>
+        <p>
+          浜に<ruby>漂<rt>ひょう</rt></ruby
+          >着した<ruby>陶<rt>とう</rt></ruby
+          >器のかけらは、<ruby>遥<rt>はる</rt></ruby
+          >か遠い国から流れてきたそうです。
+        </p>
+        <p>
+          最後に、<ruby>承<rt>うけたまわ</rt></ruby
+          >りました、と書かれた受付で、記念の<ruby>栞<rt>しおり</rt></ruby
+          >をもらいました。
+        </p>
+        <p class="label">エ　ルビのない文</p>
+        <p>帰りの電車の中で、今日見た船の話をたくさんしました。</p>
+      </div>
+    </section>
+    <!-- 2ページめ：横書き。同じ種類を横組みで -->
+    <section class="page">
+      <div class="hbox">
+        <h1>
+          <ruby>理科<rt>りか</rt></ruby
+          >の<ruby>観察<rt>かんさつ</rt></ruby
+          >ノート
+        </h1>
+        <p class="label">ア　すべての漢字にルビ（総ルビ）</p>
+        <p>
+          <ruby>朝顔<rt>あさがお</rt></ruby
+          >の<ruby>種<rt>たね</rt></ruby
+          >を<ruby>植<rt>う</rt></ruby
+          >えてから、<ruby>十日<rt>とおか</rt></ruby
+          >たちました。<ruby>双葉<rt>ふたば</rt></ruby
+          >が<ruby>開<rt>ひら</rt></ruby
+          >いています。
+        </p>
+        <p class="label">イ　むずかしい字だけにルビ（1字ずつのルビ）</p>
+        <p>
+          虫めがねで、葉の<ruby>表<rt>ひょう</rt>面<rt>めん</rt></ruby
+          >をよく見ました。<ruby>図<rt>ず</rt>鑑<rt>かん</rt></ruby
+          >で調べると、細かい毛が生えているそうです。
+        </p>
+        <p class="label">ウ　語の途中の字だけにルビ</p>
+        <p>
+          水やりの後、<ruby>蕾<rt>つぼみ</rt></ruby
+          >のまわりに小さな<ruby>蟻<rt>あり</rt></ruby
+          >が集まっていました。葉の<ruby>裏<rt>うら</rt></ruby
+          >側には、白い<ruby>粒<rt>つぶ</rt></ruby
+          >状のものがついていました。
+        </p>
+        <p>
+          先生に聞くと、<ruby>油<rt>あぶら</rt></ruby
+          >虫の<ruby>抜<rt>ぬ</rt></ruby
+          >け<ruby>殻<rt>がら</rt></ruby
+          >かもしれないと<ruby>仰<rt>おっしゃ</rt></ruby
+          >いました。
+        </p>
+        <p class="label">エ　ルビのない文</p>
+        <p>来週は、花がさいた日と天気を表にまとめます。</p>
+      </div>
+    </section>
+  </body>
+</html>
