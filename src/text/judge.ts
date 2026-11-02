@@ -1,4 +1,4 @@
-// 字ごとに分けた語に、利用者の段階に合わせてルビを付けるかを決める（方式 C：まだ習っていない字にだけ付ける）
+// 字ごとに分けた語に、利用者の段階に合わせてルビを付けるかを決める（まだ習っていない字にだけ付ける）
 import { getKanjiTier, isTierWithin } from './kanji-data';
 import type { Level, RubyPiece, Seg, SplitResult } from './types';
 

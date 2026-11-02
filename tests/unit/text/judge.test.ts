@@ -55,7 +55,7 @@ describe('judge：仮名', () => {
   });
 });
 
-describe('judge：漢字（方式 C）', () => {
+describe('judge：漢字（まだ習っていない字にだけ付ける）', () => {
   it.each<[string, string, string, Level, string | undefined]>([
     // 字（段階）, 読み, 段階の説明, 利用者の段階, 付くルビ
     ['図', 'ず', 'g2', 'all', 'ず'],
