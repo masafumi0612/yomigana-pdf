@@ -101,8 +101,14 @@ describe('applyFixups の読みを直す表の条件', () => {
 });
 
 describe('parseReadingFixes', () => {
-  it('条件の書き方が違うとき、例外を投げる', () => {
-    expect(() => parseReadingFixes('語\t読み\t条件\tメモ\n米\tこめ\t後ろ:助詞\t\n')).toThrow(
+  it.each([
+    ['向きが違う', '後ろ:助詞'],
+    ['書き方も品詞もない', '前:'],
+    ['書き方が … だけの', '後:「…」'],
+    ['… が直す語に近い側にある', '後:「…が」'],
+    ['直す語そのものに書き方を付けた', '語:「十分」'],
+  ])('条件が%sとき、例外を投げる', (_why, cell) => {
+    expect(() => parseReadingFixes(`語\t読み\t条件\tメモ\n米\tこめ\t${cell}\t\n`)).toThrow(
       '条件が読めない',
     );
   });
