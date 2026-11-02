@@ -1,5 +1,5 @@
 // 1語の読み（平仮名）を、字ごとの読みに分ける（図鑑/ずかん → 図:ず＋鑑:かん）。
-// 試作 furigana-spike の src/poc/reading-split.ts の方式を移したもの。習ったかどうか（段階）は見ない
+// 漢字ごとの音訓に、音の変化（連濁・半濁音化・促音化・連声）と送り仮名を加えて、語の読みと左から合わせる。習ったかどうか（段階）は見ない
 import { FUHYO_WORDS, type FuhyoWord, getKanjiInfo, isJoyo } from './kanji-data';
 import type { Seg, SplitResult, Word } from './types';
 
@@ -18,7 +18,7 @@ const COST_RENDAKU = 1;
 /**
  * 語の頭の連濁の点。kuromoji は接尾の語を分けて読みを付ける（ごみ袋 → ごみ／袋 ぶくろ）が、
  * Word には品詞がなく前の語に続くか分からないので、語の頭でも連濁を認め、語の中より高い点にする
- * （試作は品詞が接尾のときだけ認めていた）
+ * （品詞が分かれば接尾のときだけ認めればよいが、その印を Word に持たせていない）
  */
 const COST_RENDAKU_WORD_START = 2;
 /** 半濁音化（ん・っ の後の は行 → ぱ行。発表 はっぴょう、三本 さんぼん は連濁）の点 */
