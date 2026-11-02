@@ -47,6 +47,7 @@
     "@vitest/coverage-v8": "5.0.5",
     "eslint": "10.14.0",
     "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-jsdoc": "65.4.2",
     "eslint-plugin-simple-import-sort": "14.0.0",
     "eslint-plugin-unicorn": "79.0.0",
     "fontkit": "2.0.4",
