@@ -1,0 +1,83 @@
+# splitReading の期待値。列はタブ区切りで「語	読み	字ごとの読み	種類	メモ」。# で始まる行は読まない
+# 字ごとの読み：| で区切る。漢字は「字:よみ」、表外字（isHyogaiReading）は「字:よみ†」、仮名はそのまま、
+#   語全体の固まりは「block:理由」、語の一部の固まりは「block:理由:書き方:よみ」
+# 種類：split（字ごと）・jukujikun（付表）・irregular（表外の読み・当て字）・unknown（読みがない）・kana（漢字なし）
+# 1〜48 は試作（furigana-spike の scripts/reading-split-check.mjs）の例
+語	読み	字ごとの読み	種類	メモ
+図鑑	ずかん	図:ず|鑑:かん	split	試作1
+窓辺	まどべ	窓:まど|辺:べ	split	試作2 連濁
+今日	きょう	block:jukujikun	jukujikun	試作3 付表
+大人	おとな	block:jukujikun	jukujikun	試作4 付表
+一人	ひとり	block:jukujikun	jukujikun	試作5 付表
+二十歳	はたち	block:jukujikun	jukujikun	試作6 付表
+河原	かわら	block:jukujikun	jukujikun	試作7 付表
+生憎	あいにく	block:irregular	irregular	試作8 表外音訓（生=あい）
+身体	からだ	block:irregular	irregular	試作9 表外音訓
+薔薇	ばら	薔:ば†|薇:ら†	split	試作10 表外字が2字で仮名も2字なので1字ずつ
+蜜柑	みかん	block:irregular	irregular	試作11 当て字（蜜=み）
+檸檬	れもん	block:irregular	irregular	試作12 表外字が2字で仮名が3字。試作は hyogai-block
+林檎	りんご	林:りん|檎:ご†	split	試作13 表外字1字に残りの読み
+物語	ものがたり	物:もの|語:がたり	split	試作14 訓の連用形＋連濁
+手紙	てがみ	手:て|紙:がみ	split	試作15 連濁
+学校	がっこう	学:がっ|校:こう	split	試作16 促音化
+日本	にっぽん	日:にっ|本:ぽん	split	試作17 促音化＋半濁音化
+日本	にほん	block:irregular	irregular	試作18 表外音訓（日=に）
+月曜日	げつようび	月:げつ|曜:よう|日:び	split	試作19
+一本	いっぽん	一:いっ|本:ぽん	split	試作20
+三本	さんぼん	三:さん|本:ぼん	split	試作21 連濁
+発表	はっぴょう	発:はっ|表:ぴょう	split	試作22
+合戦	かっせん	合:かっ|戦:せん	split	試作23
+雨雲	あまぐも	雨:あま|雲:ぐも	split	試作24
+春雨	はるさめ	block:irregular	irregular	試作25 試作は備考の読みで 春:はる|雨:さめ。本番は備考を持たない
+風車	かざぐるま	風:かざ|車:ぐるま	split	試作26
+昨日	きのう	block:jukujikun	jukujikun	試作27 付表
+明日	あす	block:jukujikun	jukujikun	試作28 付表
+明日	あした	block:irregular	irregular	試作29 付表は あす だけ
+紅葉	もみじ	block:jukujikun	jukujikun	試作30 付表
+紅葉	こうよう	紅:こう|葉:よう	split	試作31
+田舎	いなか	block:jukujikun	jukujikun	試作32 付表
+眼鏡	めがね	block:jukujikun	jukujikun	試作33 付表
+時計	とけい	block:jukujikun	jukujikun	試作34 付表
+上手	じょうず	block:jukujikun	jukujikun	試作35 付表
+上手	うわて	上:うわ|手:て	split	試作36
+下手	へた	block:jukujikun	jukujikun	試作37 付表
+人々	ひとびと	人:ひと|々:びと	split	試作38 々は前の字の読み＋連濁
+因縁	いんねん	因:いん|縁:ねん	split	試作39 連声
+手綱	たづな	手:た|綱:づな	split	試作40 づ は ず にそろえて比べ、ルビは づ のまま
+金物	かなもの	金:かな|物:もの	split	試作41
+読み書き	よみかき	読:よ|み|書:か|き	split	試作42 送り仮名
+魚河岸	うおがし	魚:うお|block:jukujikun:河岸:がし	jukujikun	試作43 語の一部が付表＋連濁
+差し支え	さしつかえ	block:jukujikun:差し支:さしつか|え	jukujikun	試作44 送り仮名付きの付表の語
+相撲	すもう	block:jukujikun	jukujikun	試作45 付表
+一昨日	おととい	block:irregular	irregular	試作46 付表にない熟字訓
+煙草	たばこ	block:irregular	irregular	試作47 当て字
+秋刀魚	さんま	block:irregular	irregular	試作48 当て字
+叱る	しかる	叱:しか|る	split	許容字体
+𠮟る	しかる	𠮟:しか|る	split	正字体
+頬	ほお	頬:ほお	split	許容字体
+頬	ほほ	block:irregular	irregular	ほほ は備考の読み（本番は備考を持たない）
+補填	ほてん	補:ほ|填:てん	split	許容字体
+剥がす	はがす	剥:は|がす	split	許容字体
+山寺	やまでら	山:やま|寺:でら	split	連濁
+一般	いっぱん	一:いっ|般:ぱん	split	促音化＋半濁音化
+散歩	さんぽ	散:さん|歩:ぽ	split	ん の後の半濁音化
+反応	はんのう	反:はん|応:のう	split	連声
+受付	うけつけ	受:うけ|付:つけ	split	訓の連用形
+囲む	かこむ	囲:かこ|む	split	送り仮名
+表わす	あらわす	表:あら|わす	split	送り仮名を多めに送る許容
+来ない	こない	来:こ|ない	split	カ変の活用
+霞ヶ関	かすみがせき	霞:かすみ†|ヶ|関:せき	split	ヶ を が と読む
+一ヶ月	いっかげつ	一:いっ|ヶ|月:げつ	split	ヶ を か と読む
+燦々	さんさん	燦:さん†|々:さん†	split	表外字の後の々
+々	のま	々:のま†	split	語の頭の々（前の字がない）
+檎有	ごゆう	block:irregular	irregular	作った例。同じ点で 檎:ご|有:ゆう と 檎:ごゆ|有:う があり、表外字の切れ目が決まらない
+お神酒	おみき	お|block:jukujikun:神酒:みき	jukujikun	前に仮名が付く付表の語
+お茶	おちゃ	お|茶:ちゃ	split
+生憎だ	あいにくだ	block:irregular:生憎:あいにく|だ	irregular	後ろの仮名は固まりの外
+お煙草	おたばこ	お|block:irregular:煙草:たばこ	irregular	前の仮名は固まりの外
+3本	さんぼん	block:irregular	irregular	数字は読みと照らせない
+歌馬	うたうま	歌:うた|馬:うま	split	作った例。同じ点で 歌:うたう|馬:ま もあるが、常用の読みどうしの同点なので最初の分け方のまま
+袋	ぶくろ	袋:ぶくろ	split	語の頭の連濁（ごみ袋 の 袋 を kuromoji が分けたとき）
+檸檬		block:unknown	unknown	読みがない（辞書にない語）
+ひらがな	ひらがな	ひらがな	kana	漢字なし
+、		、	kana	漢字なし・読みなし
