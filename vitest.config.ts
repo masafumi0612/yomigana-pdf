@@ -6,8 +6,6 @@ export default defineConfig({
   plugins: [WxtVitest()],
   test: {
     include: ['tests/unit/**/*.test.ts'],
-    // M3 で src/text/ を作るまではテストがない
-    passWithNoTests: true,
     coverage: {
       provider: 'v8',
       // 網羅率の決まりは、読みの処理だけに掛ける。ほかは測るだけ
