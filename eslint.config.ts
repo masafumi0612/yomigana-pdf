@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
+import jsdoc from 'eslint-plugin-jsdoc';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
@@ -21,10 +22,30 @@ export default defineConfig(
       globals: globals.browser,
     },
     plugins: {
+      jsdoc,
       'simple-import-sort': simpleImportSort,
       unicorn,
     },
     rules: {
+      // 外から使う関数・型には TSDoc が要る。中だけで使うものは、説明を書くときだけ TSDoc で書く
+      'jsdoc/require-jsdoc': [
+        'error',
+        {
+          publicOnly: true,
+          require: {
+            FunctionDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true,
+            ClassDeclaration: true,
+          },
+          contexts: ['TSInterfaceDeclaration', 'TSTypeAliasDeclaration'],
+        },
+      ],
+      // TSDoc に書いた引数の名前が、本当の引数と合っているか
+      'jsdoc/check-param-names': 'error',
+      // 型は TypeScript に書くので、TSDoc の {型} は書かない
+      'jsdoc/no-types': 'error',
+
       // import の並べ方と、型だけの import
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
