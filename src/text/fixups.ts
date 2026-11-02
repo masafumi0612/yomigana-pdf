@@ -5,12 +5,22 @@ import { toHiragana } from './kana';
 import { parseTsv } from './tsv';
 import type { Token, UserDictionary, Word } from './types';
 
-/** 読みを直す語が、前か後ろの語に求める条件 */
+/** 読みを直す語が、前の語・後ろの語・その語そのものに求める条件 */
 export interface FixCondition {
-  /** 前の語を見るか、後ろの語を見るか */
-  readonly side: 'before' | 'after';
-  /** その語の品詞（例：助詞） */
-  readonly pos: string;
+  /** 前の語を見るか、後ろの語を見るか、直す語そのものを見るか */
+  readonly side: 'before' | 'after' | 'self';
+  /**
+   * 書き方。前なら直す語の直前までがこれで終わり、後ろなら直す語の直後からがこれで始まる
+   * （いくつかの語にまたがってよい）。見ないなら undefined
+   */
+  readonly text: string | undefined;
+  /** 書き方の、直す語から遠い側の端が、kuromoji の語の途中でもよいなら true */
+  readonly isPartial: boolean;
+  /**
+   * すぐ隣の語（直す語そのものを見るときは、その語）の品詞と細かい分け方の頭
+   * （例：['助詞']、['名詞', '接尾', '助数詞']）。見ないなら空
+   */
+  readonly pos: readonly string[];
 }
 
 /** 読みを直す表の1行 */
@@ -25,8 +35,24 @@ export interface ReadingFix {
 export type ReadingFixTable = ReadonlyMap<string, readonly ReadingFix[]>;
 
 const FIX_COLUMNS = ['語', '読み', '条件', 'メモ'] as const;
-/** 条件の書き方（例：後:助詞 は、すぐ後ろの語が助詞のとき） */
-const CONDITION_PATTERN = /^(?<side>前|後):(?<pos>.+)$/u;
+/**
+ * 条件の書き方。「前:」「後:」「語:」のあとに、「」で囲んだ書き方と品詞の、どちらか一方か両方を書く。
+ * - 後:助詞：すぐ後ろの語が助詞
+ * - 前:「時」名詞,接尾,助数詞：すぐ前の語が「時」で、品詞が 名詞・接尾・助数詞
+ * - 後:「前」：後ろが「前」で始まり、そこで語が切れる（十分前 に当たり、十分前進 には当たらない）
+ * - 後:「を占め…」：後ろが「を占め」で始まる。終わりの … は、語の途中で終わってよいこと（占める・占めた）
+ * - 前:「…月」：前が「月」で終わる。頭の … は、語の途中から始まってよいこと（四月・毎月）
+ * - 語:名詞,形容動詞語幹：直す語が kuromoji の1語のままで、品詞が 名詞・形容動詞語幹
+ */
+const CONDITION_PATTERN = /^(?<side>前|後|語):(?:「(?<text>[^「」]+)」)?(?<pos>[^「」]*)$/u;
+/** 条件の向きの書き方から、向きを引く */
+const SIDES: ReadonlyMap<string, FixCondition['side']> = new Map([
+  ['前', 'before'],
+  ['後', 'after'],
+  ['語', 'self'],
+]);
+/** 書き方の端が語の途中でもよいことを表す印 */
+const PARTIAL_MARK = '…';
 
 /** 語の並びの、ある位置から当てはまった語 */
 interface Match {
@@ -36,7 +62,8 @@ interface Match {
 }
 
 /**
- * 読みを直す表（TSV）を読む。
+ * 読みを直す表（TSV）を読む。同じ語に条件の違う行をいくつも並べてよく、上の行から順に見て、
+ * 最初に条件に合った行の読みを使う。条件のない行はいつも合う（条件の書き方は CONDITION_PATTERN）。
  * @param raw 表の文字列。列は 語・読み・条件・メモ
  * @returns 読みを直す表
  */
@@ -57,7 +84,7 @@ export const READING_FIXES: ReadingFixTable = parseReadingFixes(readingFixesTsv)
  * kuromoji の語の並びの読みを直す。同じ位置では、次の順に先に当てはまったものを使う。
  * 1. 利用者の辞書（いくつかの語をつないだ書き方にも当てる。いちばん長いもの）
  * 2. 数＋助数詞（一本 → いっぽん）
- * 3. よく間違える語の表（いくつかの語をつないだ書き方にも当てる。いちばん長いもの）
+ * 3. よく間違える語の表（いくつかの語をつないだ書き方にも当てる。いちばん長いもの。前後の語で読みを決める行もある）
  * 4. kuromoji の読みを平仮名にしたもの
  * @param tokens kuromoji の語の並び
  * @param userDictionary 利用者が直した読み・足した言葉
@@ -103,10 +130,38 @@ function parseCondition(cell: string): FixCondition | undefined {
     return undefined;
   }
   const groups = CONDITION_PATTERN.exec(cell)?.groups;
-  if (groups?.side === undefined || groups.pos === undefined) {
+  const side = SIDES.get(groups?.side ?? '');
+  const pos = groups?.pos === undefined || groups.pos === '' ? [] : groups.pos.split(',');
+  const parsed = side === undefined ? undefined : parseConditionText(groups?.text, side);
+  if (
+    side === undefined ||
+    parsed === undefined ||
+    (parsed.text === undefined && pos.length === 0)
+  ) {
     throw new Error(`読みを直す表の条件が読めない：${cell}`);
   }
-  return { side: groups.side === '前' ? 'before' : 'after', pos: groups.pos };
+  return { side, ...parsed, pos };
+}
+
+/**
+ * 条件の「」の中の書き方を読む。直す語から遠い側の端の … は、語の途中でもよいことを表す。
+ * @param raw 「」の中。書いていなければ undefined
+ * @param side 条件の向き
+ * @returns 書き方と、端が語の途中でもよいか。書き方の形が違うときは undefined
+ */
+function parseConditionText(
+  raw: string | undefined,
+  side: FixCondition['side'],
+): Pick<FixCondition, 'text' | 'isPartial'> | undefined {
+  if (raw === undefined) {
+    return { text: undefined, isPartial: false };
+  }
+  const isPartial = side === 'before' ? raw.startsWith(PARTIAL_MARK) : raw.endsWith(PARTIAL_MARK);
+  const text = isPartial ? raw.replace(PARTIAL_MARK, '') : raw;
+  // 直す語そのものは書き方が決まっているので、書き方の条件は付けない
+  return side === 'self' || text === '' || text.includes(PARTIAL_MARK)
+    ? undefined
+    : { text, isPartial };
 }
 
 /**
@@ -152,7 +207,7 @@ function findLongest(
 }
 
 /**
- * 前か後ろの語が、表の条件に合うか。
+ * 前の語・後ろの語・直す語そのものが、表の条件に合うか。
  * @param condition 条件。undefined ならいつも合う
  * @param tokens 語の並び
  * @param start 直す語の最初の位置
@@ -168,8 +223,56 @@ function isConditionMet(
   if (condition === undefined) {
     return true;
   }
+  if (condition.side === 'self') {
+    return end - start === 1 && isPosMatch(tokens[start], condition.pos);
+  }
   const neighbor = condition.side === 'before' ? tokens[start - 1] : tokens[end];
-  return neighbor?.pos === condition.pos;
+  return isPosMatch(neighbor, condition.pos) && isTextMatch(condition, tokens, start, end);
+}
+
+/**
+ * 語の品詞が、条件の品詞と細かい分け方の頭に合うか。
+ * @param token 語。並びの外なら undefined
+ * @param pos 条件の品詞と細かい分け方の頭。空ならいつも合う
+ * @returns 合えば true
+ */
+function isPosMatch(token: Token | undefined, pos: readonly string[]): boolean {
+  const actual = token === undefined ? [] : [token.pos, ...token.posDetails];
+  return pos.every((part, index) => actual[index] === part);
+}
+
+/**
+ * 直す語の前か後ろに続く書き方が、条件の書き方に合うか。
+ * @param condition 条件（前か後ろを見るもの）
+ * @param tokens 語の並び
+ * @param start 直す語の最初の位置
+ * @param end 直す語の次の位置
+ * @returns 合えば true。条件に書き方がなければ true
+ */
+function isTextMatch(
+  condition: FixCondition,
+  tokens: readonly Token[],
+  start: number,
+  end: number,
+): boolean {
+  const { text, side, isPartial } = condition;
+  if (text === undefined) {
+    return true;
+  }
+  const isBefore = side === 'before';
+  const step = isBefore ? -1 : 1;
+  let joined = '';
+  // 条件の書き方の長さに届くまで、直す語に近い順に語をつなぐ
+  for (let index = isBefore ? start - 1 : end; joined.length < text.length; index += step) {
+    const surface = tokens[index]?.surface;
+    if (surface === undefined) {
+      break;
+    }
+    joined = isBefore ? surface + joined : joined + surface;
+  }
+  const isMatch = isBefore ? joined.endsWith(text) : joined.startsWith(text);
+  // つないだ長さが書き方と同じなら、遠い側の端は語の切れ目にある
+  return isMatch && (isPartial || joined.length === text.length);
 }
 
 /**
