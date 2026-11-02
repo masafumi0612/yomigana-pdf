@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>漢字の練習プリント（画像だけの PDF・テスト用）</title>
+    <link rel="stylesheet" href="common.css" />
+    <style>
+      /* data-scan on <body>: make-test-pdfs.mjs takes a picture of each page and puts only the
+     picture in the PDF (no text). The filters make it look a little like a scanned sheet. */
+      .page {
+        background: #f3f0e8;
+      }
+      .sheet {
+        position: absolute;
+        inset: 0;
+        padding: 18mm 18mm;
+        transform: rotate(0.35deg);
+        filter: grayscale(1) contrast(1.15) blur(0.25px);
+      }
+      .head {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 2px solid #222;
+        font-size: 16px;
+        padding-bottom: 4px;
+      }
+      .head h1 {
+        font-size: 26px;
+        margin: 0;
+        font-weight: 700;
+      }
+      .q {
+        writing-mode: vertical-rl;
+        height: 190mm;
+        margin-top: 10mm;
+        font-size: 20px;
+        line-height: 2.4;
+        float: right;
+      }
+      .q p {
+        margin-left: 6px;
+      }
+      .blank {
+        display: inline-block;
+        width: 1.6em;
+        height: 2.4em;
+        border: 1px solid #333;
+        vertical-align: middle;
+      }
+      .memo {
+        position: absolute;
+        left: 18mm;
+        right: 18mm;
+        bottom: 18mm;
+        height: 40mm;
+        border: 1px solid #333;
+        padding: 3mm 5mm;
+        font-size: 14px;
+      }
+      .noise {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.22;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>");
+      }
+    </style>
+  </head>
+  <body data-scan>
+    <section class="page">
+      <div class="sheet sans">
+        <div class="head">
+          <h1>漢字の練習（10）</h1>
+          <span>名前（　　　　　　　　）</span>
+        </div>
+        <div class="q serif" style="font-family: 'TP Serif', serif">
+          <p>一　□に漢字を書きましょう。</p>
+          <p>①　朝、<span class="blank"></span>い犬と公園を歩く。（あか）</p>
+          <p>②　<span class="blank"></span>の上に雲がうかぶ。（やま）</p>
+          <p>③　川で魚を<span class="blank"></span>る。（つ）</p>
+          <p>二　線の漢字の読みを書きましょう。</p>
+          <p>①　図書館で本を<u>借</u>りる。</p>
+          <p>②　<u>春風</u>がふく野原。</p>
+          <p>③　<u>駅</u>の近くに新しい店ができた。</p>
+          <p>④　雪が深く<u>積</u>もった朝。</p>
+        </div>
+        <div class="memo">
+          おうちの人から：よくできました。とめ・はね・はらいに気をつけましょう。
+        </div>
+      </div>
+      <div class="noise"></div>
+    </section>
+  </body>
+</html>

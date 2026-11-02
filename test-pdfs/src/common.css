@@ -1,0 +1,49 @@
+/* Shared styles for the generated test PDFs (scripts/make-test-pdfs.mjs).
+   "TP Serif" / "TP Sans" are injected by the script as @font-face rules that point to
+   Noto Serif JP / Noto Sans JP (SIL OFL 1.1). Each .page is one A4 page. */
+@page {
+  size: A4;
+  margin: 0;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+}
+body {
+  font-family: 'TP Serif', serif;
+  font-weight: 400;
+  color: #1a1a1a;
+  font-kerning: none;
+}
+.page {
+  width: 210mm;
+  height: 297mm;
+  overflow: hidden;
+  position: relative;
+  break-after: page;
+  background: #fff;
+}
+.sans {
+  font-family: 'TP Sans', sans-serif;
+}
+.v {
+  writing-mode: vertical-rl;
+}
+.tcy {
+  text-combine-upright: all;
+}
+.sideways {
+  writing-mode: vertical-rl;
+  text-orientation: sideways;
+}
+p {
+  margin: 0;
+}
+rt {
+  font-size: 50%;
+}

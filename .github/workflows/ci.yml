@@ -52,6 +52,8 @@ jobs:
         run: npm run test:coverage
       - name: ビルド
         run: npm run build
+      - name: テスト用 PDF の確かめ（リポジトリに入れた PDF を読むだけ）
+        run: npm run test-pdfs:check
       - name: 依存のライセンスの確認（拡張に入る部品）
         run: npm run licenses:check
       - name: 依存の脆弱性の確認（拡張に入る部品、high 以上で失敗）
