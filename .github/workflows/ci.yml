@@ -68,4 +68,6 @@ jobs:
           name: yomigana-pdf-${{ github.sha }}
           path: .output/*.zip
           if-no-files-found: error
+          # WXT の出力先 .output は「.」で始まるので、これがないと中の zip が見つからない
+          include-hidden-files: true
           retention-days: 30
