@@ -117,6 +117,17 @@ export async function extractJoyo(file: string): Promise<JoyoTable> {
   return { kanji: entries.map((e) => toKanji(e, warnings)), fuhyo, warnings };
 }
 
+/**
+ * 本表の文字のかたまりを1つ読み、どの欄のものかを x の位置で見分けて、字の記録に足す。
+ *
+ * 見出しの漢字（大きい字）が来たら新しい字を始め、それより後のかたまりは、その字の旧字体・音訓・例に振り分ける。
+ * かたまりは上の行から、同じ行の中は左から順に渡す。
+ *
+ * @param item 文字のかたまり
+ * @param page ページの番号（最初のページの見出しを飛ばすのに使う）
+ * @param entries これまでに読んだ字。新しい字を足し、最後の字に読みを足していく
+ * @param warnings 置き場所が決まらなかったかたまりの知らせを足す
+ */
 function readMainItem(
   item: PdfTextItem,
   page: number,
@@ -165,6 +176,15 @@ function readMainItem(
   }
 }
 
+/**
+ * 読み取ったままの1字の記録を、音と訓に分けた形にする。
+ *
+ * 片仮名の読みは音、平仮名の読みは訓とし、訓には例の語から送り仮名の区切りを入れる。
+ *
+ * @param entry 本表から読み取ったままの1字
+ * @param warnings 音とも訓とも決められない読みの知らせを足す
+ * @returns 字・旧字体・音・訓
+ */
 function toKanji(entry: RawEntry, warnings: string[]): JoyoKanji {
   const on: string[] = [];
   const kun: string[] = [];
@@ -213,6 +233,16 @@ function splitOkurigana(char: string, kun: string, examples: string[]): string {
   return best === 0 ? kun : `${kun.slice(0, kun.length - best)}.${kun.slice(kun.length - best)}`;
 }
 
+/**
+ * 付表の左右どちらかの段を読み、読みごとに語をまとめる。
+ *
+ * 段の左端の平仮名を読みの行とし、その右の漢字を含むかたまりを、y がいちばん近い行の語にする
+ * （1つの読みに「海女・海士」のように語が複数あることがある）。
+ *
+ * @param items 1つの段の文字のかたまり
+ * @param warnings どの行の語か決められなかったかたまりの知らせを足す
+ * @returns 上の行から順に、読みと語の一覧
+ */
 function readFuhyoHalf(items: PdfTextItem[], warnings: string[]): JoyoFuhyoRow[] {
   const left = Math.min(...items.map((it) => it.x));
   const rows = items

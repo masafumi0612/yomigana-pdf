@@ -50,6 +50,11 @@ interface KanjiEntry {
   kun: string[];
 }
 
+/**
+ * データが決まりどおりか確かめ、違えばそこで止める（ファイルを書く前に止めるため）。
+ * @param isOk 決まりどおりなら true
+ * @param message 違ったときに出す説明
+ */
 function check(isOk: boolean, message: string): void {
   if (!isOk) throw new Error(`データが決まりと合わない：${message}`);
 }
@@ -79,6 +84,11 @@ function rankByCount(chars: string[], countOf: (char: string) => number): Map<st
   return new Map(sorted.map((char, i) => [char, i + 1]));
 }
 
+/**
+ * データを src/text/data/ に JSON で書く。Prettier と同じ形に整えるので、npm run format:check でも差が出ない。
+ * @param name ファイル名（例：kanji.json）
+ * @param value 書くデータ
+ */
 async function writeJson(name: string, value: unknown): Promise<void> {
   const path = join(outDir, name);
   const options = await resolveConfig(path);
@@ -110,13 +120,16 @@ GRADE_COUNTS.forEach((expected, i) => {
   check(actual === expected, `${String(i + 1)}年の字が ${String(actual)} 字`);
 });
 
+/** 正字体と、あればその許容字体（例：𠮟 → [𠮟, 叱]） */
 const formsOf = (char: string): string[] => [
   char,
   ...ALLOWED_FORMS.filter(([standard]) => standard === char).map(([, allowed]) => allowed),
 ];
 const aozora = readCounts(join(dataDir, 'scriptin', 'aozora_characters.csv'));
 const wikipedia = readCounts(join(dataDir, 'scriptin', 'wikipedia_characters.csv'));
-// 許容字体で書かれた数も同じ字の数に足す（実際の文章はほとんど許容字体で書かれている）
+/**
+ * 字の数を、許容字体で書かれた数も足して数える関数を作る（実際の文章はほとんど許容字体で書かれている）
+ */
 const sumForms =
   (counts: Map<string, number>) =>
   (char: string): number =>
@@ -131,6 +144,7 @@ const missing = upperChars.filter(
 check(missing.length === 0, `頻度のデータにない字 ${missing.join('')}`);
 const aozoraRank = rankByCount(upperChars, sumForms(aozora));
 const wikipediaRank = rankByCount(upperChars, sumForms(wikipedia));
+/** 青空文庫と Wikipedia の順位の平均（小さいほどよく使われる） */
 const meanRank = (char: string): number =>
   ((aozoraRank.get(char) ?? 0) + (wikipediaRank.get(char) ?? 0)) / 2;
 const byFrequency = [...upperChars].sort((a, b) => meanRank(a) - meanRank(b) || byCodePoint(a, b));
@@ -144,6 +158,7 @@ for (const { tier, size } of UPPER_TIERS) {
 }
 
 const kanji: Record<string, KanjiEntry> = {};
+/** 常用漢字表の1字を、kanji.json の1字の形にする */
 const entryOf = (k: JoyoKanji): KanjiEntry => ({
   tier: tiers.get(k.char) ?? '',
   on: k.on,
@@ -169,6 +184,7 @@ const tierNames = [
   ...GRADE_COUNTS.map((_, i) => `g${String(i + 1)}`),
   ...UPPER_TIERS.map((t) => t.tier),
 ];
+/** その段階に入った字の数（終わりに結果を見せるため） */
 const countOfTier = (tier: string): number => [...tiers.values()].filter((t) => t === tier).length;
 console.log(
   `常用漢字 ${String(joyoChars.length)} 字（許容字体を足して ${String(Object.keys(kanji).length)} 字）`,
