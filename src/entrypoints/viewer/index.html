@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>よみがなPDF</title>
+  </head>
+  <body>
+    <header class="bar">
+      <h1 id="file-name" class="bar-name"></h1>
+      <div id="page-group" class="bar-group" hidden>
+        <input
+          id="page-input"
+          class="bar-field"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+        />
+        <span id="page-total" class="bar-sub"></span>
+      </div>
+      <div id="zoom-group" class="bar-group" hidden>
+        <button id="zoom-out" class="bar-button bar-icon" type="button">−</button>
+        <output id="zoom-level" class="bar-zoom"></output>
+        <button id="zoom-in" class="bar-button bar-icon" type="button">+</button>
+      </div>
+      <div class="bar-group">
+        <button id="open-file" class="bar-button" type="button" hidden></button>
+        <button id="open-native" class="bar-button" type="button" hidden></button>
+      </div>
+      <input id="file-input" type="file" accept="application/pdf,.pdf" hidden />
+    </header>
+    <main>
+      <p id="status" class="status" role="status" hidden></p>
+      <div id="viewer-container" class="viewer-container" tabindex="0">
+        <div id="viewer" class="pdfViewer"></div>
+      </div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

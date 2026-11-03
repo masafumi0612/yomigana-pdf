@@ -40,7 +40,8 @@
   },
   "dependencies": {
     "@patdx/kuromoji": "1.0.4",
-    "kuromoji": "0.1.2"
+    "kuromoji": "0.1.2",
+    "pdfjs-dist": "6.4.299"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.4",
@@ -59,7 +60,6 @@
     "fontkit": "2.0.4",
     "globals": "17.14.0",
     "lint-staged": "17.6.0",
-    "pdfjs-dist": "6.4.299",
     "playwright": "1.64.1",
     "prettier": "3.9.10",
     "simple-git-hooks": "2.14.0",
