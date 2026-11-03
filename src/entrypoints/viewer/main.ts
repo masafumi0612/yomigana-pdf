@@ -6,6 +6,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { browser } from 'wxt/browser';
 
+import { createLogger } from '@/log';
 import { formatZoom, MAX_ZOOM, MIN_ZOOM, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
 import { fileNameFromUrl, isPdfFile, readViewerParams } from '@/viewer/source';
 
@@ -20,6 +21,8 @@ const EXTERNAL_LINK_REL = 'noopener noreferrer nofollow';
 
 /** pdf.js が読む同梱のデータの置き場所（ビルドで node_modules から写す） */
 const ASSET_BASE = location.origin;
+
+const log = createLogger('viewer');
 
 function requireElement<T extends HTMLElement>(id: string, type: new () => T): T {
   const element = document.getElementById(id);
@@ -168,8 +171,10 @@ function openFiles(files: FileList | undefined): void {
     showStatus('viewer_main_notPdf');
     return;
   }
-  // 失敗は画面に出すので、openSource は reject しない
-  void openSource({ kind: 'file', file });
+  // 画面のイベントからは待てない。開けなかったことは openSource が画面に出すので、ここでは予想外の失敗だけを残す
+  openSource({ kind: 'file', file }).catch((error: unknown) => {
+    log.error('PDF を開く途中で予想外の失敗がありました', error);
+  });
 }
 
 function updateZoom(scale: number): void {

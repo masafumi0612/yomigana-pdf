@@ -114,3 +114,22 @@ writing, such person, organization or entity, will also be exempted
 from and not be held liable to the user for any such damages as noted
 above as far as the program is concerned.
 ```
+
+## PDF.js（pdfjs-dist）
+
+- 使っている版：`pdfjs-dist` 6.4.299
+- 入手先：https://github.com/mozilla/pdf.js
+- ライセンス：Apache License, Version 2.0（全文は拡張機能の中の `licenses/Apache-2.0.txt`、または http://www.apache.org/licenses/LICENSE-2.0 ）
+
+```text
+Copyright 2024 Mozilla Foundation
+```
+
+拡張機能は、PDF.js が PDF を読むのに使う次のデータも同梱しています。それぞれのライセンスの文は、同じフォルダに入っています。
+
+| フォルダ          | 中身                                                            | ライセンスの文                                                      |
+| ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `cmaps/`          | Adobe の CMap（Copyright 1990-2009 Adobe Systems Incorporated） | `cmaps/LICENSE`                                                     |
+| `standard_fonts/` | Foxit のフォント（PDFium）、Liberation フォント                 | `standard_fonts/LICENSE_FOXIT`・`standard_fonts/LICENSE_LIBERATION` |
+| `iccs/`           | 色の変換に使う ICC プロファイル（CC0 1.0）                      | `iccs/LICENSE`                                                      |
+| `wasm/`           | JBIG2（PDFium）・OpenJPEG・qcms の画像・色の処理                | `wasm/LICENSE_*`                                                    |
