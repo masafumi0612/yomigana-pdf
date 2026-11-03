@@ -1,5 +1,6 @@
 // 1語の読み（平仮名）を、字ごとの読みに分ける（図鑑/ずかん → 図:ず＋鑑:かん）。
-// 漢字ごとの音訓に、音の変化（連濁・半濁音化・促音化・連声）と送り仮名を加えて、語の読みと左から合わせる。習ったかどうか（段階）は見ない
+// 漢字ごとの音訓に、音の変化（連濁・半濁音化・促音化・連声）と送り仮名を加えて、語の読みと左から合わせる。習ったかどうか（段階）は見ない。
+// 算用数字（11月 の 11）は、漢字に読みを当てた残りを読みとする（ルビは付けない）
 import { FUHYO_WORDS, type FuhyoWord, getKanjiInfo, isJoyo } from './kanji-data';
 import type { Seg, SplitResult, Word } from './types';
 
@@ -50,6 +51,8 @@ const COST_EPSILON = 1e-9;
 const KANJI = /^[㐀-鿿豈-﫿\u{20000}-\u{2FFFF}]$/u;
 /** 仮名1字（長音の記号を含む） */
 const KANA = /^[ぁ-ゖァ-ヺー]$/u;
+/** 算用数字1字（半角・全角） */
+const DIGIT = /^[0-9０-９]$/u;
 /** 前の字の読みを繰り返す記号（人々 ひとびと） */
 const REPEAT_MARK = /^[々ゝ]$/u;
 /** が・こ とも読む「ヶ」 */
@@ -146,8 +149,8 @@ interface Piece {
   readonly readingStart: number;
   readonly readingEnd: number;
   /**
-   * kanji：常用漢字1字、kana：仮名、fuhyo：付表の語、hyogai：表外字の続き、
-   * undecided：表外字の切れ目が決まらない部分（結果を作るときだけ使う）
+   * kanji：常用漢字1字、kana：仮名と算用数字の続き、fuhyo：付表の語、hyogai：表外字の続き、
+   * undecided：表外字・算用数字の切れ目が決まらない部分（結果を作るときだけ使う）
    */
   readonly type: 'kanji' | 'kana' | 'fuhyo' | 'hyogai' | 'undecided';
   readonly cost: number;
@@ -345,7 +348,7 @@ function solve(search: Search, i: number, j: number): readonly Solution[] {
 
 /**
  * 字の位置 i・読みの位置 j から始まる、ありうる1つ分の対応をすべて挙げる。
- * 数字・英字・記号は読みと照らせないので何も返さない（語全体が当て字の扱いになる）。
+ * 英字・記号は読みと照らせないので何も返さない（語全体が当て字の扱いになる）。
  * @param search 探す語
  * @param char i 番目の字
  * @param i 書き方の字の位置
@@ -356,6 +359,8 @@ function piecesAt(search: Search, char: string, i: number, j: number): Piece[] {
   const pieces = fuhyoPieces(search, i, j);
   if (KANA.test(char)) {
     pieces.push(...kanaPieces(search, char, i, j));
+  } else if (DIGIT.test(char)) {
+    pieces.push(...digitPieces(search, i, j));
   } else if (REPEAT_MARK.test(char)) {
     // 々 は前の字の読みを繰り返す。前が表外字なら、表外字と同じくどの読みでもよい
     const previous = candidatesOf(search.chars[i - 1] ?? '');
@@ -459,6 +464,25 @@ function hyogaiPieces(search: Search, i: number, j: number, length: number): Pie
 }
 
 /**
+ * 算用数字の続きに、どの読みでも当てる（1字以上の仮名）。数の読み方は数と後ろの字で変わる
+ * （20日 はつか、24日 にじゅうよっか）ので、後ろの漢字に読みを当てた残りを数字の読みにする。
+ * 前の対応はどれも数字の続きの途中では終わらないので、ここに来るのは続きの頭だけ。
+ * @param search 探す語
+ * @param i 書き方の字の位置
+ * @param j 読みの位置
+ * @returns ありうる対応
+ */
+function digitPieces(search: Search, i: number, j: number): Piece[] {
+  const length = search.chars.slice(i).findIndex((c) => !DIGIT.test(c));
+  const end = length < 0 ? search.chars.length : i + length;
+  const pieces: Piece[] = [];
+  for (let kanaLength = 1; j + kanaLength <= search.reading.length; kanaLength++) {
+    pieces.push(piece(i, end, j, kanaLength, 'kana', 0));
+  }
+  return pieces;
+}
+
+/**
  * 1つ分の対応を作る。
  * @param start 書き方の字の位置（はじめ）
  * @param end 書き方の字の位置（終わりの次）
@@ -530,7 +554,7 @@ function soundVariants(
 /**
  * いちばん点の低い分け方から、字ごとの結果を作る。
  *
- * 同じ点の分け方がほかにもあり、表外字を含む部分の切れ目が分け方によって違うときは、
+ * 同じ点の分け方がほかにもあり、表外字か算用数字を含む部分の切れ目が分け方によって違うときは、
  * その部分を1つの固まりにする（常用の読みどうしの同点は、最初の分け方のままにする）。
  *
  * @param chars 書き方の字
@@ -562,7 +586,8 @@ function toSegs(
 }
 
 /**
- * 同じ点の分け方どうしで切れ目が違い、表外字を含む部分の字の位置を挙げる。
+ * 同じ点の分け方どうしで切れ目が違い、表外字か算用数字を含む部分の字の位置を挙げる。
+ * どちらもどんな読みでも取れるので、切れ目が決まらないときは読みを割り当てない。
  * @param chars 書き方の字
  * @param best いちばん点の低い分け方
  * @param ties best と同じ点の分け方（best を含む）
@@ -582,7 +607,7 @@ function undecidedChars(
   for (let start = 0; start < chars.length;) {
     let end = start;
     while (undecided.has(end)) end++;
-    if (!chars.slice(start, end).some(isHyogaiKanji)) {
+    if (!chars.slice(start, end).some((c) => isHyogaiKanji(c) || DIGIT.test(c))) {
       for (let k = start; k < end; k++) undecided.delete(k);
     }
     start = end + 1;
