@@ -133,6 +133,11 @@ export default defineConfig(
     rules: { 'no-console': 'off' },
   },
   {
+    // ログはこのファイルを通すので、ここだけは console を使う
+    files: ['src/log.ts'],
+    rules: { 'no-console': 'off' },
+  },
+  {
     // WXT の入口は default export が決まり
     files: ['src/entrypoints/**'],
     rules: { 'no-restricted-exports': 'off' },
