@@ -39,6 +39,7 @@
     "*.{json,md,css,yml,yaml}": "prettier --write"
   },
   "dependencies": {
+    "@patdx/kuromoji": "1.0.4",
     "kuromoji": "0.1.2"
   },
   "devDependencies": {
