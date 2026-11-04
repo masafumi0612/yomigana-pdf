@@ -13,10 +13,10 @@ import { fileURLToPath } from 'node:url';
 import type { IpadicFeatures, Tokenizer } from 'kuromoji';
 import { builder } from 'kuromoji';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { TestContext } from 'vitest';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { extractPageText } from '@/pdf/page-text';
 import { applyFixups } from '@/text/fixups';
 import { normalizeForAnalysis } from '@/text/normalize';
 import { splitReading } from '@/text/split';
@@ -24,7 +24,6 @@ import { toTokens } from '@/text/tokens';
 import type { SplitResult } from '@/text/types';
 
 import { EXPECTATIONS } from '../../../scripts/test-pdfs/expectations';
-import { layoutPage, paragraphs } from '../../../scripts/test-pdfs/text-layout';
 
 /**
  * リポジトリのテスト用 PDF での、字ごとに分けられた割合の下限。
@@ -50,10 +49,10 @@ const PERCENT = 100;
 const CMAP_DIR = `${join(dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json')), 'cmaps')}/`;
 const OUT_DIR = fileURLToPath(new URL('../../../test-pdfs/out/', import.meta.url));
 /**
- * 文として組み直せないので測らない PDF。Word の縦書きは字が1字ずつの横書きとして置かれ、
- * 読む順に並べ直せない（test-pdfs/README.md）
+ * 測らない PDF。Word の縦書きは、横書きの版（word/word-horizontal）と同じ文なので、同じ語を2度数えないようにする
+ * （縦書きとして読めることは tests/unit/pdf で確かめる）
  */
-const UNREADABLE = new Set(['word/word-vertical']);
+const SKIPPED = new Set(['word/word-vertical']);
 
 /** 1つの PDF の、漢字を含む語の数え方 */
 interface Tally {
@@ -93,22 +92,22 @@ function listPdfNames(dir: string): string[] {
 
 /**
  * テスト用 PDF のうち、文として測るものを挙げる。
- * 決めたこと（expectations.ts）のないもの・画像だけのもの・文として組み直せないものは除く。
+ * 決めたこと（expectations.ts）のないもの・画像だけのもの・同じ文の版は除く。
  * @returns test-pdfs/out からの名前（.pdf を除く）
  */
 function listRepoPdfNames(): string[] {
   return listPdfNames(OUT_DIR).filter((name) => {
     const expectation = EXPECTATIONS[name];
-    return expectation !== undefined && expectation.noText !== true && !UNREADABLE.has(name);
+    return expectation !== undefined && expectation.noText !== true && !SKIPPED.has(name);
   });
 }
 
 /**
- * PDF の文を pdf.js で取り出し、読む順の段落にする（もとからあるルビは除く）。
+ * PDF の文を pdf.js で取り出し、読む順のかたまりの文にする（もとからあるルビは除く）。
  * @param path PDF のパス
- * @returns 段落ごとの文
+ * @returns かたまりごとの文
  */
-async function readParagraphs(path: string): Promise<string[]> {
+async function readBlockTexts(path: string): Promise<string[]> {
   const data = new Uint8Array(readFileSync(path));
   // 日本語の PDF には、文字の番号の対応表（CMap）が要るものがある。pdfjs-dist に入っている表を使う
   const task = getDocument({ data, useSystemFonts: false, cMapUrl: CMAP_DIR, cMapPacked: true });
@@ -117,18 +116,7 @@ async function readParagraphs(path: string): Promise<string[]> {
   for (let n = 1; n <= doc.numPages; n++) {
     const page = await doc.getPage(n);
     const content = await page.getTextContent();
-    const items = content.items
-      .filter((item): item is TextItem => 'str' in item && item.str.trim() !== '')
-      .map((item) => ({
-        str: item.str,
-        dir: item.dir,
-        transform: item.transform as number[],
-        width: item.width,
-        height: item.height,
-      }));
-    for (const paragraph of paragraphs(layoutPage(items).lines)) {
-      texts.push(paragraph.glyphs.map((glyph) => glyph.ch).join(''));
-    }
+    for (const block of extractPageText(content).blocks) texts.push(block.text);
   }
   await task.destroy();
   return texts;
@@ -172,7 +160,7 @@ async function tallyPdfs(dir: string, names: readonly string[]): Promise<Tally[]
   const tokenizer = await loadTokenizer();
   return Promise.all(
     names.map(async (name) => {
-      const texts = await readParagraphs(join(dir, `${name}.pdf`));
+      const texts = await readBlockTexts(join(dir, `${name}.pdf`));
       const results = texts.flatMap((text) => analyze(tokenizer, text));
       // 漢字のない語は、仮名の1つ分だけになる
       const withKanji = results.filter((result) => result.segs.some((seg) => seg.kind !== 'kana'));
