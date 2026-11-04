@@ -6,5 +6,63 @@
   "manifest_ext_description": {
     "message": "ブラウザで開いた PDF の漢字に、よみがな（ルビ）を自動で付けます。",
     "description": "拡張機能の短い説明。Chrome の拡張機能の一覧に出る（132字まで）"
+  },
+  "viewer_page_title": {
+    "message": "よみがなPDF",
+    "description": "リーダーのタブの名前。PDF を開く前に出る"
+  },
+  "viewer_bar_openFile": {
+    "message": "ファイルを開く",
+    "description": "リーダーのバーのボタン。パソコンの PDF を選ぶ"
+  },
+  "viewer_bar_pageNumber": {
+    "message": "ページ番号",
+    "description": "リーダーのバーの、今のページの番号の欄の名前（読み上げ用）"
+  },
+  "viewer_bar_pageTotal": {
+    "message": "/ $COUNT$",
+    "description": "リーダーのバーで、今のページの番号の後ろに出す全ページ数",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "12"
+      }
+    }
+  },
+  "viewer_bar_zoomOut": {
+    "message": "縮小",
+    "description": "リーダーのバーの、紙面を小さくするボタンの名前（読み上げ用）"
+  },
+  "viewer_bar_zoomIn": {
+    "message": "拡大",
+    "description": "リーダーのバーの、紙面を大きくするボタンの名前（読み上げ用）"
+  },
+  "viewer_bar_zoomLevel": {
+    "message": "倍率",
+    "description": "リーダーのバーの、今の倍率の欄の名前（読み上げ用）"
+  },
+  "viewer_bar_openNative": {
+    "message": "Chrome の標準の表示で開く（ルビは付きません）",
+    "description": "リーダーのバーのボタン。同じ PDF を Chrome のもとからある表示で開き直す"
+  },
+  "viewer_main_document": {
+    "message": "PDF の紙面",
+    "description": "リーダーの紙面の場所の名前（読み上げ用）"
+  },
+  "viewer_main_empty": {
+    "message": "PDF を開いてください。「ファイルを開く」で選ぶか、この画面に PDF をドラッグします。",
+    "description": "リーダーで PDF をまだ開いていないときの案内"
+  },
+  "viewer_main_loading": {
+    "message": "PDF を読み込んでいます…",
+    "description": "リーダーで PDF を読み込んでいる間に出す"
+  },
+  "viewer_main_openFailed": {
+    "message": "この PDF を開けませんでした。「Chrome の標準の表示で開く」で開いてください。",
+    "description": "リーダーで PDF を開けなかったときに出す"
+  },
+  "viewer_main_notPdf": {
+    "message": "PDF のファイルを選んでください。",
+    "description": "リーダーに PDF ではないファイルを渡されたときに出す"
   }
 }
