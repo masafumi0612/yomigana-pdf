@@ -26,4 +26,4 @@
 
 [MIT License](LICENSE)
 
-使っているライブラリ・辞書・データの出典とライセンスは、開発が進んだら `THIRD_PARTY_NOTICES.md` にまとめます。
+使っているライブラリ・辞書の著作権表示とライセンスは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) にあります（拡張機能にも同梱しています）。

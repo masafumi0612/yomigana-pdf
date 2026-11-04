@@ -1,0 +1,160 @@
+/* 色は WCAG 2.2 AA を満たす組み合わせ（文字は 4.5:1 以上、枠は 3:1 以上） */
+:root {
+  --bar-height: 48px;
+  --bar-gap: 12px;
+  --bar-padding: 0 16px;
+  --bar-background: #323639;
+  --bar-text: #f1f3f4;
+  --bar-text-sub: #bdc1c6;
+  --bar-hover: #474b4f;
+  --field-background: #202124;
+  --field-width: 3em;
+  --button-height: 32px;
+  --button-padding: 0 12px;
+  --button-radius: 4px;
+  --focus-ring: #8ab4f8;
+  --focus-width: 2px;
+  --page-background: #525659;
+  --status-width: 40em;
+  --status-gap: 24px;
+  --status-padding: 8px 16px;
+  --font-size: 14px;
+  --font-family: system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--page-background);
+  font: var(--font-size) / 1.5 var(--font-family);
+}
+
+.bar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 1;
+  display: flex;
+  gap: var(--bar-gap);
+  align-items: center;
+  height: var(--bar-height);
+  padding: var(--bar-padding);
+  background: var(--bar-background);
+  color: var(--bar-text);
+}
+
+.bar-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size);
+  font-weight: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-group {
+  display: flex;
+  flex: none;
+  gap: var(--bar-gap);
+  align-items: center;
+}
+
+.bar-group[hidden],
+.bar-button[hidden] {
+  display: none;
+}
+
+.bar-sub {
+  color: var(--bar-text-sub);
+}
+
+.bar-field {
+  width: var(--field-width);
+  height: var(--button-height);
+  box-sizing: border-box;
+  border: 1px solid var(--bar-text-sub);
+  border-radius: var(--button-radius);
+  background: var(--field-background);
+  color: var(--bar-text);
+  font: inherit;
+  text-align: center;
+}
+
+.bar-button {
+  height: var(--button-height);
+  padding: var(--button-padding);
+  border: 1px solid transparent;
+  border-radius: var(--button-radius);
+  background: transparent;
+  color: var(--bar-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.bar-icon {
+  min-width: var(--button-height);
+  padding: 0;
+  font-size: 1.25em;
+}
+
+.bar-button:hover:not(:disabled) {
+  background: var(--bar-hover);
+}
+
+.bar-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.bar-zoom {
+  min-width: 3.5em;
+  text-align: center;
+}
+
+.bar-field:focus-visible,
+.bar-button:focus-visible,
+.viewer-container:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-width);
+}
+
+.viewer-container:focus-visible {
+  outline-offset: calc(var(--focus-width) * -1);
+}
+
+/* 紙面を出している間に知らせることもあるので、紙面の上に重ねる */
+.status {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: var(--status-width);
+  margin: calc(var(--bar-height) + var(--status-gap)) auto 0;
+  padding: var(--status-padding);
+  border-radius: var(--button-radius);
+  background: var(--bar-background);
+  color: var(--bar-text);
+  text-align: center;
+}
+
+/* pdf.js の決まりで、紙面の入れ物は absolute で置く */
+.viewer-container {
+  position: absolute;
+  inset: var(--bar-height) 0 0;
+  overflow: auto;
+}
+
+.viewer-container[hidden] {
+  display: none;
+}
+
+@media print {
+  .bar {
+    display: none;
+  }
+}

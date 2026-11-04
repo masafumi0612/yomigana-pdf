@@ -1,0 +1,75 @@
+/** リーダーの URL で、開く PDF の URL を渡す引数の名前（`viewer.html?file=<URL>`） */
+const FILE_PARAM = 'file';
+
+/** リーダーが読みに行ってよい URL の種類。ほかの種類（javascript: や data: など）は開かない */
+const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'file:']);
+
+/** URL の引数を読み取った結果 */
+export type ViewerParamsResult =
+  | { ok: true; value: { pdfUrl: string | undefined } }
+  | { ok: false; error: 'invalid-url' | 'unsupported-protocol' };
+
+/**
+ * リーダーの URL の引数から、開く PDF の URL を読み取る。
+ *
+ * @param search - リーダーの URL の `?` から後ろ（`location.search`）
+ * @param extensionOrigin - この拡張の起点（`chrome-extension://<ID>`）。拡張の中の PDF は開いてよい
+ * @returns 開く URL。引数がなければ `pdfUrl` は undefined。読めない・開いてはいけない URL は失敗
+ */
+export function readViewerParams(search: string, extensionOrigin: string): ViewerParamsResult {
+  const raw = new URLSearchParams(search).get(FILE_PARAM);
+  if (raw === null || raw === '') {
+    return { ok: true, value: { pdfUrl: undefined } };
+  }
+  if (!URL.canParse(raw)) {
+    return { ok: false, error: 'invalid-url' };
+  }
+  const url = new URL(raw);
+  // chrome-extension: は標準の種類でないので、環境によっては origin が "null" になる。自分で組み立てる
+  const isOwnExtension = `${url.protocol}//${url.host}` === extensionOrigin;
+  if (!ALLOWED_PROTOCOLS.has(url.protocol) && !isOwnExtension) {
+    return { ok: false, error: 'unsupported-protocol' };
+  }
+  return { ok: true, value: { pdfUrl: url.href } };
+}
+
+/**
+ * PDF の URL から、バーに出すファイル名を取り出す。
+ *
+ * @param url - PDF の URL
+ * @returns パスの最後の部分（`%` の符号は戻す）。取り出せなければ URL のホスト名か URL そのもの
+ */
+export function fileNameFromUrl(url: string): string {
+  if (!URL.canParse(url)) {
+    return url;
+  }
+  const { pathname, hostname } = new URL(url);
+  const last = pathname.slice(pathname.lastIndexOf('/') + 1);
+  if (last === '') {
+    return hostname === '' ? url : hostname;
+  }
+  try {
+    return decodeURIComponent(last);
+  } catch {
+    // 壊れた % の並びは、戻さずにそのまま見せる
+    return last;
+  }
+}
+
+/** PDF かどうかを見分けるのに使う、ファイルの情報 */
+export interface FileLike {
+  /** ファイル名 */
+  name: string;
+  /** MIME の種類。わからないときは空の文字列 */
+  type: string;
+}
+
+/**
+ * 選ばれた・ドラッグされたファイルが PDF かを調べる。
+ *
+ * @param file - ファイルの名前と種類
+ * @returns 種類が PDF か、名前が `.pdf` で終わるなら true（OS によっては種類が付かないため）
+ */
+export function isPdfFile(file: FileLike): boolean {
+  return file.type === 'application/pdf' || /\.pdf$/iu.test(file.name);
+}
