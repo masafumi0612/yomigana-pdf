@@ -7,6 +7,7 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { browser } from 'wxt/browser';
 
 import { createLogger } from '@/log';
+import { allowNativeView } from '@/redirect/skip';
 import { installDrawRecorder } from '@/viewer/draw-recorder';
 import { formatZoom, MAX_ZOOM, MIN_ZOOM, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
@@ -16,7 +17,8 @@ import { fileNameFromUrl, isPdfFile, readViewerParams } from '@/viewer/source';
 type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
 
 /** 開く PDF。URL から読むか、選ばれたファイルを読む */
-type PdfSource = { kind: 'url'; url: string } | { kind: 'file'; file: File };
+type PdfSource =
+  { kind: 'url'; url: string; hasCredentials: boolean } | { kind: 'file'; file: File };
 
 /** PDF の中のリンクに付ける rel。開いた先から、このリーダーを触れないようにする */
 const EXTERNAL_LINK_REL = 'noopener noreferrer nofollow';
@@ -131,7 +133,10 @@ async function openSource(source: PdfSource): Promise<void> {
   showStatus('viewer_main_loading');
 
   // URL は pdf.js が少しずつ読みに行く。ファイルは中身を渡す
-  const input = source.kind === 'url' ? { url: source.url } : await readFile(source.file);
+  const input =
+    source.kind === 'url'
+      ? { url: source.url, withCredentials: source.hasCredentials }
+      : await readFile(source.file);
   if (input === undefined) {
     showFailure();
     return;
@@ -246,9 +251,18 @@ fileInput.addEventListener('change', () => {
   fileInput.value = '';
 });
 openNative.addEventListener('click', () => {
-  if (nativeUrl !== undefined) {
-    location.assign(nativeUrl);
+  const url = nativeUrl;
+  if (url === undefined) {
+    return;
   }
+  // 自動で移す決まりに、標準の表示からまたリーダーへ戻されないよう、先にこのタブ・この URL を除く
+  allowNativeView(url)
+    .catch((error: unknown) => {
+      log.error('標準の表示のルールを入れるのに失敗しました', error);
+    })
+    .finally(() => {
+      location.assign(url);
+    });
 });
 document.addEventListener('dragover', (event) => {
   event.preventDefault();
@@ -264,7 +278,11 @@ document.addEventListener('drop', (event) => {
 setDocumentShown(false);
 const params = readViewerParams(location.search, location.origin);
 if (params.ok && params.value.pdfUrl !== undefined) {
-  await openSource({ kind: 'url', url: params.value.pdfUrl });
+  await openSource({
+    kind: 'url',
+    url: params.value.pdfUrl,
+    hasCredentials: params.value.hasCredentials,
+  });
 } else {
   // 開いてはいけない URL を渡されたときも、ファイルを選んで開けるようにしておく
   showStatus('viewer_main_empty');
