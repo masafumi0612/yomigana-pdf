@@ -158,3 +158,29 @@ body {
     display: none;
   }
 }
+
+/* ルビの層。紙面の上、文字の層の下に重ねる。選ぶ・押す対象にしない。
+   大きさ・向きは pdf.js の文字の層と同じ決まり（--total-scale-factor・data-main-rotation）で合わせる */
+.ruby-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  color: var(--ruby-color);
+  font-family: var(--font-family);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ruby-layer > span {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.ruby-layer > .ruby-vertical {
+  writing-mode: vertical-rl;
+}

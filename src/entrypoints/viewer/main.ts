@@ -7,7 +7,9 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { browser } from 'wxt/browser';
 
 import { createLogger } from '@/log';
+import { installDrawRecorder } from '@/viewer/draw-recorder';
 import { formatZoom, MAX_ZOOM, MIN_ZOOM, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
+import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
 import { fileNameFromUrl, isPdfFile, readViewerParams } from '@/viewer/source';
 
 /** 文言のキー */
@@ -50,6 +52,9 @@ const viewerElement = requireElement('viewer', HTMLDivElement);
 const message = (name: MessageName, substitutions?: string): string =>
   browser.i18n.getMessage(name, substitutions);
 
+// pdf.js が字を描くより前に、字を描いた位置を書き留める用意をする
+const drawRecorder = installDrawRecorder();
+
 // 部品の表示（pdf_viewer.mjs）は、読み込むときに pdf.js の本体を globalThis から引く
 Object.assign(globalThis, { pdfjsLib });
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -69,6 +74,12 @@ const viewer = new pdfjsViewer.PDFViewer({
   linkService,
 });
 linkService.setViewer(viewer);
+const rubyPages = createRubyPages({
+  // pdf.js の型ではページの表示が any なので、使うところだけの形として受け取る
+  getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
+  recorder: drawRecorder,
+  root: container,
+});
 
 // 押しても動かないボタンを見せないよう、表示の部品の読み込みが済んでから文言を入れる
 document.title = message('viewer_page_title');
@@ -142,6 +153,7 @@ async function openSource(source: PdfSource): Promise<void> {
     // 読み込みの間に別の PDF が開かれたら、こちらは出さない
     if (currentTask === task) {
       setDocumentShown(true);
+      rubyPages.reset();
       viewer.setDocument(pdfDocument);
       linkService.setDocument(pdfDocument);
       showStatus(undefined);
@@ -193,6 +205,16 @@ eventBus.on('pagechanging', ({ pageNumber }: { pageNumber: number }) => {
 });
 eventBus.on('scalechanging', ({ scale }: { scale: number }) => {
   updateZoom(scale);
+});
+eventBus.on('pagerender', (event: PageRenderEvent) => {
+  rubyPages.handlePageRender(event);
+});
+// 拡大・回転で描き直したときも来るので、そのたびにルビの層を合わせ直す
+eventBus.on('pagerendered', (event: PageRenderEvent) => {
+  // 読みを出せなかったときは中でログに残すので、ここでは予想外の失敗だけを残す
+  rubyPages.handlePageRendered(event).catch((error: unknown) => {
+    log.error('ルビの層を出す途中で予想外の失敗がありました', error);
+  });
 });
 
 pageInput.addEventListener('keydown', (event) => {
