@@ -52,6 +52,32 @@ jobs:
         run: npm run test:coverage
       - name: ビルド
         run: npm run build
+      - name: Playwright の版を調べる
+        id: playwright
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Playwright の Chromium のキャッシュ
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # 拡張はヘッドレス専用の版（headless shell）では動かないので、ふつうの Chromium だけを入れる
+      - name: Playwright の Chromium を入れる
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps --no-shell chromium
+      - name: Chromium が使う OS の部品を入れる（キャッシュがあるとき）
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: E2E（ビルドした拡張を Chromium で動かす）
+        run: npx playwright test
+      - name: E2E の結果を保存（失敗したとき）
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: テスト用 PDF の確かめ（リポジトリに入れた PDF を読むだけ）
         run: npm run test-pdfs:check
       - name: 依存のライセンスの確認（拡張に入る部品）
