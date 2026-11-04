@@ -42,8 +42,9 @@ export async function ensureOffscreenDocument(
         .finally(() => {
           creating = undefined;
         });
-      await creating;
     }
+    // ほかの呼び出しが作っている途中だと、もう見つかっても中の受け口がまだないので、作り終えるまで待つ
+    await creating;
     return { ok: true, value: undefined };
   } catch (error) {
     // ほかのタブが先に作ると「1つしか作れない」で失敗するので、できているかを確かめ直す

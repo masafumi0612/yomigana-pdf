@@ -80,6 +80,28 @@ describe('ensureOffscreenDocument', () => {
     expect(createDocument).toHaveBeenCalledTimes(1);
   });
 
+  it('ほかの呼び出しが作っている途中で見つかったとき、作り終えるまで待つ', async () => {
+    const { api, createDocument } = fakeApi(0, 1);
+    let finish: (() => void) | undefined;
+    createDocument.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const order: string[] = [];
+
+    const first = ensureOffscreenDocument(api).then(() => order.push('first'));
+    const second = ensureOffscreenDocument(api).then(() => order.push('second'));
+    await vi.waitFor(() => {
+      expect(createDocument).toHaveBeenCalled();
+    });
+    order.push('created');
+    finish?.();
+    await Promise.all([first, second]);
+
+    expect(order[0]).toBe('created');
+  });
+
   it('作るのに失敗しても、ほかが作っていたとき、用意できたことにする', async () => {
     const { api, createDocument } = fakeApi(0, 1);
     createDocument.mockRejectedValueOnce(new Error('Only a single offscreen document'));
