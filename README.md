@@ -22,6 +22,10 @@
 
 - Google Chrome 128 以降（のちに Microsoft Edge にも対応予定）
 
+## 開発
+
+コードを書くときの決まりは [CONTRIBUTING.md](CONTRIBUTING.md) にあります。
+
 ## ライセンス
 
 [MIT License](LICENSE)
