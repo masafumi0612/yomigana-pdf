@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { type BrowserContext, test as base } from '@playwright/test';
+import { type BrowserContext, type Page, test as base } from '@playwright/test';
 
 /** ビルドした拡張の置き場所 */
 const EXTENSION_DIR = resolve(import.meta.dirname, '../../.output/chrome-mv3');
@@ -37,5 +37,18 @@ export const test = base.extend<ExtensionFixtures>({
     await use(new URL(worker.url()).host);
   },
 });
+
+/**
+ * リーダーを開き、テスト用 PDF をファイルとして選ぶ。
+ * @param page 画面
+ * @param extensionId 入れた拡張の ID
+ * @param file test-pdfs/out からの PDF の名前
+ */
+export async function openFromFile(page: Page, extensionId: string, file: string): Promise<void> {
+  await page.goto(`chrome-extension://${extensionId}/viewer.html`);
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'ファイルを開く' }).click();
+  await (await chooser).setFiles(join(TEST_PDF_DIR, file));
+}
 
 export { expect } from '@playwright/test';

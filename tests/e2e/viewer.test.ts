@@ -3,9 +3,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { basename, join } from 'node:path';
 
-import type { Page } from '@playwright/test';
-
-import { expect, test, TEST_PDF_DIR } from './fixtures';
+import { expect, openFromFile, test, TEST_PDF_DIR } from './fixtures';
 
 /** 縦書きの物語（2ページ）。文字の層に出るはずの言葉 */
 const VERTICAL_STORY = { file: 'vertical-story.pdf', pageCount: 2, word: '檸檬' };
@@ -42,13 +40,6 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await new Promise((resolve) => server.close(resolve));
 });
-
-async function openFromFile(page: Page, extensionId: string, file: string): Promise<void> {
-  await page.goto(`chrome-extension://${extensionId}/viewer.html`);
-  const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'ファイルを開く' }).click();
-  await (await chooser).setFiles(join(TEST_PDF_DIR, file));
-}
 
 test('ファイルを選んだとき、ファイル名と全ページ数が出る', async ({ page, extensionId }) => {
   await openFromFile(page, extensionId, VERTICAL_STORY.file);
