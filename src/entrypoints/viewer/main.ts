@@ -12,6 +12,7 @@ import { installDrawRecorder } from '@/viewer/draw-recorder';
 import { formatZoom, MAX_ZOOM, MIN_ZOOM, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
 import { fileNameFromUrl, isPdfFile, readViewerParams } from '@/viewer/source';
+import { isImageOnlyDocument } from '@/viewer/special-cases';
 
 /** 文言のキー */
 type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
@@ -48,6 +49,20 @@ const openFile = requireElement('open-file', HTMLButtonElement);
 const openNative = requireElement('open-native', HTMLButtonElement);
 const fileInput = requireElement('file-input', HTMLInputElement);
 const status = requireElement('status', HTMLParagraphElement);
+const failureActions = requireElement('failure-actions', HTMLDivElement);
+const failureChoose = requireElement('failure-choose', HTMLButtonElement);
+const failureNative = requireElement('failure-native', HTMLButtonElement);
+const rubyFailed = requireElement('ruby-failed', HTMLDivElement);
+const rubyFailedText = requireElement('ruby-failed-text', HTMLSpanElement);
+const rubyRetry = requireElement('ruby-retry', HTMLButtonElement);
+const passwordForm = requireElement('password-form', HTMLFormElement);
+const passwordLabel = requireElement('password-label', HTMLLabelElement);
+const passwordInput = requireElement('password-input', HTMLInputElement);
+const passwordSubmit = requireElement('password-submit', HTMLButtonElement);
+const passwordError = requireElement('password-error', HTMLParagraphElement);
+const noTextNotice = requireElement('no-text-notice', HTMLDivElement);
+const noTextText = requireElement('no-text-text', HTMLParagraphElement);
+const noTextClose = requireElement('no-text-close', HTMLButtonElement);
 const container = requireElement('viewer-container', HTMLDivElement);
 const viewerElement = requireElement('viewer', HTMLDivElement);
 
@@ -76,11 +91,27 @@ const viewer = new pdfjsViewer.PDFViewer({
   linkService,
 });
 linkService.setViewer(viewer);
+// 描いたページごとの、文があるか。文字が画像になっている PDF の案内に使う
+const hasTextByPage = new Map<number, boolean>();
+// 案内を閉じたら、同じ PDF では出し直さない
+let isNoTextDismissed = false;
+
+function updateNoTextNotice(): void {
+  noTextNotice.hidden = isNoTextDismissed || !isImageOnlyDocument(hasTextByPage);
+}
+
 const rubyPages = createRubyPages({
   // pdf.js の型ではページの表示が any なので、使うところだけの形として受け取る
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
   recorder: drawRecorder,
   root: container,
+  onPageText: (pageNumber, hasText) => {
+    hasTextByPage.set(pageNumber, hasText);
+    updateNoTextNotice();
+  },
+  onReadingFailureChange: (hasFailed) => {
+    rubyFailed.hidden = !hasFailed;
+  },
 });
 
 // 押しても動かないボタンを見せないよう、表示の部品の読み込みが済んでから文言を入れる
@@ -93,13 +124,39 @@ openFile.textContent = message('viewer_bar_openFile');
 openFile.hidden = false;
 openNative.textContent = message('viewer_bar_openNative');
 container.setAttribute('aria-label', message('viewer_main_document'));
+failureChoose.textContent = message('viewer_main_chooseFile');
+failureNative.textContent = message('viewer_main_openNative');
+rubyFailedText.textContent = message('viewer_bar_rubyFailed');
+rubyRetry.textContent = message('viewer_bar_rubyRetry');
+passwordLabel.textContent = message('viewer_password_label');
+passwordSubmit.textContent = message('viewer_password_open');
+passwordError.textContent = message('viewer_password_incorrect');
+noTextText.textContent = message('viewer_notice_noText');
+noTextClose.textContent = message('viewer_notice_close');
 
 let currentTask: PDFDocumentLoadingTask | undefined;
 let nativeUrl: string | undefined;
+/** パスワードの入力を待っている間の、pdf.js へ渡す関数 */
+let pendingPassword: ((password: string) => void) | undefined;
 
 function showStatus(name: MessageName | undefined): void {
   status.textContent = name === undefined ? '' : message(name);
   status.hidden = name === undefined;
+  failureActions.hidden = name !== 'viewer_main_openFailed';
+}
+
+function hidePasswordForm(): void {
+  passwordForm.hidden = true;
+  passwordError.hidden = true;
+  passwordInput.value = '';
+}
+
+/** 別の PDF を開くときに、前の PDF の案内を片づける */
+function resetNotices(): void {
+  hidePasswordForm();
+  hasTextByPage.clear();
+  isNoTextDismissed = false;
+  updateNoTextNotice();
 }
 
 function setDocumentShown(isShown: boolean): void {
@@ -130,6 +187,7 @@ async function openSource(source: PdfSource): Promise<void> {
   fileName.textContent = name;
   document.title = name;
   setNativeUrl(source);
+  resetNotices();
   showStatus('viewer_main_loading');
 
   // URL は pdf.js が少しずつ読みに行く。ファイルは中身を渡す
@@ -153,6 +211,18 @@ async function openSource(source: PdfSource): Promise<void> {
     useSystemFonts: false,
   });
   currentTask = task;
+  // パスワードは入力欄から pdf.js へ渡すだけで、変数・ログ・保存先には残さない
+  task.onPassword = (updatePassword: (password: string) => void, reason: number) => {
+    if (currentTask !== task) {
+      return;
+    }
+    showStatus(undefined);
+    passwordError.hidden = reason !== pdfjsLib.PasswordResponses.INCORRECT_PASSWORD;
+    passwordForm.hidden = false;
+    pendingPassword = updatePassword;
+    passwordInput.value = '';
+    passwordInput.focus();
+  };
   try {
     const pdfDocument = await task.promise;
     // 読み込みの間に別の PDF が開かれたら、こちらは出さない
@@ -169,6 +239,10 @@ async function openSource(source: PdfSource): Promise<void> {
       showFailure();
     }
   } finally {
+    if (currentTask === task) {
+      pendingPassword = undefined;
+      hidePasswordForm();
+    }
     await previous?.destroy();
   }
 }
@@ -176,7 +250,22 @@ async function openSource(source: PdfSource): Promise<void> {
 function showFailure(): void {
   setDocumentShown(false);
   showStatus('viewer_main_openFailed');
-  openNative.focus();
+  failureNative.focus();
+}
+
+function goNative(): void {
+  const url = nativeUrl;
+  if (url === undefined) {
+    return;
+  }
+  // 自動で移す決まりに、標準の表示からまたリーダーへ戻されないよう、先にこのタブ・この URL を除く
+  allowNativeView(url)
+    .catch((error: unknown) => {
+      log.error('標準の表示のルールを入れるのに失敗しました', error);
+    })
+    .finally(() => {
+      location.assign(url);
+    });
 }
 
 function openFiles(files: FileList | undefined): void {
@@ -250,19 +339,39 @@ fileInput.addEventListener('change', () => {
   // 同じファイルを選び直しても change が来るようにする
   fileInput.value = '';
 });
-openNative.addEventListener('click', () => {
-  const url = nativeUrl;
-  if (url === undefined) {
-    return;
-  }
-  // 自動で移す決まりに、標準の表示からまたリーダーへ戻されないよう、先にこのタブ・この URL を除く
-  allowNativeView(url)
+openNative.addEventListener('click', goNative);
+failureNative.addEventListener('click', goNative);
+failureChoose.addEventListener('click', () => {
+  fileInput.click();
+});
+rubyRetry.addEventListener('click', () => {
+  rubyRetry.disabled = true;
+  rubyPages
+    .retryFailed()
     .catch((error: unknown) => {
-      log.error('標準の表示のルールを入れるのに失敗しました', error);
+      log.error('ルビの付け直しの途中で予想外の失敗がありました', error);
     })
     .finally(() => {
-      location.assign(url);
+      rubyRetry.disabled = false;
     });
+});
+noTextClose.addEventListener('click', () => {
+  isNoTextDismissed = true;
+  updateNoTextNotice();
+  container.focus();
+});
+passwordForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const update = pendingPassword;
+  if (update === undefined || passwordInput.value === '') {
+    return;
+  }
+  pendingPassword = undefined;
+  passwordForm.hidden = true;
+  passwordError.hidden = true;
+  showStatus('viewer_main_loading');
+  update(passwordInput.value);
+  passwordInput.value = '';
 });
 document.addEventListener('dragover', (event) => {
   event.preventDefault();
