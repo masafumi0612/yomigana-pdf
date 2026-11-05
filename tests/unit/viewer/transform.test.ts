@@ -6,6 +6,7 @@ import {
   type Matrix,
   multiplyMatrix,
   toMatrix,
+  transformBox,
 } from '@/viewer/transform';
 
 /** pdf.js の 100% のときの viewport.transform（高さ 842 のページ。y を下向きにする） */
@@ -44,5 +45,28 @@ describe('invertMatrix', () => {
 describe('toMatrix', () => {
   it('数が足りないとき、足りないところは単位行列の値になる', () => {
     expect(toMatrix([2, 0])).toEqual([2, 0, 0, 1, 0, 0]);
+  });
+});
+
+describe('transformBox', () => {
+  it('ページの変換をかけたとき、上の端が画面の上になる箱になる', () => {
+    expect(transformBox(PAGE_TO_SCREEN, { x1: 10, y1: 700, x2: 50, y2: 800 })).toEqual({
+      left: 10,
+      top: 42,
+      width: 40,
+      height: 100,
+    });
+  });
+
+  it('90 度回した変換をかけたとき、幅と高さが入れかわった箱になる', () => {
+    // 右に 90 度回した、100% のときの viewport.transform（ページの箱が原点から始まるとき）
+    const rotated: Matrix = [0, 1, 1, 0, 0, 0];
+
+    expect(transformBox(rotated, { x1: 10, y1: 700, x2: 50, y2: 800 })).toEqual({
+      left: 700,
+      top: 10,
+      width: 100,
+      height: 40,
+    });
   });
 });
