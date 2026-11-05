@@ -221,6 +221,166 @@
     "message": "このサイトを読む許可がないため、開けませんでした。",
     "description": "サイトを読む許可をもらえなかったときに出す"
   },
+  "options_dict_title": {
+    "message": "直した読み",
+    "description": "直した読みの場所の見出し"
+  },
+  "options_dict_lead": {
+    "message": "PDF のルビを右クリック（長押し）して「読みを直す」を選ぶと、ここに入ります。ここで読みを変えたり、言葉を足したりもできます。直した読みは、ほかの PDF でも使われます。",
+    "description": "直した読みの場所の説明"
+  },
+  "options_dict_local": {
+    "message": "直した読みが多くなったため、このパソコンの Chrome だけに保存しています。ほかの Chrome には共有されません。",
+    "description": "直した読みを storage.sync に入れられず、storage.local に移したときに出す"
+  },
+  "options_dict_empty": {
+    "message": "まだありません",
+    "description": "直した読みが1つもないときに出す"
+  },
+  "options_dict_change": {
+    "message": "読みを変える",
+    "description": "直した読みの読みを変えるボタン"
+  },
+  "options_dict_changeLabel": {
+    "message": "「$WORD$」の読みを変える",
+    "description": "読みを変えるボタンの、読み上げ用の名前",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "林"
+      }
+    }
+  },
+  "options_dict_remove": {
+    "message": "元に戻す",
+    "description": "直した読みを消すボタン"
+  },
+  "options_dict_removeLabel": {
+    "message": "「$WORD$」の読みを元に戻す",
+    "description": "元に戻すボタンの、読み上げ用の名前",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "林"
+      }
+    }
+  },
+  "options_dict_editLabel": {
+    "message": "「$WORD$」の読み",
+    "description": "読みを変える欄の、読み上げ用の名前",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "林"
+      }
+    }
+  },
+  "options_dict_save": {
+    "message": "決める",
+    "description": "変えた読みを保存するボタン"
+  },
+  "options_dict_cancel": {
+    "message": "やめる",
+    "description": "読みを変えるのをやめるボタン"
+  },
+  "options_dict_addTitle": {
+    "message": "言葉と読みを足す",
+    "description": "言葉と読みを足す欄の見出し"
+  },
+  "options_dict_surfaceLabel": {
+    "message": "言葉",
+    "description": "足す言葉の欄の名前"
+  },
+  "options_dict_surfacePlaceholder": {
+    "message": "例：小鳥遊",
+    "description": "足す言葉の欄の例"
+  },
+  "options_dict_readingLabel": {
+    "message": "読み",
+    "description": "足す読みの欄の名前"
+  },
+  "options_dict_readingPlaceholder": {
+    "message": "例：たかなし",
+    "description": "足す読みの欄の例"
+  },
+  "options_dict_add": {
+    "message": "足す",
+    "description": "言葉と読みを足すボタン"
+  },
+  "options_dict_addHint": {
+    "message": "クラスの友だちの名前など、PDF を開く前に足しておけます。",
+    "description": "言葉と読みを足す欄の下の説明"
+  },
+  "options_dict_surfaceEmpty": {
+    "message": "言葉を入れてください。",
+    "description": "言葉が空のときに出す"
+  },
+  "options_dict_surfaceTooLong": {
+    "message": "言葉は $COUNT$ 字までにしてください。",
+    "description": "言葉が長すぎるときに出す",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "20"
+      }
+    }
+  },
+  "options_dict_surfaceNoKanji": {
+    "message": "漢字を含む言葉を入れてください（ルビは漢字に付きます）。",
+    "description": "言葉に漢字がないときに出す"
+  },
+  "options_dict_readingEmpty": {
+    "message": "読みを入れてください。",
+    "description": "読みが空のときに出す"
+  },
+  "options_dict_readingNotHiragana": {
+    "message": "読みはひらがなで入れてください。",
+    "description": "読みにひらがな・長音でない字があるときに出す"
+  },
+  "options_dict_readingTooLong": {
+    "message": "読みは $COUNT$ 字までにしてください。",
+    "description": "読みが長すぎるときに出す",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "40"
+      }
+    }
+  },
+  "options_dict_added": {
+    "message": "「$WORD$」を足しました。",
+    "description": "言葉と読みを足したあとに出す",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "小鳥遊"
+      }
+    }
+  },
+  "options_dict_changed": {
+    "message": "「$WORD$」の読みを変えました。",
+    "description": "読みを変えたあとに出す",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "林"
+      }
+    }
+  },
+  "options_dict_removed": {
+    "message": "「$WORD$」の読みを元に戻しました。",
+    "description": "直した読みを消したあとに出す",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "林"
+      }
+    }
+  },
+  "options_dict_saveFailed": {
+    "message": "保存できませんでした。もう一度ためしてください。",
+    "description": "直した読みを保存できなかったときに出す"
+  },
   "options_reset_button": {
     "message": "設定を最初の状態にもどす（直した読みは残ります）",
     "description": "設定を既定に戻すボタン"

@@ -36,12 +36,16 @@
   --switch-height: 36px;
   --switch-knob: 30px;
   --font-family: 'BIZ UDPGothic', 'BIZ UDPゴシック', system-ui, sans-serif;
+  --font-family-serif: 'BIZ UDPMincho', 'BIZ UDP明朝', serif;
   --font-size: 14px;
   --font-size-small: 13px;
   --font-size-large: 15px;
   --title-size: 24px;
   --card-title-size: 19px;
   --card-title-main-size: 21px;
+  --dict-word-size: 20px;
+  --dict-word-width: 96px;
+  --dict-field-width: 180px;
 }
 
 body {
@@ -54,6 +58,7 @@ body {
 p,
 h1,
 h2,
+h3,
 ol,
 ul {
   margin: 0;
@@ -378,4 +383,99 @@ input {
 /* 理由がないときは場所を取らない */
 .error:empty {
   display: none;
+}
+
+/* 見た目には出さず、読み上げにだけ使う */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.button-quiet {
+  border: 1px solid var(--field-border);
+  background: var(--card-background);
+  color: var(--text);
+}
+
+.button-quiet:hover {
+  border-color: var(--text);
+}
+
+.dict-local {
+  border-radius: var(--radius);
+  padding: var(--gap-small) var(--gap);
+  background: var(--warn-background);
+  color: var(--warn-text);
+}
+
+.dict-list {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0;
+  list-style: none;
+}
+
+.dict-row,
+.dict-empty {
+  padding: var(--gap-small) var(--gap);
+}
+
+.dict-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.dict-row + .dict-row {
+  border-top: 1px solid var(--line);
+}
+
+.dict-word {
+  flex: 1 1 auto;
+  min-width: var(--dict-word-width);
+  font-family: var(--font-family-serif);
+  font-size: var(--dict-word-size);
+  line-height: 2.1;
+}
+
+.dict-empty {
+  color: var(--text-sub);
+  font-size: var(--font-size-small);
+}
+
+.dict-edit-field {
+  flex-basis: var(--dict-field-width);
+  min-height: var(--control-height);
+}
+
+.dict-form,
+.dict-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-small);
+}
+
+.dict-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--gap);
+}
+
+.dict-field {
+  flex: 1 1 var(--dict-field-width);
+}
+
+.dict-field .field {
+  flex: none;
+}
+
+/* 欄の名前の1行分だけ下げ、欄とそろえて置く */
+.dict-add {
+  margin-top: calc(var(--font-size) * 1.7 + var(--gap-small));
 }

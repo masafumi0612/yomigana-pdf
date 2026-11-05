@@ -6,6 +6,7 @@ import { useHostAccess, useSettings } from './hooks';
 import { message } from './message';
 import { OpenPdfSection } from './open-pdf-section';
 import { ResetSettings } from './reset-settings';
+import { UserDictionarySection } from './user-dictionary-section';
 
 /**
  * 設定の画面の全体。白い枠は設定、枠のない下の場所は拡張の情報。場所ごとに部品を分けて並べる。
@@ -46,7 +47,8 @@ export function App(): JSX.Element {
           <AutoRedirectSection isEnabled={settings.autoRedirect} hasHostAccess={hasHostAccess} />
         )}
         <OpenPdfSection />
-        {/* ルビの量・ルビの見た目・直した読みの一覧は、ここに場所ごとの部品として足す */}
+        {/* ルビの量・ルビの見た目は、ここに場所ごとの部品として足す */}
+        <UserDictionarySection />
         <ResetSettings />
       </main>
       <AboutSection />

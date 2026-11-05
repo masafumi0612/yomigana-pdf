@@ -6,6 +6,11 @@ import { browser } from 'wxt/browser';
 import { createLogger } from '@/log';
 import type { Settings } from '@/settings/model';
 import { getSettings, watchSettings } from '@/settings/storage';
+import {
+  getUserDictionary,
+  type StoredUserDictionary,
+  watchUserDictionary,
+} from '@/settings/user-dictionary';
 
 import { ALL_SITES } from './auto-redirect';
 
@@ -27,6 +32,24 @@ export function useSettings(): Settings | undefined {
     return stop;
   }, []);
   return settings;
+}
+
+/**
+ * 保存してある直した読みを読み、ほかの画面や同期したほかの Chrome で変わったら読み直す。
+ * @returns 直した読みと保存している場所。読み終わるまでは undefined
+ */
+export function useUserDictionary(): StoredUserDictionary | undefined {
+  const [dictionary, setDictionary] = useState<StoredUserDictionary | undefined>(undefined);
+  useEffect(() => {
+    const stop = watchUserDictionary(setDictionary);
+    getUserDictionary()
+      .then(setDictionary)
+      .catch((error: unknown) => {
+        log.error('直した読みを読むのに失敗しました', error);
+      });
+    return stop;
+  }, []);
+  return dictionary;
 }
 
 /**
