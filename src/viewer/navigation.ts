@@ -62,3 +62,16 @@ export function nextZoomStep(scale: number, direction: ZoomDirection): number {
 export function formatZoom(scale: number): string {
   return `${String(Math.round(scale * 100))}%`;
 }
+
+/** 紙面を1回で回す角度（時計回り） */
+const ROTATION_STEP = 90;
+
+/**
+ * 今の向きから、時計回りに 90 度回した向きを求める。
+ *
+ * @param rotation - 今の向き（0・90・180・270 のどれか）
+ * @returns 90 度回した向き（270 の次は 0）
+ */
+export function nextRotation(rotation: number): number {
+  return (rotation + ROTATION_STEP) % 360;
+}

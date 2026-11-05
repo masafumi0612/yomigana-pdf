@@ -9,7 +9,14 @@ import { browser } from 'wxt/browser';
 import { createLogger } from '@/log';
 import { allowNativeView } from '@/redirect/skip';
 import { installDrawRecorder } from '@/viewer/draw-recorder';
-import { formatZoom, MAX_ZOOM, MIN_ZOOM, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
+import {
+  formatZoom,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  nextRotation,
+  nextZoomStep,
+  parsePageNumber,
+} from '@/viewer/navigation';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
 import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
 import { isImageOnlyDocument } from '@/viewer/special-cases';
@@ -46,6 +53,8 @@ const zoomGroup = requireElement('zoom-group', HTMLDivElement);
 const zoomOut = requireElement('zoom-out', HTMLButtonElement);
 const zoomLevel = requireElement('zoom-level', HTMLOutputElement);
 const zoomIn = requireElement('zoom-in', HTMLButtonElement);
+const rotate = requireElement('rotate', HTMLButtonElement);
+const rotateLabel = requireElement('rotate-label', HTMLSpanElement);
 const openFile = requireElement('open-file', HTMLButtonElement);
 const openNative = requireElement('open-native', HTMLButtonElement);
 const fileInput = requireElement('file-input', HTMLInputElement);
@@ -123,6 +132,9 @@ pageInput.setAttribute('aria-label', message('viewer_bar_pageNumber'));
 zoomOut.setAttribute('aria-label', message('viewer_bar_zoomOut'));
 zoomIn.setAttribute('aria-label', message('viewer_bar_zoomIn'));
 zoomLevel.setAttribute('aria-label', message('viewer_bar_zoomLevel'));
+// 更新のボタンと見分けられるよう、紙と矢印の絵に「右に回す」の文字を添える
+rotateLabel.textContent = message('viewer_bar_rotate');
+rotate.title = message('viewer_bar_rotateTitle');
 openFile.textContent = message('viewer_bar_openFile');
 openFile.hidden = false;
 openNative.textContent = message('viewer_bar_openNative');
@@ -340,6 +352,10 @@ zoomOut.addEventListener('click', () => {
 });
 zoomIn.addEventListener('click', () => {
   viewer.currentScale = nextZoomStep(viewer.currentScale, 'in');
+});
+rotate.addEventListener('click', () => {
+  // 描き直しのあとの pagerendered で、ルビの層も新しい向きに置き直される
+  viewer.pagesRotation = nextRotation(viewer.pagesRotation);
 });
 openFile.addEventListener('click', () => {
   fileInput.click();
