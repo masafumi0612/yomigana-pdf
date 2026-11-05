@@ -504,3 +504,11 @@ input {
 .welcome-title {
   font-size: var(--welcome-title-size);
 }
+
+/* 報告用の情報のコピー */
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-small);
+  margin: var(--gap-small) 0;
+}

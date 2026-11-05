@@ -2,12 +2,13 @@ import type { JSX } from 'preact';
 import { browser } from 'wxt/browser';
 
 import { message } from './message';
+import { ReportButton } from './report-button';
 
 /** 同梱した部品のライセンスと辞書の出典の文書。ビルドで拡張に写す（wxt.config.ts） */
 const NOTICES_PATH = '/THIRD_PARTY_NOTICES.md';
 
 /**
- * 「この拡張について」。設定ではなく、拡張の情報（プライバシー・版・ライセンス）を出す。
+ * 「この拡張について」。設定ではなく、拡張の情報（プライバシー・版・ライセンス）と、報告用の情報のコピーを出す。
  * @returns 拡張の情報の場所
  */
 export function AboutSection(): JSX.Element {
@@ -27,6 +28,7 @@ export function AboutSection(): JSX.Element {
           {message('options_about_licenses')}
         </a>
       </p>
+      <ReportButton />
       <p>{message('options_about_version', browser.runtime.getManifest().version)}</p>
     </footer>
   );
