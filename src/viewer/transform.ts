@@ -67,3 +67,35 @@ export function toMatrix(values: readonly number[]): Matrix {
   const [a = 1, b = 0, c = 0, d = 1, e = 0, f = 0] = values;
   return [a, b, c, d, e, f];
 }
+
+/** 画面の上の箱（左上の角と大きさ） */
+export interface Box {
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * 2つの角で決まる箱に変換をかけ、変換した先の箱にする。回した変換でも、左上の角と大きさにそろえる。
+ * @param matrix 変換（回すのは 90 度ずつだけ）
+ * @param corners 箱の向かい合う2つの角
+ * @param corners.x1 1つめの角の x
+ * @param corners.y1 1つめの角の y
+ * @param corners.x2 2つめの角の x
+ * @param corners.y2 2つめの角の y
+ * @returns 変換した箱
+ */
+export function transformBox(
+  matrix: Matrix,
+  corners: { readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number },
+): Box {
+  const a = applyMatrix(matrix, { x: corners.x1, y: corners.y1 });
+  const b = applyMatrix(matrix, { x: corners.x2, y: corners.y2 });
+  return {
+    left: Math.min(a.x, b.x),
+    top: Math.min(a.y, b.y),
+    width: Math.abs(b.x - a.x),
+    height: Math.abs(b.y - a.y),
+  };
+}

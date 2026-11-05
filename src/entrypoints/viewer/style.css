@@ -36,6 +36,19 @@
   --notice-border: #8ab4f8;
   --notice-error: #f6aea9;
   --alert-text: #fdd663;
+  --edit-bar-background: #1a56c4;
+  --edit-bar-hover: #2862c2;
+  --direction-frame: #1a56c4;
+  --direction-frame-uncertain: #b45309;
+  --direction-paper: #ffffff;
+  --direction-on-frame: #ffffff;
+  --direction-focus: #1f2933;
+  --direction-border-width: 2px;
+  --direction-toggle-font-size: 12px;
+  --notice-close-size: 44px;
+  --notice-close-font-size: 1.5em;
+  --menu-background: #323639;
+  --menu-padding: 4px;
   --font-size: 14px;
   --font-family: system-ui, sans-serif;
   --ruby-font-serif: 'Yomigana Ruby Serif', serif;
@@ -86,6 +99,7 @@ body {
 }
 
 .bar-group[hidden],
+.menu[hidden],
 .bar-button[hidden],
 .notice[hidden],
 .status-actions[hidden],
@@ -238,6 +252,15 @@ body {
   border-color: var(--bar-text-sub);
 }
 
+/* 閉じるボタンは、押しやすいよう 44px 四方にする */
+.notice-close {
+  width: var(--notice-close-size);
+  height: var(--notice-close-size);
+  padding: 0;
+  font-size: var(--notice-close-font-size);
+  line-height: 1;
+}
+
 .notice-error {
   flex-basis: 100%;
   margin: 0;
@@ -299,4 +322,134 @@ body {
 
 .ruby-layer > .ruby-vertical {
   writing-mode: vertical-rl;
+}
+
+/* 文字の向きを直すモード。バーを青にして、変わったことが分かるようにする */
+.bar--editing {
+  background: var(--edit-bar-background);
+}
+
+.bar--editing .bar-normal {
+  display: none;
+}
+
+.bar-editing-text {
+  margin: 0;
+}
+
+.bar-edit-button {
+  border-color: var(--bar-text);
+}
+
+.bar--editing .bar-button:hover:not(:disabled) {
+  background: var(--edit-bar-hover);
+}
+
+/* 紙面を右クリックしたときのメニュー */
+.menu {
+  position: fixed;
+  z-index: 3;
+  padding: var(--menu-padding);
+  border-radius: var(--button-radius);
+  background: var(--menu-background);
+}
+
+.menu-item {
+  height: var(--button-height);
+  padding: var(--button-padding);
+  border: 0;
+  border-radius: var(--button-radius);
+  background: transparent;
+  color: var(--bar-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--bar-hover);
+}
+
+/* 向きを直す層。ルビの層と同じ決まりで紙面に合わせ、枠と切り替えだけを押せるようにする */
+.direction-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+/* 枠は押せるようにする。押すか Tab で移ると、そのかたまりを選んで切り替えを出す */
+.direction-block {
+  --direction-frame-color: var(--direction-frame);
+
+  position: absolute;
+  box-sizing: border-box;
+  border: var(--direction-border-width) solid var(--direction-frame-color);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.direction-block[data-uncertain='true'] {
+  --direction-frame-color: var(--direction-frame-uncertain);
+}
+
+/* 選んだかたまりは、枠を外側に太くして見分ける */
+.direction-block[data-selected='true'] {
+  box-shadow: 0 0 0 var(--direction-border-width) var(--direction-frame-color);
+}
+
+.direction-block:focus-visible {
+  outline: calc(var(--focus-width) + 1px) solid var(--direction-focus);
+  outline-offset: calc(var(--direction-border-width) + var(--focus-width));
+}
+
+/* 切り替えは枠の角の外側に置く（紙面の上の端では枠の下） */
+.direction-toggle {
+  position: absolute;
+  left: calc(var(--direction-border-width) * -1);
+  display: flex;
+  padding: 0;
+  overflow: hidden;
+  border: var(--direction-border-width) solid var(--direction-frame);
+  border-radius: var(--button-radius);
+  background: var(--direction-paper);
+  font: inherit;
+  font-size: var(--direction-toggle-font-size);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.direction-toggle[hidden] {
+  display: none;
+}
+
+.direction-toggle[data-place='above'] {
+  bottom: 100%;
+}
+
+.direction-toggle[data-place='below'] {
+  top: 100%;
+}
+
+.direction-toggle:focus-visible {
+  outline: calc(var(--focus-width) + 1px) solid var(--direction-focus);
+  outline-offset: var(--focus-width);
+}
+
+.direction-option {
+  padding: 0 8px;
+  background: var(--direction-paper);
+  color: var(--direction-frame);
+}
+
+.direction-option[data-current='true'] {
+  background: var(--direction-frame);
+  color: var(--direction-on-frame);
+  font-weight: bold;
+}
+
+.direction-option rt {
+  font-size: 0.65em;
 }
