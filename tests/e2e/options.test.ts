@@ -151,6 +151,7 @@ test('もどすのをやめたとき、設定は変わらない', async ({ page,
 
   await tabTo(page, reset);
   await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'やめる' })).toBeFocused();
   await page.keyboard.press('Enter');
 
   await expect(page.getByRole('button', { name: 'もどす', exact: true })).toBeHidden();
