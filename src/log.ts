@@ -1,8 +1,19 @@
 // ログはすべてここを通す（console を直接使ってよいのはこのファイルだけ）。
-// PDF の本文や URL は、ログにも直近のエラーにも入れない。呼ぶ側は、決まった文と、エラーの名前・文だけを渡す
+// PDF の本文や URL は、ログにも直近のエラーにも入れない。呼ぶ側は、決まった文と、エラーの名前・文だけを渡す。
+// エラーの文に URL が混じっていても（pdf.js のエラーなど）、残す前に消す
+import { browser } from 'wxt/browser';
 
 /** 残しておく直近のエラーの数。「報告用の情報をコピー」で貼る量を絞るため */
 const MAX_RECENT_ERRORS = 20;
+
+/** 部品をまたいで直近のエラーを残す、storage.local のキー */
+const RECENT_ERRORS_KEY = 'recentErrors';
+
+/** URL（`https://…` や `blob:`・`data:`・`file:` など）。エラーの文から消す */
+const URL_PATTERN = /\b(?:[a-z][\d+.a-z-]*:\/\/|(?:blob|data|file|javascript):)\S*/giu;
+
+/** URL を消したところに入れる印 */
+const URL_MARK = '（URL）';
 
 /** 残しておく1件のエラー */
 export interface ErrorRecord {
@@ -47,6 +58,9 @@ export interface LoggerOptions {
 
 const recentErrors: ErrorRecord[] = [];
 
+/** 続けて出たエラーの書き込みが重ならないよう、順に動かすための鎖 */
+let storeQueue: Promise<unknown> = Promise.resolve();
+
 /**
  * 部品ごとのロガーを作る。
  * @param scope どの部品のログか（例：offscreen）。ログの頭に付ける
@@ -69,12 +83,16 @@ export function createLogger(scope: string, options: LoggerOptions = {}): Logger
       console.warn(prefix, message);
     },
     error(message, detail) {
-      const full = detail === undefined ? message : `${message}：${describeError(detail)}`;
+      const full = stripUrls(
+        detail === undefined ? message : `${message}：${describeError(detail)}`,
+      );
       console.error(prefix, full);
-      recentErrors.push({ time: new Date().toISOString(), scope, message: full });
+      const record = { time: new Date().toISOString(), scope, message: full };
+      recentErrors.push(record);
       if (recentErrors.length > MAX_RECENT_ERRORS) {
         recentErrors.shift();
       }
+      storeError(record, prefix);
     },
   };
 }
@@ -88,10 +106,87 @@ export function getRecentErrors(): readonly ErrorRecord[] {
 }
 
 /**
+ * どの部品（画面・background）で残したものも合わせた、直近のエラーを読む（古い順、最大 20 件）。
+ * offscreen document と Worker には storage がないので、そこで出たエラーは入らない。
+ * @returns 直近のエラー。storage が使えないときは、この部品で残したものだけ
+ */
+export async function getStoredErrors(): Promise<readonly ErrorRecord[]> {
+  const area = localArea();
+  if (area === undefined) {
+    return getRecentErrors();
+  }
+  const stored = await area.get(RECENT_ERRORS_KEY);
+  return parseErrorRecords(stored[RECENT_ERRORS_KEY]);
+}
+
+/**
+ * 文の中の URL を印に置きかえる。
+ * @param text もとの文
+ * @returns URL を「（URL）」にした文
+ */
+export function stripUrls(text: string): string {
+  return text.replaceAll(URL_PATTERN, URL_MARK);
+}
+
+/**
  * 残した直近のエラーを消す。
  */
 export function clearRecentErrors(): void {
   recentErrors.length = 0;
+}
+
+/**
+ * エラーを storage.local にも足す。古いものから捨てて、上限の数だけ残す。
+ * 残せなくても、ログのほかの動きは止めない（ここで error を出すと繰り返すので warn だけ）。
+ * @param record 足すエラー
+ * @param prefix ログの頭に付ける部品の名前
+ */
+function storeError(record: ErrorRecord, prefix: string): void {
+  const area = localArea();
+  if (area === undefined) {
+    return;
+  }
+  storeQueue = storeQueue
+    .then(async () => {
+      const stored = await area.get(RECENT_ERRORS_KEY);
+      const records = [...parseErrorRecords(stored[RECENT_ERRORS_KEY]), record];
+      await area.set({ [RECENT_ERRORS_KEY]: records.slice(-MAX_RECENT_ERRORS) });
+    })
+    .catch((error: unknown) => {
+      console.warn(prefix, `直近のエラーを残せませんでした：${describeError(error)}`);
+    });
+}
+
+/**
+ * 直近のエラーを残せる storage.local を取り出す。
+ * @returns storage.local。offscreen document と Worker では storage がないので undefined
+ */
+function localArea(): typeof browser.storage.local | undefined {
+  // Worker では拡張の API そのものがなく、offscreen document には storage がない
+  const api = browser as Partial<typeof browser> | undefined;
+  return api?.storage?.local;
+}
+
+/**
+ * 保存してある値から、形の合うエラーだけを取り出す。
+ * @param value storage.local の値
+ * @returns 形の合うエラー（古い順）
+ */
+function parseErrorRecords(value: unknown): ErrorRecord[] {
+  return Array.isArray(value) ? value.filter(isErrorRecord) : [];
+}
+
+/**
+ * 残しておく1件のエラーの形かを調べる。
+ * @param item 調べる値
+ * @returns 時刻・部品・文がどれも文字列なら true
+ */
+function isErrorRecord(item: unknown): item is ErrorRecord {
+  if (typeof item !== 'object' || item === null) {
+    return false;
+  }
+  const { time, scope, message } = item as Partial<Record<keyof ErrorRecord, unknown>>;
+  return typeof time === 'string' && typeof scope === 'string' && typeof message === 'string';
 }
 
 /**

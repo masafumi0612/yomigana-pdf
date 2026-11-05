@@ -517,6 +517,22 @@
     "message": "ライセンスと出典",
     "description": "同梱した部品のライセンスと辞書の出典の文書を開くリンク"
   },
+  "options_about_copyReport": {
+    "message": "報告用の情報をコピー",
+    "description": "拡張とブラウザの版、直近のエラーをコピーするボタン"
+  },
+  "options_about_copyReportHint": {
+    "message": "不具合を知らせるときに貼ってください。拡張と Chrome の版、直近のエラーが入ります。PDF の URL や中身は入りません。",
+    "description": "報告用の情報をコピーするボタンの下の説明"
+  },
+  "options_about_copied": {
+    "message": "コピーしました",
+    "description": "報告用の情報をコピーしたあとに出す"
+  },
+  "options_about_copyFailed": {
+    "message": "コピーできませんでした",
+    "description": "報告用の情報をコピーできなかったときに出す"
+  },
   "options_about_version": {
     "message": "バージョン $VERSION$ ・ MIT ライセンス",
     "description": "拡張の版とライセンス",
