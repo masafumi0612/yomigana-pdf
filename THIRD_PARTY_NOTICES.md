@@ -141,6 +141,7 @@ Copyright 2024 Mozilla Foundation
 - 入手先：https://github.com/notofonts/noto-cjk 、https://fonts.google.com/noto
 - ライセンス：SIL Open Font License, Version 1.1（全文は拡張機能の中の `licenses/OFL-1.1.txt`、または https://openfontlicense.org ）
 - 取り出して作り直したので、Reserved Font Name（「Source」）を避けて、family の名前を「Yomigana Ruby Serif」「Yomigana Ruby Sans」にしています
+- 設定の画面から開く見本の PDF（拡張機能の中の `sample/yomigana-sample.pdf`）にも、Noto Serif JP と Noto Sans JP の部分集合（見本に使った字だけ）を埋め込んでいます。見本の文は、この拡張のために書き下ろしたものです（`test-pdfs/src/sample.html`）
 
 ```text
 Noto Serif JP: Copyright 2017-2023 Adobe (http://www.adobe.com/).
