@@ -7,6 +7,7 @@ import { message } from './message';
 import { OpenPdfSection } from './open-pdf-section';
 import { ResetSettings } from './reset-settings';
 import { RubyAmountSection } from './ruby-amount-section';
+import { RubyLookSection } from './ruby-look-section';
 import { UserDictionarySection } from './user-dictionary-section';
 
 /**
@@ -48,7 +49,12 @@ export function App(): JSX.Element {
           <AutoRedirectSection isEnabled={settings.autoRedirect} hasHostAccess={hasHostAccess} />
         )}
         <OpenPdfSection />
-        {settings !== undefined && <RubyAmountSection level={settings.level} />}
+        {settings !== undefined && (
+          <>
+            <RubyAmountSection level={settings.level} />
+            <RubyLookSection rubyStyle={settings.rubyStyle} />
+          </>
+        )}
         <UserDictionarySection />
         <ResetSettings />
       </main>
