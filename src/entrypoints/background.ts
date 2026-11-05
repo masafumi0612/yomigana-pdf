@@ -1,13 +1,16 @@
 import { browser } from 'wxt/browser';
 
-import { AUTO_REDIRECT_STORAGE_KEY } from '@/config';
 import { createLogger } from '@/log';
 import { type DynamicRuleStore, syncRedirectRules } from '@/redirect/register';
-import { getAutoRedirect } from '@/redirect/settings';
 import { clearSkipRule } from '@/redirect/skip';
+import type { SettingKey } from '@/settings/model';
+import { getSettings } from '@/settings/storage';
 
 /** すべてのサイトを読む権限。後から利用者に許可してもらう */
 const ALL_URLS = { origins: ['<all_urls>'] };
+
+/** 親スイッチの設定のキー。ほかの設定が変わっても、ルールは合わせ直さない */
+const AUTO_REDIRECT_KEY: SettingKey = 'autoRedirect';
 
 const log = createLogger('background');
 
@@ -24,12 +27,12 @@ let syncQueue: Promise<unknown> = Promise.resolve();
 function syncRules(): void {
   syncQueue = syncQueue
     .then(async () => {
-      const [isEnabled, hasHostAccess] = await Promise.all([
-        getAutoRedirect(),
+      const [settings, hasHostAccess] = await Promise.all([
+        getSettings(),
         browser.permissions.contains(ALL_URLS),
       ]);
       await syncRedirectRules(dynamicRules, browser.runtime.getURL('/viewer.html'), {
-        isEnabled,
+        isEnabled: settings.autoRedirect,
         hasHostAccess,
       });
     })
@@ -44,7 +47,7 @@ export default defineBackground(() => {
   browser.permissions.onAdded.addListener(syncRules);
   browser.permissions.onRemoved.addListener(syncRules);
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area === 'sync' && AUTO_REDIRECT_STORAGE_KEY in changes) {
+    if (area === 'sync' && AUTO_REDIRECT_KEY in changes) {
       syncRules();
     }
   });

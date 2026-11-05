@@ -13,7 +13,10 @@ import {
 } from '@playwright/test';
 import type { browser } from 'wxt/browser';
 
-import { AUTO_REDIRECT_STORAGE_KEY } from '../../src/config';
+import type { SettingKey } from '../../src/settings/model';
+
+/** 親スイッチの設定のキー */
+const AUTO_REDIRECT_KEY: SettingKey = 'autoRedirect';
 
 /** service worker の中で動かす関数から使う、拡張の API（型だけ。中身は service worker にある） */
 declare const chrome: typeof browser;
@@ -121,7 +124,7 @@ export async function setAutoRedirect(worker: Worker, isEnabled: boolean): Promi
     async ({ key, value }) => {
       await chrome.storage.sync.set({ [key]: value });
     },
-    { key: AUTO_REDIRECT_STORAGE_KEY, value: isEnabled },
+    { key: AUTO_REDIRECT_KEY, value: isEnabled },
   );
   await expect
     .poll(() =>
