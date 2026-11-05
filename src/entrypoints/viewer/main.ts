@@ -11,6 +11,7 @@ import { withTimeout } from '@/messaging/timeout';
 import { allowNativeView } from '@/redirect/skip';
 import { DEFAULT_SETTINGS, type Settings } from '@/settings/model';
 import { getSettings, watchSettings } from '@/settings/storage';
+import { createDirectionEditor } from '@/viewer/direction-editor';
 import { installDrawRecorder } from '@/viewer/draw-recorder';
 import {
   formatZoom,
@@ -79,6 +80,18 @@ const passwordError = requireElement('password-error', HTMLParagraphElement);
 const noTextNotice = requireElement('no-text-notice', HTMLDivElement);
 const noTextText = requireElement('no-text-text', HTMLParagraphElement);
 const noTextClose = requireElement('no-text-close', HTMLButtonElement);
+const bar = requireElement('bar', HTMLElement);
+const directionBar = requireElement('direction-bar', HTMLDivElement);
+const directionBarText = requireElement('direction-bar-text', HTMLParagraphElement);
+const directionAllVertical = requireElement('direction-all-vertical', HTMLButtonElement);
+const directionAllHorizontal = requireElement('direction-all-horizontal', HTMLButtonElement);
+const directionDone = requireElement('direction-done', HTMLButtonElement);
+const directionNotice = requireElement('direction-notice', HTMLDivElement);
+const directionNoticeText = requireElement('direction-notice-text', HTMLParagraphElement);
+const directionNoticeStart = requireElement('direction-notice-start', HTMLButtonElement);
+const directionNoticeClose = requireElement('direction-notice-close', HTMLButtonElement);
+const directionMenu = requireElement('direction-menu', HTMLDivElement);
+const directionMenuItem = requireElement('direction-menu-item', HTMLButtonElement);
 const container = requireElement('viewer-container', HTMLDivElement);
 const viewerElement = requireElement('viewer', HTMLDivElement);
 
@@ -133,6 +146,16 @@ let isNoTextDismissed = false;
 // 開くときに URL の # から後ろで指されたページ・倍率。ページの数がわかる pagesinit で一度だけ使う
 let initialHash = '';
 
+// 向きの自信がないかたまりがあるか。あるときだけ、バーの下に向きを直す案内を出す
+let hasUncertainDirection = false;
+let isDirectionEditing = false;
+// 向きを直せる案内を閉じたら、同じ PDF では出し直さない（保存はしない）
+let isDirectionHintDismissed = false;
+
+function updateDirectionNotice(): void {
+  directionNotice.hidden = !hasUncertainDirection || isDirectionEditing || isDirectionHintDismissed;
+}
+
 function updateNoTextNotice(): void {
   noTextNotice.hidden = isNoTextDismissed || !isImageOnlyDocument(hasTextByPage);
 }
@@ -152,6 +175,17 @@ const rubyPages = createRubyPages({
   onReadingFailureChange: (hasFailed) => {
     rubyFailed.hidden = !hasFailed;
   },
+  onPageShown: (pageNumber) => {
+    directionEditor.refreshPage(pageNumber);
+  },
+  onUncertainChange: (hasUncertain) => {
+    hasUncertainDirection = hasUncertain;
+    updateDirectionNotice();
+  },
+});
+const directionEditor = createDirectionEditor({
+  pages: rubyPages,
+  getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
 });
 // 設定の画面やほかの Chrome で変えた設定を、開き直さずに反映する
 watchSettings((settings) => {
@@ -182,6 +216,13 @@ passwordSubmit.textContent = message('viewer_password_open');
 passwordError.textContent = message('viewer_password_incorrect');
 noTextText.textContent = message('viewer_notice_noText');
 noTextClose.textContent = message('viewer_notice_close');
+directionNoticeText.textContent = message('viewer_notice_directionHint');
+directionNoticeStart.textContent = message('viewer_notice_directionStart');
+directionNoticeClose.setAttribute('aria-label', message('viewer_notice_directionClose'));
+directionMenuItem.textContent = message('viewer_menu_directionFix');
+directionAllVertical.textContent = message('viewer_direction_allVertical');
+directionAllHorizontal.textContent = message('viewer_direction_allHorizontal');
+directionDone.textContent = message('viewer_direction_done');
 
 let currentTask: PDFDocumentLoadingTask | undefined;
 let nativeUrl: string | undefined;
@@ -200,12 +241,37 @@ function hidePasswordForm(): void {
   passwordInput.value = '';
 }
 
+/** 向きを直すモードに入る（入っている間だけ、バーを青にして案内を出す） */
+function enterDirectionEditing(): void {
+  isDirectionEditing = true;
+  bar.classList.add('bar--editing');
+  directionBar.hidden = false;
+  directionBarText.textContent = message('viewer_direction_barText');
+  updateDirectionNotice();
+  directionEditor.enter();
+}
+
+/** 向きを直すモードを終える */
+function exitDirectionEditing(): void {
+  if (!isDirectionEditing) return;
+  isDirectionEditing = false;
+  directionEditor.exit();
+  bar.classList.remove('bar--editing');
+  directionBar.hidden = true;
+  directionBarText.textContent = '';
+  updateDirectionNotice();
+  container.focus();
+}
+
 /** 別の PDF を開くときに、前の PDF の案内を片づける */
 function resetNotices(): void {
+  exitDirectionEditing();
   hidePasswordForm();
   hasTextByPage.clear();
   isNoTextDismissed = false;
   updateNoTextNotice();
+  isDirectionHintDismissed = false;
+  updateDirectionNotice();
 }
 
 function setDocumentShown(isShown: boolean): void {
@@ -414,6 +480,50 @@ rubyRetry.addEventListener('click', () => {
     .finally(() => {
       rubyRetry.disabled = false;
     });
+});
+directionNoticeStart.addEventListener('click', enterDirectionEditing);
+directionNoticeClose.addEventListener('click', () => {
+  isDirectionHintDismissed = true;
+  updateDirectionNotice();
+  container.focus();
+});
+directionDone.addEventListener('click', exitDirectionEditing);
+for (const [button, direction] of [
+  [directionAllVertical, 'vertical'],
+  [directionAllHorizontal, 'horizontal'],
+] as const) {
+  button.addEventListener('click', () => {
+    rubyPages.setAllDirection(direction).catch((error: unknown) => {
+      log.error('すべてのかたまりの向きを決める途中で予想外の失敗がありました', error);
+    });
+  });
+}
+// 紙面を右クリックしたら、向きを直すメニューを出す。文字を選んでいるときは、標準のメニュー（コピーなど）に任せる
+container.addEventListener('contextmenu', (event) => {
+  if (isDirectionEditing || document.getSelection()?.isCollapsed === false) return;
+  event.preventDefault();
+  directionMenu.style.left = `${String(event.clientX)}px`;
+  directionMenu.style.top = `${String(event.clientY)}px`;
+  directionMenu.hidden = false;
+  directionMenuItem.focus();
+});
+directionMenuItem.addEventListener('click', () => {
+  directionMenu.hidden = true;
+  enterDirectionEditing();
+});
+document.addEventListener('pointerdown', (event) => {
+  if (event.target instanceof Node && !directionMenu.contains(event.target)) {
+    directionMenu.hidden = true;
+  }
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (!directionMenu.hidden) {
+    directionMenu.hidden = true;
+    container.focus();
+  } else {
+    exitDirectionEditing();
+  }
 });
 noTextClose.addEventListener('click', () => {
   isNoTextDismissed = true;

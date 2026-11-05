@@ -387,30 +387,36 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     return { ok: true, value: updated };
   };
 
-  // 向きを決め直したかたまりだけ読み直し、ルビの層を置き直す。読めなかったときは、今のままにする
+  // 向きを決め直したかたまりだけ読み直し、ルビの層を置き直す。読めなかったときは、今のままにする。
+  // 待つ間に段階が変わったり、ほかの読み直しが先に済んだりしたら、その新しい文に同じ向きを当てて読み直す。
+  // 利用者が決めた向きを、段階の読み直しで捨てないため
   const redirect = async (
     pageNumber: number,
     wanted: (block: TextBlock) => Direction | undefined,
   ): Promise<void> => {
     const view = options.getPageView(pageNumber);
     const entry = entries.get(pageNumber);
-    const data = entry?.resolved;
-    if (view === undefined || entry === undefined || data === undefined) return;
+    if (view === undefined || entry?.resolved === undefined) return;
     const rebuild = createBlockRebuilder(await view.pdfPage.getTextContent());
-    const changes = rebuiltBlocks(data.page, rebuild, wanted);
-    if (changes.length === 0) return;
-    const blocks = [...data.page.blocks];
-    for (const { index, block } of changes) blocks[index] = block;
-    const result = await reread(pageNumber, entry, data, blocks);
-    if (!result.ok) {
+    for (;;) {
+      const data = entry.resolved;
+      if (entries.get(pageNumber) !== entry) return;
+      const changes = rebuiltBlocks(data.page, rebuild, wanted);
+      if (changes.length === 0) return;
+      const blocks = [...data.page.blocks];
+      for (const { index, block } of changes) blocks[index] = block;
+      const result = await reread(pageNumber, entry, data, blocks);
+      if (result.ok) {
+        markUncertain(pageNumber, result.value.page);
+        showLayer(view, entry, result.value);
+        options.onPageShown?.(pageNumber);
+        return;
+      }
       if (result.error !== 'outdated') {
         log.error('向きを決め直したかたまりの読みを出せませんでした', result.error);
+        return;
       }
-      return;
     }
-    markUncertain(pageNumber, result.value.page);
-    showLayer(view, entry, result.value);
-    options.onPageShown?.(pageNumber);
   };
 
   // ルビの層を出しているページを、今のページに近い順に出し直す。描いている途中のページは、描き終えたときに今の設定で出す
