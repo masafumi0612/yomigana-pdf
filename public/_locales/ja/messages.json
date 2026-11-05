@@ -37,6 +37,14 @@
     "message": "拡大",
     "description": "リーダーのバーの、紙面を大きくするボタンの名前（読み上げ用）"
   },
+  "viewer_bar_rotate": {
+    "message": "右に回す",
+    "description": "リーダーのバーの、紙面を時計回りに 90 度回すボタンの文字"
+  },
+  "viewer_bar_rotateTitle": {
+    "message": "紙面を右に 90 度回す",
+    "description": "リーダーのバーの、回すボタンにマウスを乗せたときの説明"
+  },
   "viewer_bar_zoomLevel": {
     "message": "倍率",
     "description": "リーダーのバーの、今の倍率の欄の名前（読み上げ用）"
@@ -162,5 +170,171 @@
   "viewer_direction_uncertain": {
     "message": "（向きに自信がありません）",
     "description": "かたまりの向きの切り替えの名前の終わりに足す（読み上げ用）"
+  },
+  "options_page_title": {
+    "message": "ルビの設定 - よみがなPDF",
+    "description": "設定の画面のタブの名前"
+  },
+  "options_header_title": {
+    "message": "ルビの設定",
+    "description": "設定の画面のいちばん上の見出し"
+  },
+  "options_header_lead": {
+    "message": "Chrome 右上の拡張のアイコンを押すと、この画面が開きます。ここで変えた設定は、すべての PDF に使われます。",
+    "description": "設定の画面の見出しの下の説明"
+  },
+  "options_header_saved": {
+    "message": "変更はすぐ保存されます",
+    "description": "設定の画面の見出しの横の、保存のボタンがいらないことの案内"
+  },
+  "options_auto_title": {
+    "message": "PDF を開いたら、自動でルビを付ける",
+    "description": "自動でリーダーに移すスイッチの見出し"
+  },
+  "options_auto_noteOn": {
+    "message": "オン：Web の PDF のリンクを押すと、自動でルビ付きで開きます。",
+    "description": "スイッチがオンのときの説明"
+  },
+  "options_auto_noteOff": {
+    "message": "オフ：PDF は Chrome のふつうの表示で開きます。オンにすると、Chrome が「すべてのサイト」へのアクセスの許可を求めます。PDF を見分けるためだけに使い、ページの中身は読み取りも送信もしません。",
+    "description": "スイッチがオフのときの説明"
+  },
+  "options_file_label": {
+    "message": "パソコンに保存した PDF を開いたときも、自動でルビを付ける",
+    "description": "ファイルの URL へのアクセスの行の名前"
+  },
+  "options_file_allowed": {
+    "message": "Chrome で許可されています",
+    "description": "ファイルの URL へのアクセスが許可されているときの印"
+  },
+  "options_file_needed": {
+    "message": "Chrome の許可が必要",
+    "description": "ファイルの URL へのアクセスが許可されていないときの印"
+  },
+  "options_file_showSteps": {
+    "message": "許可の手順",
+    "description": "ファイルの URL へのアクセスを許可する手順を開くボタン"
+  },
+  "options_file_hideSteps": {
+    "message": "手順を閉じる",
+    "description": "ファイルの URL へのアクセスを許可する手順を閉じるボタン"
+  },
+  "options_file_step1": {
+    "message": "「拡張機能の設定を開く」を押す",
+    "description": "許可の手順の1つめ"
+  },
+  "options_file_step2": {
+    "message": "「ファイルの URL へのアクセスを許可する」をオンにする",
+    "description": "許可の手順の2つめ。Chrome の拡張機能の画面の項目名に合わせる"
+  },
+  "options_file_openExtensions": {
+    "message": "拡張機能の設定を開く",
+    "description": "Chrome の拡張機能の画面で、この拡張の詳しい設定を開くボタン"
+  },
+  "options_file_school": {
+    "message": "学校の Chromebook では変えられないことがあります",
+    "description": "許可の手順の下の注意"
+  },
+  "options_open_title": {
+    "message": "PDF を選んでルビ付きで開く",
+    "description": "PDF を選んでリーダーで開く場所の見出し"
+  },
+  "options_open_lead": {
+    "message": "上のスイッチがオフでも、ここから開けばルビが付きます。",
+    "description": "PDF を選んで開く場所の説明"
+  },
+  "options_open_chooseFile": {
+    "message": "パソコンの PDF を選ぶ",
+    "description": "パソコンの PDF を選んでリーダーで開くボタン"
+  },
+  "options_open_dropHint": {
+    "message": "この画面に PDF をドラッグしても開けます。",
+    "description": "ファイルを選ぶボタンの横の案内"
+  },
+  "options_open_notPdf": {
+    "message": "PDF のファイルを選んでください。",
+    "description": "PDF ではないファイルを選んだ・ドラッグしたときに出す"
+  },
+  "options_open_urlLabel": {
+    "message": "Web の PDF の URL",
+    "description": "PDF の URL を入れる欄の名前"
+  },
+  "options_open_urlPlaceholder": {
+    "message": "https://… の URL をここに貼る",
+    "description": "PDF の URL を入れる欄の、空のときの見本"
+  },
+  "options_open_urlSubmit": {
+    "message": "ルビ付きで開く",
+    "description": "入れた URL の PDF をリーダーで開くボタン"
+  },
+  "options_open_urlHint": {
+    "message": "PDF のリンクを右クリックして「リンクのアドレスをコピー」すると、URL を写せます。",
+    "description": "PDF の URL を入れる欄の下の案内"
+  },
+  "options_open_urlEmpty": {
+    "message": "PDF の URL を入れてください。",
+    "description": "URL を入れずに開こうとしたときに出す"
+  },
+  "options_open_urlInvalid": {
+    "message": "http:// か https:// で始まる URL を入れてください。",
+    "description": "開けない形の URL を入れたときに出す"
+  },
+  "options_open_urlDenied": {
+    "message": "このサイトを読む許可がないため、開けませんでした。",
+    "description": "サイトを読む許可をもらえなかったときに出す"
+  },
+  "options_reset_button": {
+    "message": "設定を最初の状態にもどす（直した読みは残ります）",
+    "description": "設定を既定に戻すボタン"
+  },
+  "options_reset_question": {
+    "message": "設定を最初の状態にもどしますか？",
+    "description": "設定を既定に戻す前の確かめの文"
+  },
+  "options_reset_confirm": {
+    "message": "もどす",
+    "description": "設定を既定に戻すことを決めるボタン"
+  },
+  "options_reset_cancel": {
+    "message": "やめる",
+    "description": "設定を既定に戻すのをやめるボタン"
+  },
+  "options_reset_done": {
+    "message": "設定を最初の状態にもどしました。",
+    "description": "設定を既定に戻したあとに出す"
+  },
+  "options_about_title": {
+    "message": "この拡張について",
+    "description": "設定の画面のいちばん下の、拡張の情報の見出し"
+  },
+  "options_about_privacyLocal": {
+    "message": "読んだ PDF の中身は、外部に送りません。漢字の読みはこのパソコンの中で調べます。",
+    "description": "プライバシーの説明の1つめ"
+  },
+  "options_about_privacySites": {
+    "message": "「すべてのサイト」へのアクセスは、PDF を見分けるためだけに使います。ページの中身は読み取りも送信もしません。",
+    "description": "プライバシーの説明の2つめ"
+  },
+  "options_about_privacySync": {
+    "message": "設定と直した読みは、同じアカウントでログインした Chrome どうしで共有されます。",
+    "description": "プライバシーの説明の3つめ"
+  },
+  "options_about_privacyProfiles": {
+    "message": "きょうだいで同じパソコンを使うときは、Chrome のプロフィールを人ごとに分けてください。",
+    "description": "プライバシーの説明の4つめ"
+  },
+  "options_about_licenses": {
+    "message": "ライセンスと出典",
+    "description": "同梱した部品のライセンスと辞書の出典の文書を開くリンク"
+  },
+  "options_about_version": {
+    "message": "バージョン $VERSION$ ・ MIT ライセンス",
+    "description": "拡張の版とライセンス",
+    "placeholders": {
+      "version": {
+        "content": "$1",
+        "example": "0.1.0"
+      }
+    }
   }
 }

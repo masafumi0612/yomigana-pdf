@@ -25,6 +25,7 @@
   --button-height: 32px;
   --button-padding: 0 12px;
   --button-radius: 4px;
+  --button-border: #80868b;
   --focus-ring: #8ab4f8;
   --focus-width: 2px;
   --page-background: #525659;
@@ -50,6 +51,7 @@
   --font-family: system-ui, sans-serif;
   --ruby-font-serif: 'Yomigana Ruby Serif', serif;
   --ruby-font-sans: 'Yomigana Ruby Sans', sans-serif;
+  --ruby-band: #ffffff;
 }
 
 html,
@@ -134,6 +136,18 @@ body {
   min-width: var(--button-height);
   padding: 0;
   font-size: 1.25em;
+}
+
+/* 枠を付けて、文字だけのボタンとも見分けやすくする（枠は背景と 3:1 以上） */
+.bar-rotate {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border-color: var(--button-border);
+}
+
+.bar-rotate-icon {
+  flex: none;
 }
 
 .bar-button:hover:not(:disabled) {
@@ -284,6 +298,11 @@ body {
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+}
+
+/* 行間がせまく隣の行に重なっても読めるよう、ルビの箱にだけ白を敷く。箱は親字の外側なので、親字は隠さない */
+.ruby-band .ruby-layer > span {
+  background: var(--ruby-band);
 }
 
 .ruby-layer > .ruby-serif {

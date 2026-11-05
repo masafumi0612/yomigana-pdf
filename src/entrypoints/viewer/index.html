@@ -22,6 +22,26 @@
         <button id="zoom-out" class="bar-button bar-icon" type="button">−</button>
         <output id="zoom-level" class="bar-zoom"></output>
         <button id="zoom-in" class="bar-button bar-icon" type="button">+</button>
+        <button id="rotate" class="bar-button bar-rotate" type="button">
+          <svg
+            class="bar-rotate-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <rect x="3" y="10" width="10" height="11" rx="1.5" />
+            <path d="M8 4h3a8 8 0 0 1 8 8v2" />
+            <path d="M16 11l3 3 3-3" />
+          </svg>
+          <span id="rotate-label"></span>
+        </button>
       </div>
       <div id="direction-bar" class="bar-group bar-editing" hidden>
         <p id="direction-bar-text" class="bar-editing-text" role="status"></p>

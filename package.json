@@ -42,7 +42,8 @@
   },
   "dependencies": {
     "@patdx/kuromoji": "1.0.4",
-    "pdfjs-dist": "6.4.299"
+    "pdfjs-dist": "6.4.299",
+    "preact": "11.0.1"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.4",

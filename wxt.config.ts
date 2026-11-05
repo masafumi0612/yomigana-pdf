@@ -35,6 +35,8 @@ export default defineConfig({
     optional_host_permissions: ['<all_urls>'],
     // 他のサイトの PDF の移し先として、ページ全体や枠の中でリーダーを開けるようにする
     web_accessible_resources: [{ resources: ['viewer.html'], matches: ['<all_urls>'] }],
+    // 拡張のアイコン。小さな枠（popup）は付けず、押したら設定の画面を開く（background.ts）
+    action: {},
   },
   hooks: {
     // 辞書・pdf.js のデータはリポジトリに入れず、ビルドのたびに node_modules から写す。
