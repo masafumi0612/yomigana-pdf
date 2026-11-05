@@ -10,6 +10,7 @@
   --on-accent: #ffffff;
   --line: #e3e7ed;
   --line-strong: #d5dbe3;
+  --field-border: #767f8c;
   --switch-off: #6b7685;
   --ok-background: #e6f4ea;
   --ok-text: #1e6b3a;
@@ -17,6 +18,7 @@
   --warn-text: #6b3a00;
   --danger: #a1361b;
   --danger-hover: #7f2a15;
+  --error: #b3261e;
   --focus-ring: 3px solid #1a5fb4;
   --focus-offset: 2px;
   --page-width: 880px;
@@ -28,6 +30,7 @@
   --radius-large: 16px;
   --card-padding: 24px 28px;
   --control-height: 40px;
+  --control-large-height: 48px;
   --control-padding: 0 16px;
   --switch-width: 64px;
   --switch-height: 36px;
@@ -35,6 +38,7 @@
   --font-family: 'BIZ UDPGothic', 'BIZ UDPゴシック', system-ui, sans-serif;
   --font-size: 14px;
   --font-size-small: 13px;
+  --font-size-large: 15px;
   --title-size: 24px;
   --card-title-size: 19px;
   --card-title-main-size: 21px;
@@ -329,4 +333,49 @@ input {
 
 .link:hover {
   color: var(--accent-hover);
+}
+
+.button-large {
+  min-height: var(--control-large-height);
+  font-size: var(--font-size-large);
+}
+
+.url-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-small);
+}
+
+.field-label {
+  font-weight: 700;
+}
+
+.field {
+  flex: 1 1 320px;
+  box-sizing: border-box;
+  min-height: var(--control-large-height);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  padding: var(--control-padding);
+  background: var(--card-background);
+  color: var(--text);
+  font-size: var(--font-size-large);
+}
+
+.field[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.field::placeholder {
+  color: var(--text-sub);
+}
+
+.error {
+  color: var(--error);
+  font-size: var(--font-size-small);
+}
+
+/* 理由がないときは場所を取らない */
+.error:empty {
+  display: none;
 }

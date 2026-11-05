@@ -173,6 +173,54 @@
     "message": "学校の Chromebook では変えられないことがあります",
     "description": "許可の手順の下の注意"
   },
+  "options_open_title": {
+    "message": "PDF を選んでルビ付きで開く",
+    "description": "PDF を選んでリーダーで開く場所の見出し"
+  },
+  "options_open_lead": {
+    "message": "上のスイッチがオフでも、ここから開けばルビが付きます。",
+    "description": "PDF を選んで開く場所の説明"
+  },
+  "options_open_chooseFile": {
+    "message": "パソコンの PDF を選ぶ",
+    "description": "パソコンの PDF を選んでリーダーで開くボタン"
+  },
+  "options_open_dropHint": {
+    "message": "この画面に PDF をドラッグしても開けます。",
+    "description": "ファイルを選ぶボタンの横の案内"
+  },
+  "options_open_notPdf": {
+    "message": "PDF のファイルを選んでください。",
+    "description": "PDF ではないファイルを選んだ・ドラッグしたときに出す"
+  },
+  "options_open_urlLabel": {
+    "message": "Web の PDF の URL",
+    "description": "PDF の URL を入れる欄の名前"
+  },
+  "options_open_urlPlaceholder": {
+    "message": "https://… の URL をここに貼る",
+    "description": "PDF の URL を入れる欄の、空のときの見本"
+  },
+  "options_open_urlSubmit": {
+    "message": "ルビ付きで開く",
+    "description": "入れた URL の PDF をリーダーで開くボタン"
+  },
+  "options_open_urlHint": {
+    "message": "PDF のリンクを右クリックして「リンクのアドレスをコピー」すると、URL を写せます。",
+    "description": "PDF の URL を入れる欄の下の案内"
+  },
+  "options_open_urlEmpty": {
+    "message": "PDF の URL を入れてください。",
+    "description": "URL を入れずに開こうとしたときに出す"
+  },
+  "options_open_urlInvalid": {
+    "message": "http:// か https:// で始まる URL を入れてください。",
+    "description": "開けない形の URL を入れたときに出す"
+  },
+  "options_open_urlDenied": {
+    "message": "このサイトを読む許可がないため、開けませんでした。",
+    "description": "サイトを読む許可をもらえなかったときに出す"
+  },
   "options_reset_button": {
     "message": "設定を最初の状態にもどす（直した読みは残ります）",
     "description": "設定を既定に戻すボタン"

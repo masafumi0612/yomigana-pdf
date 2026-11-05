@@ -4,6 +4,7 @@ import { AboutSection } from './about-section';
 import { AutoRedirectSection } from './auto-redirect-section';
 import { useHostAccess, useSettings } from './hooks';
 import { message } from './message';
+import { OpenPdfSection } from './open-pdf-section';
 import { ResetSettings } from './reset-settings';
 
 /**
@@ -44,6 +45,7 @@ export function App(): JSX.Element {
         {settings !== undefined && (
           <AutoRedirectSection isEnabled={settings.autoRedirect} hasHostAccess={hasHostAccess} />
         )}
+        <OpenPdfSection />
         {/* ルビの量・ルビの見た目・直した読みの一覧は、ここに場所ごとの部品として足す */}
         <ResetSettings />
       </main>
