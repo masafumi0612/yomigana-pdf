@@ -36,6 +36,12 @@ export interface FuhyoWord {
   readonly reading: string;
 }
 
+/**
+ * 常用漢字表が認める許容字体のうち、文字の番号が別のもの（データでは正字体のすぐ後に入っている）。
+ * 正字体と同じ字なので、字の数には入れない
+ */
+const ALLOWED_FORMS: ReadonlySet<string> = new Set(['叱', '填', '剥', '頬']);
+
 interface KanjiData {
   readonly kanji: Readonly<Record<string, KanjiInfo>>;
 }
@@ -83,4 +89,17 @@ export function getKanjiTier(char: string): KanjiTier | undefined {
  */
 export function isTierWithin(tier: KanjiTier, level: KanjiTier): boolean {
   return KANJI_TIERS.indexOf(tier) <= KANJI_TIERS.indexOf(level);
+}
+
+/**
+ * 段階 level までに習う常用漢字の字の数を数える。許容字体は正字体と同じ字なので数えない。
+ * @param level 読む人が習い終えた段階
+ * @returns 字の数（例：g1 は 80、joyo は常用漢字すべての 2,136）
+ */
+export function countKanjiWithin(level: KanjiTier): number {
+  let count = 0;
+  for (const [char, info] of kanjiByChar) {
+    if (!ALLOWED_FORMS.has(char) && isTierWithin(info.tier, level)) count += 1;
+  }
+  return count;
 }

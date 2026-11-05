@@ -51,6 +51,22 @@
   --dict-word-size: 20px;
   --dict-word-width: 96px;
   --dict-field-width: 180px;
+  /* ルビの量・ルビの見た目 */
+  --selected-background: #e8f0fb;
+  --font-size-tiny: 12px;
+  --radius-medium: 12px;
+  --choice-padding: 8px 12px;
+  --choice-mark-size: 18px;
+  --level-columns: 4;
+  --level-choice-height: 60px;
+  --always-padding: 16px 20px;
+  --always-item-width: 180px;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --level-columns: 2;
+  }
 }
 
 body {
@@ -408,6 +424,123 @@ input {
 
 .button-quiet:hover {
   border-color: var(--text);
+}
+
+/* ルビの量：段階のまとまり。名前を浮かせて、横の注意と同じ行に並べる */
+.level-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gap-small) var(--gap);
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.level-legend {
+  float: left;
+  padding: 0;
+  color: var(--text-sub);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+}
+
+.level-group-note,
+.level-note {
+  color: var(--text-sub);
+  font-size: var(--font-size-tiny);
+}
+
+.level-grid {
+  display: grid;
+  flex: 1 1 100%;
+  grid-template-columns: repeat(var(--level-columns), minmax(0, 1fr));
+  gap: var(--gap);
+}
+
+.level-choice {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  min-height: var(--level-choice-height);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-medium);
+  padding: var(--choice-padding);
+  cursor: pointer;
+}
+
+.level-choice:has(:checked) {
+  border-color: var(--accent);
+  background: var(--selected-background);
+}
+
+.level-choice input {
+  flex: none;
+  width: var(--choice-mark-size);
+  height: var(--choice-mark-size);
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.level-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.4;
+}
+
+.level-name {
+  font-size: var(--font-size-large);
+  font-weight: 700;
+}
+
+/* どの段階でもルビが付く文字の見本 */
+.always {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  border-radius: var(--radius-medium);
+  padding: var(--always-padding);
+  background: var(--page-background);
+}
+
+.always-title {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-small);
+  font-size: var(--font-size);
+}
+
+.always-title svg {
+  flex: none;
+  color: var(--text-sub);
+}
+
+.always-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--always-item-width), 1fr));
+  gap: var(--gap);
+  padding: 0;
+  list-style: none;
+}
+
+.always-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.always-kind {
+  color: var(--text-note);
+  font-size: var(--font-size-small);
+}
+
+.always-example {
+  font-family: var(--font-family-serif);
+  font-size: var(--dict-word-size);
+  line-height: 2.1;
 }
 
 .dict-local {

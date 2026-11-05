@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import kanjiJson from '@/text/data/kanji.json';
 import {
+  countKanjiWithin,
   FUHYO_WORDS,
   getKanjiInfo,
   getKanjiTier,
@@ -110,6 +111,25 @@ describe('isTierWithin', () => {
 
   it('字の段階が習い終えた段階より後のとき、false になる', () => {
     expect(isTierWithin('m1', 'g6')).toBe(false);
+  });
+});
+
+describe('countKanjiWithin', () => {
+  it.each([
+    ['g1', 80],
+    ['g2', 240],
+    ['g3', 440],
+    ['g4', 642],
+    ['g5', 835],
+    ['g6', 1026],
+    ['m1', 1376],
+    ['m2', 1776],
+  ] as const)('段階が %s のとき、それまでに習う字は %d 字になる', (level, count) => {
+    expect(countKanjiWithin(level)).toBe(count);
+  });
+
+  it('常用漢字すべてのとき、許容字体を数えずに 2,136 字になる', () => {
+    expect(countKanjiWithin('joyo')).toBe(2136);
   });
 });
 

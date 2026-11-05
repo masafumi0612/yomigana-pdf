@@ -250,8 +250,8 @@
     "description": "設定の画面の見出しの下の説明"
   },
   "options_header_saved": {
-    "message": "変更はすぐ保存されます",
-    "description": "設定の画面の見出しの横の、保存のボタンがいらないことの案内"
+    "message": "変更はすぐ保存され、開いている PDF にも反映されます",
+    "description": "設定の画面の見出しの横の、保存のボタンがいらず、開いているリーダーにもすぐ効くことの案内"
   },
   "options_welcome_title": {
     "message": "インストールありがとうございます",
@@ -364,6 +364,112 @@
   "options_open_urlDenied": {
     "message": "このサイトを読む許可がないため、開けませんでした。",
     "description": "サイトを読む許可をもらえなかったときに出す"
+  },
+  "options_amount_title": {
+    "message": "ルビの量：ルビを付けない漢字の範囲",
+    "description": "ルビの量（段階）を選ぶ場所の見出し"
+  },
+  "options_amount_lead": {
+    "message": "選んだ範囲までの漢字にはルビを付けず、それより上の漢字にだけ付けます。",
+    "description": "ルビの量を選ぶ場所の説明"
+  },
+  "options_amount_current": {
+    "message": "いまの設定：",
+    "description": "ルビの量の説明の後ろに、今の段階（例：3年までの漢字には付けない）を続けて出す"
+  },
+  "options_amount_elementary": {
+    "message": "小学校（学年別漢字配当表）",
+    "description": "段階のまとまりの名前。小学1〜6年"
+  },
+  "options_amount_middleGroup": {
+    "message": "中学・高校（常用漢字）",
+    "description": "段階のまとまりの名前。中1・中2の目安と、常用漢字すべて"
+  },
+  "options_amount_middleNote": {
+    "message": "中1・中2は、よく使われる順に字数で区切った目安です。教科書の学年とは一致しません。",
+    "description": "中学・高校のまとまりの名前の横の注意"
+  },
+  "options_amount_none": {
+    "message": "なし",
+    "description": "段階の選択肢。ルビを付けない漢字はない（すべての漢字にルビ）"
+  },
+  "options_amount_noneNote": {
+    "message": "すべての漢字にルビ",
+    "description": "段階の選択肢「なし」の下の説明"
+  },
+  "options_amount_grade": {
+    "message": "$GRADE$年まで",
+    "description": "段階の選択肢。小学校のその学年までに習う漢字にはルビを付けない",
+    "placeholders": {
+      "grade": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "options_amount_middle": {
+    "message": "中$GRADE$まで（目安）",
+    "description": "段階の選択肢。中学のその学年の目安までの漢字にはルビを付けない",
+    "placeholders": {
+      "grade": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "options_amount_joyo": {
+    "message": "常用漢字すべて",
+    "description": "段階の選択肢。常用漢字にはルビを付けない"
+  },
+  "options_amount_count": {
+    "message": "$COUNT$字",
+    "description": "段階の選択肢の下の説明。その段階までに習う漢字の数",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1,026"
+      }
+    }
+  },
+  "options_amount_alwaysTitle": {
+    "message": "次の文字は、どの範囲を選んでもルビが付きます",
+    "description": "段階に関係なくルビが付く文字の見本の見出し"
+  },
+  "options_amount_hyogaiChar": {
+    "message": "常用漢字にない漢字",
+    "description": "段階に関係なくルビが付く文字の種類（1つめ）"
+  },
+  "options_amount_hyogaiCharTerm": {
+    "message": "（表外字）",
+    "description": "1つめの種類の呼び名"
+  },
+  "options_amount_hyogaiCharExample": {
+    "message": "｜薔《ば》｜薇《ら》・｜檸《れ》｜檬《もん》",
+    "description": "1つめの種類の見本。｜字《ルビ》の形でルビを付ける"
+  },
+  "options_amount_jukujikun": {
+    "message": "語全体で特別に読む言葉",
+    "description": "段階に関係なくルビが付く文字の種類（2つめ）"
+  },
+  "options_amount_jukujikunTerm": {
+    "message": "（熟字訓）",
+    "description": "2つめの種類の呼び名"
+  },
+  "options_amount_jukujikunExample": {
+    "message": "｜今日《きょう》・｜大人《おとな》",
+    "description": "2つめの種類の見本。｜字《ルビ》の形でルビを付ける"
+  },
+  "options_amount_hyogaiReading": {
+    "message": "学校で習わない読み方",
+    "description": "段階に関係なくルビが付く文字の種類（3つめ）"
+  },
+  "options_amount_hyogaiReadingTerm": {
+    "message": "（表外の読み）",
+    "description": "3つめの種類の呼び名"
+  },
+  "options_amount_hyogaiReadingExample": {
+    "message": "｜生憎《あいにく》・｜身体《からだ》",
+    "description": "3つめの種類の見本。｜字《ルビ》の形でルビを付ける"
   },
   "options_dict_title": {
     "message": "直した読み",
