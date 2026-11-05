@@ -40,6 +40,7 @@
   --font-family: system-ui, sans-serif;
   --ruby-font-serif: 'Yomigana Ruby Serif', serif;
   --ruby-font-sans: 'Yomigana Ruby Sans', sans-serif;
+  --ruby-band: #ffffff;
 }
 
 html,
@@ -285,6 +286,11 @@ body {
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+}
+
+/* 行間がせまく隣の行に重なっても読めるよう、ルビの箱にだけ白を敷く。箱は親字の外側なので、親字は隠さない */
+.ruby-band .ruby-layer > span {
+  background: var(--ruby-band);
 }
 
 .ruby-layer > .ruby-serif {
