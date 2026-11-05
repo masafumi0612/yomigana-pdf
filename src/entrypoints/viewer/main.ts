@@ -11,6 +11,7 @@ import { withTimeout } from '@/messaging/timeout';
 import { allowNativeView } from '@/redirect/skip';
 import { DEFAULT_SETTINGS, type Settings } from '@/settings/model';
 import { getSettings, watchSettings } from '@/settings/storage';
+import type { Level } from '@/text/types';
 import { createDirectionEditor } from '@/viewer/direction-editor';
 import { installDrawRecorder } from '@/viewer/draw-recorder';
 import {
@@ -21,6 +22,7 @@ import {
   nextZoomStep,
   parsePageNumber,
 } from '@/viewer/navigation';
+import { rubyAmountLabel } from '@/viewer/ruby-amount';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
 import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
 import { isImageOnlyDocument } from '@/viewer/special-cases';
@@ -62,6 +64,8 @@ const zoomLevel = requireElement('zoom-level', HTMLOutputElement);
 const zoomIn = requireElement('zoom-in', HTMLButtonElement);
 const rotate = requireElement('rotate', HTMLButtonElement);
 const rotateLabel = requireElement('rotate-label', HTMLSpanElement);
+const rubyAmount = requireElement('ruby-amount', HTMLButtonElement);
+const rubyAmountText = requireElement('ruby-amount-text', HTMLSpanElement);
 const openFile = requireElement('open-file', HTMLButtonElement);
 const openNative = requireElement('open-native', HTMLButtonElement);
 const fileInput = requireElement('file-input', HTMLInputElement);
@@ -115,6 +119,16 @@ async function loadSettings(): Promise<Settings> {
   return DEFAULT_SETTINGS;
 }
 
+/**
+ * バーのルビの量のボタンを、段階に合わせる。
+ * @param level 段階
+ */
+function showRubyAmount(level: Level): void {
+  const label = rubyAmountLabel(level, message);
+  rubyAmountText.textContent = label.text;
+  rubyAmount.setAttribute('aria-label', label.name);
+}
+
 // pdf.js が字を描くより前に、字を描いた位置を書き留める用意をする
 const drawRecorder = installDrawRecorder();
 // 表示の部品を読み込む間に、設定も読んでおく
@@ -160,13 +174,14 @@ function updateNoTextNotice(): void {
   noTextNotice.hidden = isNoTextDismissed || !isImageOnlyDocument(hasTextByPage);
 }
 
+const initialSettings = await loadingSettings;
 const rubyPages = createRubyPages({
   // pdf.js の型ではページの表示が any なので、使うところだけの形として受け取る
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
   recorder: drawRecorder,
   root: container,
   // 最初の読みの問い合わせより前に、保存した設定を読み終えておく
-  settings: await loadingSettings,
+  settings: initialSettings,
   currentPageNumber: () => viewer.currentPageNumber,
   onPageText: (pageNumber, hasText) => {
     hasTextByPage.set(pageNumber, hasText);
@@ -189,6 +204,7 @@ const directionEditor = createDirectionEditor({
 });
 // 設定の画面やほかの Chrome で変えた設定を、開き直さずに反映する
 watchSettings((settings) => {
+  showRubyAmount(settings.level);
   rubyPages.applySettings(settings).catch((error: unknown) => {
     log.error('変わった設定をルビに反映する途中で予想外の失敗がありました', error);
   });
@@ -203,6 +219,9 @@ zoomLevel.setAttribute('aria-label', message('viewer_bar_zoomLevel'));
 // 更新のボタンと見分けられるよう、紙と矢印の絵に「右に回す」の文字を添える
 rotateLabel.textContent = message('viewer_bar_rotate');
 rotate.title = message('viewer_bar_rotateTitle');
+showRubyAmount(initialSettings.level);
+rubyAmount.title = message('viewer_bar_rubyAmountTitle');
+rubyAmount.hidden = false;
 openFile.textContent = message('viewer_bar_openFile');
 openFile.hidden = false;
 openNative.textContent = message('viewer_bar_openNative');
@@ -456,6 +475,11 @@ zoomIn.addEventListener('click', () => {
 rotate.addEventListener('click', () => {
   // 描き直しのあとの pagerendered で、ルビの層も新しい向きに置き直される
   viewer.pagesRotation = nextRotation(viewer.pagesRotation);
+});
+rubyAmount.addEventListener('click', () => {
+  browser.runtime.openOptionsPage().catch((error: unknown) => {
+    log.error('設定の画面を開くのに失敗しました', error);
+  });
 });
 openFile.addEventListener('click', () => {
   fileInput.click();

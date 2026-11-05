@@ -54,6 +54,10 @@
   --ruby-font-serif: 'Yomigana Ruby Serif', serif;
   --ruby-font-sans: 'Yomigana Ruby Sans', sans-serif;
   --ruby-band: #ffffff;
+  --amount-background: #3c4f6e;
+  --amount-hover: #4a5f82;
+  --amount-text: #e8f0fe;
+  --amount-padding: 0 10px 0 12px;
 }
 
 html,
@@ -159,6 +163,22 @@ body {
 .bar-button:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+/* 今のルビの量。押すと設定の画面が開くので、ほかのボタンと形を変えて目立たせる */
+.bar-amount {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: var(--amount-padding);
+  border-radius: calc(var(--button-height) / 2);
+  background: var(--amount-background);
+  color: var(--amount-text);
+  white-space: nowrap;
+}
+
+.bar-amount:hover:not(:disabled) {
+  background: var(--amount-hover);
 }
 
 .bar-zoom {
