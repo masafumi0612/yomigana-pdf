@@ -7,12 +7,22 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { browser } from 'wxt/browser';
 
 import { createLogger } from '@/log';
+import { withTimeout } from '@/messaging/timeout';
 import { allowNativeView } from '@/redirect/skip';
+import { DEFAULT_SETTINGS, type Settings } from '@/settings/model';
+import { getSettings, watchSettings } from '@/settings/storage';
 import { createDirectionEditor } from '@/viewer/direction-editor';
 import { installDrawRecorder } from '@/viewer/draw-recorder';
-import { formatZoom, MAX_ZOOM, MIN_ZOOM, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
+import {
+  formatZoom,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  nextRotation,
+  nextZoomStep,
+  parsePageNumber,
+} from '@/viewer/navigation';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
-import { fileNameFromUrl, isPdfFile, readViewerParams } from '@/viewer/source';
+import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
 import { isImageOnlyDocument } from '@/viewer/special-cases';
 
 /** 文言のキー */
@@ -20,13 +30,17 @@ type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
 
 /** 開く PDF。URL から読むか、選ばれたファイルを読む */
 type PdfSource =
-  { kind: 'url'; url: string; hasCredentials: boolean } | { kind: 'file'; file: File };
+  | { kind: 'url'; url: string; hasCredentials: boolean; hash: string }
+  | { kind: 'file'; file: File };
 
 /** PDF の中のリンクに付ける rel。開いた先から、このリーダーを触れないようにする */
 const EXTERNAL_LINK_REL = 'noopener noreferrer nofollow';
 
 /** pdf.js が読む同梱のデータの置き場所（ビルドで node_modules から写す） */
 const ASSET_BASE = location.origin;
+
+/** 始めに設定を読むのを待つ時間の上限（ミリ秒）。過ぎたら既定で始め、PDF を出すのを止めない */
+const SETTINGS_TIMEOUT_MS = 1000;
 
 const log = createLogger('viewer');
 
@@ -46,6 +60,8 @@ const zoomGroup = requireElement('zoom-group', HTMLDivElement);
 const zoomOut = requireElement('zoom-out', HTMLButtonElement);
 const zoomLevel = requireElement('zoom-level', HTMLOutputElement);
 const zoomIn = requireElement('zoom-in', HTMLButtonElement);
+const rotate = requireElement('rotate', HTMLButtonElement);
+const rotateLabel = requireElement('rotate-label', HTMLSpanElement);
 const openFile = requireElement('open-file', HTMLButtonElement);
 const openNative = requireElement('open-native', HTMLButtonElement);
 const fileInput = requireElement('file-input', HTMLInputElement);
@@ -73,6 +89,7 @@ const directionDone = requireElement('direction-done', HTMLButtonElement);
 const directionNotice = requireElement('direction-notice', HTMLDivElement);
 const directionNoticeText = requireElement('direction-notice-text', HTMLParagraphElement);
 const directionNoticeStart = requireElement('direction-notice-start', HTMLButtonElement);
+const directionNoticeClose = requireElement('direction-notice-close', HTMLButtonElement);
 const directionMenu = requireElement('direction-menu', HTMLDivElement);
 const directionMenuItem = requireElement('direction-menu-item', HTMLButtonElement);
 const container = requireElement('viewer-container', HTMLDivElement);
@@ -81,8 +98,27 @@ const viewerElement = requireElement('viewer', HTMLDivElement);
 const message = (name: MessageName, substitutions?: string): string =>
   browser.i18n.getMessage(name, substitutions);
 
+/**
+ * 保存した設定を読む。読めないとき・時間がかかるときは、ログに残して既定を使う。
+ * @returns 設定
+ */
+async function loadSettings(): Promise<Settings> {
+  try {
+    const result = await withTimeout(getSettings(), SETTINGS_TIMEOUT_MS);
+    if (result.ok) {
+      return result.value;
+    }
+    log.warn('設定を読むのに時間がかかったので、既定を使います');
+  } catch (error) {
+    log.error('設定を読めなかったので、既定を使います', error);
+  }
+  return DEFAULT_SETTINGS;
+}
+
 // pdf.js が字を描くより前に、字を描いた位置を書き留める用意をする
 const drawRecorder = installDrawRecorder();
+// 表示の部品を読み込む間に、設定も読んでおく
+const loadingSettings = loadSettings();
 
 // 部品の表示（pdf_viewer.mjs）は、読み込むときに pdf.js の本体を globalThis から引く
 Object.assign(globalThis, { pdfjsLib });
@@ -107,13 +143,17 @@ linkService.setViewer(viewer);
 const hasTextByPage = new Map<number, boolean>();
 // 案内を閉じたら、同じ PDF では出し直さない
 let isNoTextDismissed = false;
+// 開くときに URL の # から後ろで指されたページ・倍率。ページの数がわかる pagesinit で一度だけ使う
+let initialHash = '';
 
 // 向きの自信がないかたまりがあるか。あるときだけ、バーの下に向きを直す案内を出す
 let hasUncertainDirection = false;
 let isDirectionEditing = false;
+// 向きを直せる案内を閉じたら、同じ PDF では出し直さない（保存はしない）
+let isDirectionHintDismissed = false;
 
 function updateDirectionNotice(): void {
-  directionNotice.hidden = !hasUncertainDirection || isDirectionEditing;
+  directionNotice.hidden = !hasUncertainDirection || isDirectionEditing || isDirectionHintDismissed;
 }
 
 function updateNoTextNotice(): void {
@@ -125,6 +165,9 @@ const rubyPages = createRubyPages({
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
   recorder: drawRecorder,
   root: container,
+  // 最初の読みの問い合わせより前に、保存した設定を読み終えておく
+  settings: await loadingSettings,
+  currentPageNumber: () => viewer.currentPageNumber,
   onPageText: (pageNumber, hasText) => {
     hasTextByPage.set(pageNumber, hasText);
     updateNoTextNotice();
@@ -144,6 +187,12 @@ const directionEditor = createDirectionEditor({
   pages: rubyPages,
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
 });
+// 設定の画面やほかの Chrome で変えた設定を、開き直さずに反映する
+watchSettings((settings) => {
+  rubyPages.applySettings(settings).catch((error: unknown) => {
+    log.error('変わった設定をルビに反映する途中で予想外の失敗がありました', error);
+  });
+});
 
 // 押しても動かないボタンを見せないよう、表示の部品の読み込みが済んでから文言を入れる
 document.title = message('viewer_page_title');
@@ -151,6 +200,9 @@ pageInput.setAttribute('aria-label', message('viewer_bar_pageNumber'));
 zoomOut.setAttribute('aria-label', message('viewer_bar_zoomOut'));
 zoomIn.setAttribute('aria-label', message('viewer_bar_zoomIn'));
 zoomLevel.setAttribute('aria-label', message('viewer_bar_zoomLevel'));
+// 更新のボタンと見分けられるよう、紙と矢印の絵に「右に回す」の文字を添える
+rotateLabel.textContent = message('viewer_bar_rotate');
+rotate.title = message('viewer_bar_rotateTitle');
 openFile.textContent = message('viewer_bar_openFile');
 openFile.hidden = false;
 openNative.textContent = message('viewer_bar_openNative');
@@ -166,6 +218,7 @@ noTextText.textContent = message('viewer_notice_noText');
 noTextClose.textContent = message('viewer_notice_close');
 directionNoticeText.textContent = message('viewer_notice_directionHint');
 directionNoticeStart.textContent = message('viewer_notice_directionStart');
+directionNoticeClose.setAttribute('aria-label', message('viewer_notice_directionClose'));
 directionMenuItem.textContent = message('viewer_menu_directionFix');
 directionAllVertical.textContent = message('viewer_direction_allVertical');
 directionAllHorizontal.textContent = message('viewer_direction_allHorizontal');
@@ -217,6 +270,8 @@ function resetNotices(): void {
   hasTextByPage.clear();
   isNoTextDismissed = false;
   updateNoTextNotice();
+  isDirectionHintDismissed = false;
+  updateDirectionNotice();
 }
 
 function setDocumentShown(isShown: boolean): void {
@@ -247,6 +302,7 @@ async function openSource(source: PdfSource): Promise<void> {
   fileName.textContent = name;
   document.title = name;
   setNativeUrl(source);
+  initialHash = source.kind === 'url' ? source.hash : '';
   resetNotices();
   showStatus('viewer_main_loading');
 
@@ -353,6 +409,10 @@ function updateZoom(scale: number): void {
 
 eventBus.on('pagesinit', () => {
   viewer.currentScaleValue = 'auto';
+  if (initialHash !== '') {
+    linkService.setHash(initialHash);
+    initialHash = '';
+  }
   pageTotal.textContent = message('viewer_bar_pageTotal', String(viewer.pagesCount));
   pageInput.value = String(viewer.currentPageNumber);
 });
@@ -393,6 +453,10 @@ zoomOut.addEventListener('click', () => {
 zoomIn.addEventListener('click', () => {
   viewer.currentScale = nextZoomStep(viewer.currentScale, 'in');
 });
+rotate.addEventListener('click', () => {
+  // 描き直しのあとの pagerendered で、ルビの層も新しい向きに置き直される
+  viewer.pagesRotation = nextRotation(viewer.pagesRotation);
+});
 openFile.addEventListener('click', () => {
   fileInput.click();
 });
@@ -418,6 +482,11 @@ rubyRetry.addEventListener('click', () => {
     });
 });
 directionNoticeStart.addEventListener('click', enterDirectionEditing);
+directionNoticeClose.addEventListener('click', () => {
+  isDirectionHintDismissed = true;
+  updateDirectionNotice();
+  container.focus();
+});
 directionDone.addEventListener('click', exitDirectionEditing);
 for (const [button, direction] of [
   [directionAllVertical, 'vertical'],
@@ -492,6 +561,7 @@ if (params.ok && params.value.pdfUrl !== undefined) {
     kind: 'url',
     url: params.value.pdfUrl,
     hasCredentials: params.value.hasCredentials,
+    hash: readInitialHash(params.value.pdfUrl, params.value.hasCredentials, location.hash),
   });
 } else {
   // 開いてはいけない URL を渡されたときも、ファイルを選んで開けるようにしておく

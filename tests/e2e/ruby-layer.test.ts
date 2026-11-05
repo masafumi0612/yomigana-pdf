@@ -293,3 +293,64 @@ async function durations(page: Page, name: string): Promise<number[]> {
     name,
   );
 }
+
+/** 親字から見たルビの側 */
+type Side = 'top' | 'right' | 'bottom' | 'left';
+
+/** 時計回りに 90 度ずつ回したときの、ルビの側の移り方 */
+const CLOCKWISE: readonly Side[] = ['top', 'right', 'bottom', 'left'];
+
+/**
+ * ルビが親字のどちら側にあるか。中心どうしの差が大きいほうの向きで決める。
+ * @param measured ルビと親字の箱
+ * @returns ルビの側
+ */
+function sideOf(measured: RubyAndBase): Side {
+  const { ruby, base } = measured;
+  const dx = (ruby.left + ruby.right) / 2 - (base.left + base.right) / 2;
+  const dy = (ruby.top + ruby.bottom) / 2 - (base.top + base.bottom) / 2;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx > 0 ? 'right' : 'left';
+  }
+  return dy > 0 ? 'bottom' : 'top';
+}
+
+const ROTATION_CASES = [
+  { name: '縦書き', file: 'vertical-story.pdf', base: '傘', ruby: 'かさ', side: 'right' },
+  { name: '横書き', file: 'horizontal-print.pdf', base: '筒', ruby: 'とう', side: 'top' },
+] as const;
+
+for (const { name, file, base, ruby, side } of ROTATION_CASES) {
+  test(`${name}の PDF を回したとき、ルビが回したあとの親字の同じ側に付いてくる`, async ({
+    page,
+    extensionId,
+  }) => {
+    await openFromFile(page, extensionId, file);
+    await expect(rubyLayer(page, 1).locator(`[data-base="${base}"]`)).toHaveText(ruby, {
+      timeout: FIRST_RUBY_TIMEOUT_MS,
+    });
+    const start = CLOCKWISE.indexOf(side);
+
+    for (const turns of [1, 2, 3]) {
+      await page.getByRole('button', { name: '右に回す' }).click();
+      const expected = CLOCKWISE[(start + turns) % CLOCKWISE.length];
+
+      await expect
+        .poll(async () => sideOf(await measureRuby(page, 1, base)), { timeout: 10_000 })
+        .toBe(expected);
+      await expect(rubyLayer(page, 1).locator(`[data-base="${base}"]`)).toHaveText(ruby);
+    }
+  });
+}
+
+test('回すボタンをキーボードで押したとき、紙面が回る', async ({ page, extensionId }) => {
+  await openFromFile(page, extensionId, 'horizontal-print.pdf');
+  await expect(rubyLayer(page, 1).locator('[data-base="筒"]')).toBeAttached({
+    timeout: FIRST_RUBY_TIMEOUT_MS,
+  });
+
+  await page.getByRole('button', { name: '右に回す' }).focus();
+  await page.keyboard.press('Enter');
+
+  await expect(rubyLayer(page, 1)).toHaveAttribute('data-main-rotation', '90');
+});

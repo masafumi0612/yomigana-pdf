@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatZoom, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
+import { formatZoom, nextRotation, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
 
 describe('parsePageNumber', () => {
   it('範囲の中の数のとき、そのページ番号になる', () => {
@@ -53,5 +53,15 @@ describe('nextZoomStep', () => {
 describe('formatZoom', () => {
   it('倍率のとき、四捨五入した百分率になる', () => {
     expect(formatZoom(1.234)).toBe('123%');
+  });
+});
+
+describe('nextRotation', () => {
+  it('0 度のとき、90 度になる', () => {
+    expect(nextRotation(0)).toBe(90);
+  });
+
+  it('270 度のとき、0 度に戻る', () => {
+    expect(nextRotation(270)).toBe(0);
   });
 });

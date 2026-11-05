@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fileNameFromUrl, isPdfFile, readViewerParams } from '@/viewer/source';
+import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
 
 const EXTENSION_ORIGIN = 'chrome-extension://abcdefghijklmnopabcdefghijklmnop';
 
@@ -43,6 +43,27 @@ describe('readViewerParams', () => {
 
   it('ほかの拡張の URL のとき、開かない', () => {
     expect(readViewerParams('?file=chrome-extension://other/a.pdf', EXTENSION_ORIGIN)).toEqual({
+      ok: false,
+      error: 'unsupported-protocol',
+    });
+  });
+
+  it('この拡張の画面が作った blob: の URL のとき、開いてよい', () => {
+    expect(readViewerParams(`?file=blob:${EXTENSION_ORIGIN}/0f8c-41`, EXTENSION_ORIGIN)).toEqual({
+      ok: true,
+      value: { pdfUrl: `blob:${EXTENSION_ORIGIN}/0f8c-41`, hasCredentials: false },
+    });
+  });
+
+  it('ほかのサイトが作った blob: の URL のとき、開かない', () => {
+    expect(readViewerParams('?file=blob:https://example.com/0f8c-41', EXTENSION_ORIGIN)).toEqual({
+      ok: false,
+      error: 'unsupported-protocol',
+    });
+  });
+
+  it('作った側の URL がない blob: の URL のとき、開かない', () => {
+    expect(readViewerParams('?file=blob:0f8c-41', EXTENSION_ORIGIN)).toEqual({
       ok: false,
       error: 'unsupported-protocol',
     });
@@ -111,6 +132,14 @@ describe('fileNameFromUrl', () => {
     expect(fileNameFromUrl('https://example.com/%E3%81.pdf')).toBe('%E3%81.pdf');
   });
 
+  it('blob: の URL のとき、# の後ろの名前になる', () => {
+    expect(fileNameFromUrl('blob:chrome-extension://abc/0f8c-41#%E5%9B%B3.pdf')).toBe('図.pdf');
+  });
+
+  it('blob: の URL に名前がないとき、パスの最後になる', () => {
+    expect(fileNameFromUrl('blob:chrome-extension://abc/0f8c-41')).toBe('0f8c-41');
+  });
+
   it('URL として読めないとき、渡した文字そのものになる', () => {
     expect(fileNameFromUrl('a.pdf')).toBe('a.pdf');
   });
@@ -127,5 +156,25 @@ describe('isPdfFile', () => {
 
   it('種類も名前も PDF でないとき、PDF とみなさない', () => {
     expect(isPdfFile({ name: 'photo.png', type: 'image/png' })).toBe(false);
+  });
+});
+
+describe('readInitialHash', () => {
+  it('自動で移されたとき、リーダーの URL の # から後ろを返す', () => {
+    expect(readInitialHash('https://example.com/a.pdf', true, '#page=3&zoom=150')).toBe(
+      'page=3&zoom=150',
+    );
+  });
+
+  it('file の引数で開くとき、PDF の URL の # から後ろを返す', () => {
+    expect(readInitialHash('https://example.com/a.pdf#page=2', false, '#page=9')).toBe('page=2');
+  });
+
+  it('file の引数で blob: の URL を開くとき、# の後ろはファイル名なので空の文字列になる', () => {
+    expect(readInitialHash('blob:chrome-extension://abc/0f8c-41#page=2.pdf', false, '')).toBe('');
+  });
+
+  it('# から後ろがないとき、空の文字列になる', () => {
+    expect(readInitialHash('https://example.com/a.pdf', true, '')).toBe('');
   });
 });

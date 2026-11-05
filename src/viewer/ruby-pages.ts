@@ -3,21 +3,30 @@
 // ページの文・読み・字の位置・ルビの置き場所はページごとに取っておき、拡大・回転で描き直しても問い合わせ直さない。
 import type { PageViewport, PDFPageProxy } from 'pdfjs-dist';
 
-import { RUBY_COLOR, RUBY_SIZE_RATIO } from '@/config';
 import { createLogger } from '@/log';
-import type { ReadingResult } from '@/messaging/messages';
+import type { ReadingError, ReadingResult } from '@/messaging/messages';
 import { requestReadings } from '@/messaging/reading-client';
 import { isDirectionUncertain } from '@/pdf/direction';
 import { extractPageText } from '@/pdf/page-text';
 import { type BlockRebuilder, createBlockRebuilder } from '@/pdf/rebuild-block';
 import { isSerifFont } from '@/pdf/typeface';
 import type { Direction, Glyph, PageText, PdfTextContent, Rect, TextBlock } from '@/pdf/types';
+import type { Result } from '@/result';
+import {
+  DEFAULT_SETTINGS,
+  RUBY_COLORS,
+  RUBY_SIZE_RATIOS,
+  type RubyStyle,
+  type Settings,
+} from '@/settings/model';
 import type { RubySpan } from '@/text/annotate';
+import type { Level } from '@/text/types';
 
 import type { DrawRecorder } from './draw-recorder';
 import { type DrawnBox, snapGlyphs, toDrawnBoxes } from './glyph-snap';
-import { showRubyLayer } from './ruby-layer';
+import { RUBY_BAND_CLASS, showRubyLayer } from './ruby-layer';
 import { layoutRubies, type PageFrame, type RubyBox } from './ruby-layout';
+import { nearestFirst, settingsChange } from './settings-change';
 import { createFailedPages } from './special-cases';
 import { invertMatrix, type Matrix, multiplyMatrix, toMatrix } from './transform';
 
@@ -60,14 +69,22 @@ export interface RubyPagesOptions {
   readonly getPageView: (pageNumber: number) => RubyPageView | undefined;
   /** 描いた字の位置を書き留める道具 */
   readonly recorder: DrawRecorder;
-  /** ルビの見た目（CSS 変数）を置く要素 */
+  /** ルビの見た目（CSS 変数と class）を置く要素 */
   readonly root: HTMLElement;
+  /** 始めの設定。既定は DEFAULT_SETTINGS */
+  readonly settings?: Settings;
+  /**
+   * 今のページ番号を引く。設定が変わったとき、近いページから付け直すのに使う
+   * @returns ページ番号（1 から）
+   */
+  readonly currentPageNumber?: () => number;
   /**
    * 読みを問い合わせる（テストで差しかえるため）
    * @param texts 文
+   * @param level 段階
    * @returns 文ごとのルビを付ける所
    */
-  readonly readTexts?: (texts: readonly string[]) => Promise<ReadingResult>;
+  readonly readTexts?: (texts: readonly string[], level: Level) => Promise<ReadingResult>;
   /**
    * ページの文を取り出せたときに呼ぶ（文字が画像になっているかの判定に使う）
    * @param pageNumber ページ番号（1 から）
@@ -128,6 +145,12 @@ export interface RubyPages {
    * @param direction 決める向き
    */
   setAllDirection(direction: Direction): Promise<void>;
+  /**
+   * 設定が変わったときに呼ぶ。色と帯はすぐ変え、大きさが変わればルビを置き直し、
+   * 段階が変わればルビの層を出しているページを（近いページから）読み直す。ほかのページは次に描いたときに読み直す。
+   * @param settings 変わったあとの設定
+   */
+  applySettings(settings: Settings): Promise<void>;
   /** 別の PDF を開くときに呼ぶ。取っておいたものを捨てる */
   reset(): void;
 }
@@ -136,7 +159,12 @@ export interface RubyPages {
 interface PageData {
   readonly page: PageText;
   readonly spans: readonly (readonly RubySpan[])[];
+  /** 読みを問い合わせたときの段階 */
+  readonly level: Level;
 }
+
+/** 読み直しが役に立たなかった理由。outdated は、待つ間にほかの読み直しや段階の変更があったとき */
+type RereadError = ReadingError | 'outdated';
 
 /** ページごとに取っておくもの */
 interface PageEntry {
@@ -164,9 +192,14 @@ const log = createLogger('ruby-layer');
  * @returns ルビの層の部品
  */
 export function createRubyPages(options: RubyPagesOptions): RubyPages {
-  const readTexts = options.readTexts ?? requestReadings;
-  options.root.style.setProperty('--ruby-size', String(RUBY_SIZE_RATIO));
-  options.root.style.setProperty('--ruby-color', RUBY_COLOR);
+  const readTexts = options.readTexts ?? ((texts, level) => requestReadings(texts, { level }));
+  let settings = options.settings ?? DEFAULT_SETTINGS;
+  const applyStyle = (style: RubyStyle): void => {
+    options.root.style.setProperty('--ruby-size', String(RUBY_SIZE_RATIOS[style.size]));
+    options.root.style.setProperty('--ruby-color', RUBY_COLORS[style.color]);
+    options.root.classList.toggle(RUBY_BAND_CLASS, style.hasBand);
+  };
+  applyStyle(settings.rubyStyle);
   let entries = new Map<number, PageEntry>();
   /** 利用者がすべてのかたまりに決めた向き。あとから開くページにも使う */
   let forced: Direction | undefined;
@@ -215,9 +248,13 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     const content = await view.pdfPage.getTextContent();
     const page = redirected(extractPageText(content), content, forced);
     options.onPageText?.(pageNumber, page.blocks.length > 0);
-    if (page.blocks.length === 0) return { page, spans: [] };
+    const { level } = settings;
+    if (page.blocks.length === 0) return { page, spans: [], level };
     const startedAt = performance.now();
-    const result = await readTexts(page.blocks.map((block) => block.text));
+    const result = await readTexts(
+      page.blocks.map((block) => block.text),
+      level,
+    );
     performance.measure(READINGS_MEASURE, { start: startedAt });
     if (!result.ok) {
       log.error('読みを出せなかったので、ルビを付けずに出します', result.error);
@@ -227,7 +264,7 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       return undefined;
     }
     if (current === entries) markFailure(pageNumber, undefined);
-    return { page, spans: result.value };
+    return { page, spans: result.value, level };
   };
 
   // 文と読みは取っておき、描き終えたときに待つ。待つ前に失敗しても、ここでログに残して undefined にする
@@ -247,63 +284,98 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     return entry.data;
   };
 
+  // 置き場所を出し直したときは、前の層の要素が古いので、層を作り直す
   const showLayer = (view: RubyPageView, entry: PageEntry, data: PageData): void => {
-    const { exact } = entry;
-    const { styles } = data.page;
-    entry.boxes ??= layoutRubies(data.page.blocks, data.spans, frameOf(view.viewport), {
-      sizeRatio: RUBY_SIZE_RATIO,
-      rectOf: (glyph) => exact?.get(glyph) ?? glyph.rect,
-      isSerif: (glyph) =>
-        isSerifFont(styles[glyph.fontName], realFontName(view.pdfPage, glyph.fontName)),
-    });
+    if (entry.boxes === undefined) {
+      const { exact } = entry;
+      const { styles } = data.page;
+      entry.boxes = layoutRubies(data.page.blocks, data.spans, frameOf(view.viewport), {
+        sizeRatio: RUBY_SIZE_RATIOS[settings.rubyStyle.size],
+        rectOf: (glyph) => exact?.get(glyph) ?? glyph.rect,
+        isSerif: (glyph) =>
+          isSerifFont(styles[glyph.fontName], realFontName(view.pdfPage, glyph.fontName)),
+      });
+      entry.layer?.remove();
+      entry.layer = undefined;
+    }
     entry.layer = showRubyLayer(view.div, view.viewport, entry.boxes, entry.layer);
   };
 
-  // 向きを決め直したかたまりだけ読み直し、ルビの層を置き直す。読めなかったときは、今のままにする
+  // かたまりを blocks に置きかえ、変わったかたまりを今の段階で読み直す。段階が変わっていれば、すべて読み直す。
+  // 読めたら取っておいた文と読みを置きかえ、置き場所は次に出すときに出し直す
+  const reread = async (
+    pageNumber: number,
+    entry: PageEntry,
+    data: PageData,
+    blocks: readonly TextBlock[],
+  ): Promise<Result<PageData, RereadError>> => {
+    const { level } = settings;
+    const targets = blocks.flatMap((block, index) =>
+      level !== data.level || block !== data.page.blocks[index] ? [{ index, block }] : [],
+    );
+    const result: ReadingResult =
+      targets.length === 0
+        ? { ok: true, value: [] }
+        : await readTexts(
+            targets.map(({ block }) => block.text),
+            level,
+          );
+    if (!result.ok) return result;
+    // 別の PDF に移ったとき・ほかの読み直しが先に済んだとき・段階がまた変わったときは、古い読みで上書きしない
+    if (entries.get(pageNumber) !== entry || entry.resolved !== data || level !== settings.level) {
+      return { ok: false, error: 'outdated' };
+    }
+    const spans = [...data.spans];
+    for (const [order, { index }] of targets.entries()) spans[index] = result.value[order] ?? [];
+    const updated: PageData = { page: { ...data.page, blocks: [...blocks] }, spans, level };
+    const rebuilt = targets.filter(({ index, block }) => block !== data.page.blocks[index]);
+    if (rebuilt.length > 0 && entry.exact !== undefined && entry.drawn !== undefined) {
+      const exact = new Map(entry.exact);
+      for (const { index } of rebuilt) {
+        for (const glyph of data.page.blocks[index]?.glyphs ?? []) exact.delete(glyph);
+      }
+      const snapped = snapGlyphs(
+        rebuilt.map(({ block }) => block),
+        entry.drawn,
+      );
+      entry.exact = new Map([...exact, ...snapped]);
+    }
+    entry.resolved = updated;
+    entry.data = Promise.resolve(updated);
+    entry.boxes = undefined;
+    return { ok: true, value: updated };
+  };
+
+  // 向きを決め直したかたまりだけ読み直し、ルビの層を置き直す。読めなかったときは、今のままにする。
+  // 待つ間に段階が変わったり、ほかの読み直しが先に済んだりしたら、その新しい文に同じ向きを当てて読み直す。
+  // 利用者が決めた向きを、段階の読み直しで捨てないため
   const redirect = async (
     pageNumber: number,
     wanted: (block: TextBlock) => Direction | undefined,
   ): Promise<void> => {
     const view = options.getPageView(pageNumber);
     const entry = entries.get(pageNumber);
-    const data = entry?.resolved;
-    if (view === undefined || entry === undefined || data === undefined) return;
-    const current = entries;
+    if (view === undefined || entry?.resolved === undefined) return;
     const rebuild = createBlockRebuilder(await view.pdfPage.getTextContent());
-    const changes = rebuiltBlocks(data.page, rebuild, wanted);
-    if (changes.length === 0) return;
-    const result = await readTexts(changes.map(({ block }) => block.text));
-    if (!result.ok) {
-      log.error('向きを決め直したかたまりの読みを出せませんでした', result.error);
-      return;
-    }
-    if (current !== entries || entry.resolved !== data) return;
-    const blocks = [...data.page.blocks];
-    const spans = [...data.spans];
-    for (const [order, { index, block }] of changes.entries()) {
-      blocks[index] = block;
-      spans[index] = result.value[order] ?? [];
-    }
-    const updated = { page: { ...data.page, blocks }, spans };
-    entry.resolved = updated;
-    entry.data = Promise.resolve(updated);
-    if (entry.exact !== undefined && entry.drawn !== undefined) {
-      const exact = new Map(entry.exact);
-      for (const { index } of changes) {
-        for (const glyph of data.page.blocks[index]?.glyphs ?? []) exact.delete(glyph);
+    for (;;) {
+      const data = entry.resolved;
+      if (entries.get(pageNumber) !== entry) return;
+      const changes = rebuiltBlocks(data.page, rebuild, wanted);
+      if (changes.length === 0) return;
+      const blocks = [...data.page.blocks];
+      for (const { index, block } of changes) blocks[index] = block;
+      const result = await reread(pageNumber, entry, data, blocks);
+      if (result.ok) {
+        markUncertain(pageNumber, result.value.page);
+        showLayer(view, entry, result.value);
+        options.onPageShown?.(pageNumber);
+        return;
       }
-      const snapped = snapGlyphs(
-        changes.map(({ block }) => block),
-        entry.drawn,
-      );
-      entry.exact = new Map([...exact, ...snapped]);
+      if (result.error !== 'outdated') {
+        log.error('向きを決め直したかたまりの読みを出せませんでした', result.error);
+        return;
+      }
     }
-    markUncertain(pageNumber, updated.page);
-    entry.boxes = undefined;
-    entry.layer?.remove();
-    entry.layer = undefined;
-    showLayer(view, entry, updated);
-    options.onPageShown?.(pageNumber);
   };
 
   return {
@@ -340,6 +412,20 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
         entry.resolved = data;
         markUncertain(event.pageNumber, data.page);
       }
+      // 前の段階で読んだページは、文と字の位置はそのままに、読みだけ問い合わせ直す
+      const { resolved } = entry;
+      if (resolved.level !== settings.level) {
+        const result = await reread(event.pageNumber, entry, resolved, resolved.page.blocks);
+        if (current !== entries || renders !== entry.renders) return;
+        if (result.ok) {
+          markFailure(event.pageNumber, undefined);
+        } else if (result.error !== 'outdated') {
+          // 今のルビは残し、「もう一度」で読み直せるようにする
+          log.error('段階を変えたページの読みを出せませんでした', result.error);
+          markFailure(event.pageNumber, view);
+        }
+      }
+      // 待つ間にほかの読み直しが先に済んでいたら、そちらを出す
       showLayer(view, entry, entry.resolved);
       performance.measure(RUBY_LAYER_MEASURE, {
         start: renderedAt,
@@ -370,6 +456,26 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
         [...entries.keys()].map((pageNumber) =>
           redirect(pageNumber, (block) => forcedDirection(block, direction)),
         ),
+      );
+    },
+
+    async applySettings(next) {
+      const change = settingsChange(settings, next);
+      settings = next;
+      applyStyle(next.rubyStyle);
+      if (change.isSizeChanged) {
+        for (const entry of entries.values()) entry.boxes = undefined;
+      }
+      if (!change.isLevelChanged && !change.isSizeChanged) return;
+      // 描いている途中のページは、描き終えたときに今の設定で出し直す
+      const pages = [...entries]
+        .filter(([, entry]) => entry.layer?.isConnected === true && entry.watching === undefined)
+        .map(([pageNumber]) => pageNumber);
+      await Promise.all(
+        nearestFirst(pages, options.currentPageNumber?.() ?? 1).map(async (pageNumber) => {
+          const view = options.getPageView(pageNumber);
+          if (view !== undefined) await this.handlePageRendered({ source: view, pageNumber });
+        }),
       );
     },
 

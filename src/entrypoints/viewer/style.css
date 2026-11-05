@@ -25,6 +25,7 @@
   --button-height: 32px;
   --button-padding: 0 12px;
   --button-radius: 4px;
+  --button-border: #80868b;
   --focus-ring: #8ab4f8;
   --focus-width: 2px;
   --page-background: #525659;
@@ -44,12 +45,15 @@
   --direction-focus: #1f2933;
   --direction-border-width: 2px;
   --direction-toggle-font-size: 12px;
+  --notice-close-size: 44px;
+  --notice-close-font-size: 1.5em;
   --menu-background: #323639;
   --menu-padding: 4px;
   --font-size: 14px;
   --font-family: system-ui, sans-serif;
   --ruby-font-serif: 'Yomigana Ruby Serif', serif;
   --ruby-font-sans: 'Yomigana Ruby Sans', sans-serif;
+  --ruby-band: #ffffff;
 }
 
 html,
@@ -134,6 +138,18 @@ body {
   min-width: var(--button-height);
   padding: 0;
   font-size: 1.25em;
+}
+
+/* 枠を付けて、文字だけのボタンとも見分けやすくする（枠は背景と 3:1 以上） */
+.bar-rotate {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border-color: var(--button-border);
+}
+
+.bar-rotate-icon {
+  flex: none;
 }
 
 .bar-button:hover:not(:disabled) {
@@ -236,6 +252,15 @@ body {
   border-color: var(--bar-text-sub);
 }
 
+/* 閉じるボタンは、押しやすいよう 44px 四方にする */
+.notice-close {
+  width: var(--notice-close-size);
+  height: var(--notice-close-size);
+  padding: 0;
+  font-size: var(--notice-close-font-size);
+  line-height: 1;
+}
+
 .notice-error {
   flex-basis: 100%;
   margin: 0;
@@ -284,6 +309,11 @@ body {
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+}
+
+/* 行間がせまく隣の行に重なっても読めるよう、ルビの箱にだけ白を敷く。箱は親字の外側なので、親字は隠さない */
+.ruby-band .ruby-layer > span {
+  background: var(--ruby-band);
 }
 
 .ruby-layer > .ruby-serif {
@@ -350,14 +380,29 @@ body {
   pointer-events: none;
 }
 
+/* 枠は押せるようにする。押すか Tab で移ると、そのかたまりを選んで切り替えを出す */
 .direction-block {
+  --direction-frame-color: var(--direction-frame);
+
   position: absolute;
   box-sizing: border-box;
-  border: var(--direction-border-width) solid var(--direction-frame);
+  border: var(--direction-border-width) solid var(--direction-frame-color);
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .direction-block[data-uncertain='true'] {
-  border-color: var(--direction-frame-uncertain);
+  --direction-frame-color: var(--direction-frame-uncertain);
+}
+
+/* 選んだかたまりは、枠を外側に太くして見分ける */
+.direction-block[data-selected='true'] {
+  box-shadow: 0 0 0 var(--direction-border-width) var(--direction-frame-color);
+}
+
+.direction-block:focus-visible {
+  outline: calc(var(--focus-width) + 1px) solid var(--direction-focus);
+  outline-offset: calc(var(--direction-border-width) + var(--focus-width));
 }
 
 /* 切り替えは枠の角の外側に置く（紙面の上の端では枠の下） */
@@ -374,6 +419,10 @@ body {
   font-size: var(--direction-toggle-font-size);
   cursor: pointer;
   pointer-events: auto;
+}
+
+.direction-toggle[hidden] {
+  display: none;
 }
 
 .direction-toggle[data-place='above'] {

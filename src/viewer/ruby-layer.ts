@@ -9,6 +9,8 @@ import type { RubyBox } from './ruby-layout';
 
 /** ルビの層の class */
 export const RUBY_LAYER_CLASS = 'ruby-layer';
+/** ルビの下に帯を敷くときに、ルビの層を入れる要素に付ける class */
+export const RUBY_BAND_CLASS = 'ruby-band';
 /** 縦書きのルビの class */
 const VERTICAL_CLASS = 'ruby-vertical';
 /** 親字が明朝のルビの class（ルビも明朝にする） */
