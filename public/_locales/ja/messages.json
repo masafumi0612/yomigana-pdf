@@ -58,11 +58,47 @@
     "description": "リーダーで PDF を読み込んでいる間に出す"
   },
   "viewer_main_openFailed": {
-    "message": "この PDF を開けませんでした。「Chrome の標準の表示で開く」で開いてください。",
+    "message": "この PDF を開けませんでした。ファイルを選んで開くか、Chrome の標準の表示で開いてください。",
     "description": "リーダーで PDF を開けなかったときに出す"
   },
   "viewer_main_notPdf": {
     "message": "PDF のファイルを選んでください。",
     "description": "リーダーに PDF ではないファイルを渡されたときに出す"
+  },
+  "viewer_main_chooseFile": {
+    "message": "ファイルを選んで開く",
+    "description": "PDF を開けなかったときの案内のボタン。ファイルを選んで開き直す"
+  },
+  "viewer_main_openNative": {
+    "message": "Chrome の標準の表示で開く",
+    "description": "PDF を開けなかったときの案内のボタン。Chrome のもとからある表示で開く"
+  },
+  "viewer_bar_rubyFailed": {
+    "message": "ルビを付けられませんでした",
+    "description": "リーダーのバーに出す。読みを出せなかったページがあるとき"
+  },
+  "viewer_bar_rubyRetry": {
+    "message": "もう一度",
+    "description": "リーダーのバーのボタン。読みを出せなかったページを、もう一度問い合わせる"
+  },
+  "viewer_password_label": {
+    "message": "この PDF にはパスワードがかかっています。パスワードを入れてください。",
+    "description": "パスワード付きの PDF を開くときの、入力欄の名前"
+  },
+  "viewer_password_open": {
+    "message": "開く",
+    "description": "パスワードを入れて PDF を開くボタン"
+  },
+  "viewer_password_incorrect": {
+    "message": "パスワードが違います。もう一度入れてください。",
+    "description": "入れたパスワードが違ったときに出す"
+  },
+  "viewer_notice_noText": {
+    "message": "この PDF は文字が画像になっているので、ルビを付けられません。",
+    "description": "文字が取れない PDF（画像だけの PDF）を開いたときの案内"
+  },
+  "viewer_notice_close": {
+    "message": "閉じる",
+    "description": "案内を閉じるボタン"
   }
 }

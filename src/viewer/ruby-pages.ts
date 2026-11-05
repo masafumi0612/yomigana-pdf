@@ -15,6 +15,7 @@ import type { DrawRecorder } from './draw-recorder';
 import { snapGlyphs, toDrawnBoxes } from './glyph-snap';
 import { showRubyLayer } from './ruby-layer';
 import { layoutRubies, type PageFrame, type RubyBox } from './ruby-layout';
+import { createFailedPages } from './special-cases';
 import { invertMatrix, type Matrix, multiplyMatrix, toMatrix } from './transform';
 
 /** 読みの問い合わせにかかった時間を測る名前（performance.measure） */
@@ -64,6 +65,17 @@ export interface RubyPagesOptions {
    * @returns 文ごとのルビを付ける所
    */
   readonly readTexts?: (texts: readonly string[]) => Promise<ReadingResult>;
+  /**
+   * ページの文を取り出せたときに呼ぶ（文字が画像になっているかの判定に使う）
+   * @param pageNumber ページ番号（1 から）
+   * @param hasText 文があるか
+   */
+  readonly onPageText?: (pageNumber: number, hasText: boolean) => void;
+  /**
+   * 読みを出せなかったページがあるかが変わったときに呼ぶ
+   * @param hasFailed 読みを出せなかったページが1つでもあれば true
+   */
+  readonly onReadingFailureChange?: (hasFailed: boolean) => void;
 }
 
 /** ページごとにルビの層を重ねる部品 */
@@ -78,6 +90,8 @@ export interface RubyPages {
    * @param event pagerendered の知らせ
    */
   handlePageRendered(event: PageRenderEvent): Promise<void>;
+  /** 読みを出せなかったページの読みを、問い合わせ直してルビの層を出す */
+  retryFailed(): Promise<void>;
   /** 別の PDF を開くときに呼ぶ。取っておいたものを捨てる */
   reset(): void;
 }
@@ -114,6 +128,13 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
   options.root.style.setProperty('--ruby-size', String(RUBY_SIZE_RATIO));
   options.root.style.setProperty('--ruby-color', RUBY_COLOR);
   let entries = new Map<number, PageEntry>();
+  const failed = createFailedPages<RubyPageView>();
+  const markFailure = (pageNumber: number, view: RubyPageView | undefined): void => {
+    const before = failed.size;
+    if (view === undefined) failed.remove(pageNumber);
+    else failed.add(pageNumber, view);
+    if ((before === 0) !== (failed.size === 0)) options.onReadingFailureChange?.(failed.size > 0);
+  };
 
   const entryOf = (pageNumber: number): PageEntry => {
     let entry = entries.get(pageNumber);
@@ -131,8 +152,14 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     return entry;
   };
 
-  const load = async (view: RubyPageView, entry: PageEntry): Promise<PageData | undefined> => {
+  const load = async (
+    pageNumber: number,
+    view: RubyPageView,
+    entry: PageEntry,
+  ): Promise<PageData | undefined> => {
+    const current = entries;
     const page = extractPageText(await view.pdfPage.getTextContent());
+    options.onPageText?.(pageNumber, page.blocks.length > 0);
     if (page.blocks.length === 0) return { page, spans: [] };
     const startedAt = performance.now();
     const result = await readTexts(page.blocks.map((block) => block.text));
@@ -140,16 +167,24 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     if (!result.ok) {
       log.error('読みを出せなかったので、ルビを付けずに出します', result.error);
       entry.data = undefined;
+      // 別の PDF に移った後の失敗は、新しい PDF の記録に入れない
+      if (current === entries) markFailure(pageNumber, view);
       return undefined;
     }
+    if (current === entries) markFailure(pageNumber, undefined);
     return { page, spans: result.value };
   };
 
   // 文と読みは取っておき、描き終えたときに待つ。待つ前に失敗しても、ここでログに残して undefined にする
-  const prepare = (view: RubyPageView, entry: PageEntry): Promise<PageData | undefined> => {
+  const prepare = (
+    pageNumber: number,
+    view: RubyPageView,
+    entry: PageEntry,
+  ): Promise<PageData | undefined> => {
     const current = entries;
-    entry.data ??= load(view, entry).catch((error: unknown) => {
+    entry.data ??= load(pageNumber, view, entry).catch((error: unknown) => {
       entry.data = undefined;
+      if (current === entries) markFailure(pageNumber, view);
       // 別の PDF に移って、前の PDF のページが読めなくなったときは知らせない
       if (current === entries) log.error('ページの文字を読み出せませんでした', error);
       return undefined;
@@ -162,7 +197,7 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       const view = options.getPageView(event.pageNumber);
       if (view === undefined || view !== event.source) return;
       const entry = entryOf(event.pageNumber);
-      entry.data = prepare(view, entry);
+      entry.data = prepare(event.pageNumber, view, entry);
       if (entry.exact !== undefined || !(view.canvas instanceof HTMLCanvasElement)) return;
       const canvasToPdf = canvasToPdfOf(view);
       if (canvasToPdf === undefined) return;
@@ -180,7 +215,7 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       const { watching } = entry;
       entry.watching = undefined;
       const draws = watching === undefined ? [] : options.recorder.take(watching.canvas);
-      const data = await prepare(view, entry);
+      const data = await prepare(event.pageNumber, view, entry);
       if (data === undefined || current !== entries || renders !== entry.renders) return;
       if (watching !== undefined && draws.length > 0 && entry.exact === undefined) {
         entry.exact = snapGlyphs(data.page.blocks, toDrawnBoxes(draws, watching.canvasToPdf));
@@ -198,8 +233,18 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       });
     },
 
+    async retryFailed() {
+      await Promise.all(
+        failed
+          .list()
+          .map(([pageNumber, view]) => this.handlePageRendered({ source: view, pageNumber })),
+      );
+    },
+
     reset() {
       entries = new Map();
+      failed.clear();
+      options.onReadingFailureChange?.(false);
     },
   };
 }
