@@ -41,7 +41,22 @@ function syncRules(): void {
     });
 }
 
+/** 設定の画面をタブで開く */
+function openOptions(): void {
+  browser.runtime.openOptionsPage().catch((error: unknown) => {
+    log.error('設定の画面を開くのに失敗しました', error);
+  });
+}
+
 export default defineBackground(() => {
+  // 拡張のアイコンを押したら、小さな枠ではなく設定の画面を開く
+  browser.action.onClicked.addListener(openOptions);
+  // 初めて入れたときだけ開く。更新のたびには開かない
+  browser.runtime.onInstalled.addListener(({ reason }) => {
+    if (reason === 'install') {
+      openOptions();
+    }
+  });
   // 起動のたびに合わせ直す（拡張の更新でルールが変わったときも、ここで入れ替わる）
   syncRules();
   browser.permissions.onAdded.addListener(syncRules);

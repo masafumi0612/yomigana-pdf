@@ -53,11 +53,16 @@ async function launchWithExtension(
   if (!existsSync(join(extensionDir, 'manifest.json'))) {
     throw new Error('拡張がビルドされていない。先に npm run build を動かす');
   }
-  return playwright.chromium.launchPersistentContext('', {
+  const context = await playwright.chromium.launchPersistentContext('', {
     channel: 'chromium',
     headless: true,
     args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
   });
+  // 初めて入れた拡張は、設定の画面をタブで開く。空のタブが使われることもあるので、
+  // テストの画面が途中で開き直されないよう、開き終わるまで待つ
+  const optionsUrl = `chrome-extension://${await findExtensionId(context)}/options.html`;
+  await expect.poll(() => context.pages().some((page) => page.url() === optionsUrl)).toBe(true);
+  return context;
 }
 
 /**
@@ -83,36 +88,49 @@ export const test = base.extend<ExtensionFixtures>({
 });
 
 /**
- * 「すべてのサイトを読む権限」を最初から持たせ、自動で移すスイッチをオンにした拡張を入れた Chromium。
+ * 「すべてのサイトを読む権限」を最初から持たせた拡張を入れた Chromium を作る。
  *
  * 後から許可する権限は、テストから許可のボタンを押せない。そこで、ビルドした拡張を写した
  * フォルダの manifest だけを書き換えて、後から許可する権限を最初の権限に移す。
  * 本物の拡張のコードは変えず、スイッチも本物の保存先（storage.sync）に書いて動かす。
+ * 権限はもうあるので、拡張が許可を求めても、画面を出さずに許可される。
+ * @param isAutoRedirectOn 立ち上げたあと、自動で移すスイッチをオンにするなら true
+ * @returns 拡張を入れた Chromium を使うテスト
  */
-export const redirectTest = base.extend<ExtensionFixtures>({
-  context: async ({ playwright }, use) => {
-    const dir = await mkdtemp(join(tmpdir(), 'yomigana-e2e-'));
-    await cp(EXTENSION_DIR, dir, { recursive: true });
-    const manifestPath = join(dir, 'manifest.json');
-    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as Record<
-      string,
-      string[] | undefined
-    >;
-    manifest[HOST_KEY] = [...(manifest[HOST_KEY] ?? []), ...(manifest[OPTIONAL_HOST_KEY] ?? [])];
-    manifest[OPTIONAL_HOST_KEY] = [];
-    await writeFile(manifestPath, JSON.stringify(manifest));
+function withHostAccess(isAutoRedirectOn: boolean): typeof test {
+  return base.extend<ExtensionFixtures>({
+    context: async ({ playwright }, use) => {
+      const dir = await mkdtemp(join(tmpdir(), 'yomigana-e2e-'));
+      await cp(EXTENSION_DIR, dir, { recursive: true });
+      const manifestPath = join(dir, 'manifest.json');
+      const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as Record<
+        string,
+        string[] | undefined
+      >;
+      manifest[HOST_KEY] = [...(manifest[HOST_KEY] ?? []), ...(manifest[OPTIONAL_HOST_KEY] ?? [])];
+      manifest[OPTIONAL_HOST_KEY] = [];
+      await writeFile(manifestPath, JSON.stringify(manifest));
 
-    const context = await launchWithExtension(playwright, dir);
-    const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
-    await setAutoRedirect(worker, true);
-    await use(context);
-    await context.close();
-    await rm(dir, { recursive: true, force: true });
-  },
-  extensionId: async ({ context }, use) => {
-    await use(await findExtensionId(context));
-  },
-});
+      const context = await launchWithExtension(playwright, dir);
+      if (isAutoRedirectOn) {
+        const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+        await setAutoRedirect(worker, true);
+      }
+      await use(context);
+      await context.close();
+      await rm(dir, { recursive: true, force: true });
+    },
+    extensionId: async ({ context }, use) => {
+      await use(await findExtensionId(context));
+    },
+  });
+}
+
+/** 「すべてのサイトを読む権限」を最初から持たせ、自動で移すスイッチをオンにした拡張を入れた Chromium */
+export const redirectTest = withHostAccess(true);
+
+/** 「すべてのサイトを読む権限」を最初から持たせ、スイッチはオフのままの拡張を入れた Chromium */
+export const hostAccessTest = withHostAccess(false);
 
 /**
  * 親スイッチを書き換え、ルールがそれに合うまで待つ。
