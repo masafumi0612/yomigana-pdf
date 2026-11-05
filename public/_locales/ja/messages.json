@@ -253,6 +253,22 @@
     "message": "変更はすぐ保存されます",
     "description": "設定の画面の見出しの横の、保存のボタンがいらないことの案内"
   },
+  "options_welcome_title": {
+    "message": "インストールありがとうございます",
+    "description": "初めて入れた直後の案内の見出し"
+  },
+  "options_welcome_lead": {
+    "message": "PDF を開くたびに自動でルビを付けるには、下のスイッチをオンにしてください。ルビの量は、あとからいつでも変えられます（最初は、すべての漢字にルビ）。",
+    "description": "初めて入れた直後の案内の説明"
+  },
+  "options_welcome_trySample": {
+    "message": "見本の PDF で試す",
+    "description": "拡張に同梱した見本の PDF をリーダーで開くボタン"
+  },
+  "options_welcome_close": {
+    "message": "閉じる",
+    "description": "初めて入れた直後の案内を閉じるボタン"
+  },
   "options_auto_title": {
     "message": "PDF を開いたら、自動でルビを付ける",
     "description": "自動でリーダーに移すスイッチの見出し"
@@ -552,6 +568,22 @@
   "options_about_licenses": {
     "message": "ライセンスと出典",
     "description": "同梱した部品のライセンスと辞書の出典の文書を開くリンク"
+  },
+  "options_about_copyReport": {
+    "message": "報告用の情報をコピー",
+    "description": "拡張とブラウザの版、直近のエラーをコピーするボタン"
+  },
+  "options_about_copyReportHint": {
+    "message": "不具合を知らせるときに貼ってください。拡張と Chrome の版、直近のエラーが入ります。PDF の URL や中身は入りません。",
+    "description": "報告用の情報をコピーするボタンの下の説明"
+  },
+  "options_about_copied": {
+    "message": "コピーしました",
+    "description": "報告用の情報をコピーしたあとに出す"
+  },
+  "options_about_copyFailed": {
+    "message": "コピーできませんでした",
+    "description": "報告用の情報をコピーできなかったときに出す"
   },
   "options_about_version": {
     "message": "バージョン $VERSION$ ・ MIT ライセンス",

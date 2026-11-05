@@ -2,11 +2,12 @@ import type { JSX } from 'preact';
 
 import { AboutSection } from './about-section';
 import { AutoRedirectSection } from './auto-redirect-section';
-import { useHostAccess, useSettings } from './hooks';
+import { useElement, useHostAccess, useSettings } from './hooks';
 import { message } from './message';
 import { OpenPdfSection } from './open-pdf-section';
 import { ResetSettings } from './reset-settings';
 import { UserDictionarySection } from './user-dictionary-section';
+import { useWelcome, WelcomeCard } from './welcome-card';
 
 /**
  * 設定の画面の全体。白い枠は設定、枠のない下の場所は拡張の情報。場所ごとに部品を分けて並べる。
@@ -15,12 +16,16 @@ import { UserDictionarySection } from './user-dictionary-section';
 export function App(): JSX.Element {
   const settings = useSettings();
   const hasHostAccess = useHostAccess();
+  const [isWelcomeShown, closeWelcome] = useWelcome();
+  const [title, setTitle] = useElement<HTMLHeadingElement>();
 
   return (
     <div class="page">
       <header class="header">
         <div class="heading">
-          <h1 class="title">{message('options_header_title')}</h1>
+          <h1 ref={setTitle} class="title" tabIndex={-1}>
+            {message('options_header_title')}
+          </h1>
           <p class="lead">{message('options_header_lead')}</p>
         </div>
         <p class="header-saved">
@@ -42,7 +47,15 @@ export function App(): JSX.Element {
         </p>
       </header>
       <main class="main">
-        {/* 初めて入れたときの案内は、ここに足す */}
+        {isWelcomeShown && (
+          <WelcomeCard
+            onClose={() => {
+              // 押したボタンが消えるので、画面の見出しに移る
+              title.current?.focus();
+              closeWelcome();
+            }}
+          />
+        )}
         {settings !== undefined && (
           <AutoRedirectSection isEnabled={settings.autoRedirect} hasHostAccess={hasHostAccess} />
         )}
