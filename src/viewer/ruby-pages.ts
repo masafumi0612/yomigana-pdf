@@ -20,7 +20,7 @@ import {
   type Settings,
 } from '@/settings/model';
 import type { RubySpan } from '@/text/annotate';
-import type { Level } from '@/text/types';
+import type { Level, UserDictionary } from '@/text/types';
 
 import type { DrawRecorder } from './draw-recorder';
 import { type DrawnBox, snapGlyphs, toDrawnBoxes } from './glyph-snap';
@@ -29,6 +29,7 @@ import { layoutRubies, type PageFrame, type RubyBox } from './ruby-layout';
 import { nearestFirst, settingsChange } from './settings-change';
 import { createFailedPages } from './special-cases';
 import { invertMatrix, type Matrix, multiplyMatrix, toMatrix } from './transform';
+import { storedUserDictionary, type UserDictionaryFeed } from './user-dictionary-feed';
 
 /** 読みの問い合わせにかかった時間を測る名前（performance.measure） */
 export const READINGS_MEASURE = 'yomigana-pdf:readings';
@@ -82,9 +83,16 @@ export interface RubyPagesOptions {
    * 読みを問い合わせる（テストで差しかえるため）
    * @param texts 文
    * @param level 段階
+   * @param userDictionary 直した読み
    * @returns 文ごとのルビを付ける所
    */
-  readonly readTexts?: (texts: readonly string[], level: Level) => Promise<ReadingResult>;
+  readonly readTexts?: (
+    texts: readonly string[],
+    level: Level,
+    userDictionary: UserDictionary,
+  ) => Promise<ReadingResult>;
+  /** 直した読みを渡すもの（テストで差しかえるため）。既定は保存してある直した読み */
+  readonly userDictionary?: UserDictionaryFeed;
   /**
    * ページの文を取り出せたときに呼ぶ（文字が画像になっているかの判定に使う）
    * @param pageNumber ページ番号（1 から）
@@ -151,6 +159,11 @@ export interface RubyPages {
    * @param settings 変わったあとの設定
    */
   applySettings(settings: Settings): Promise<void>;
+  /**
+   * 直した読みが変わったときに呼ぶ。段階が変わったときと同じく、ルビの層を出しているページを読み直す。
+   * @param userDictionary 変わったあとの直した読み
+   */
+  applyUserDictionary(userDictionary: UserDictionary): Promise<void>;
   /** 別の PDF を開くときに呼ぶ。取っておいたものを捨てる */
   reset(): void;
 }
@@ -161,9 +174,11 @@ interface PageData {
   readonly spans: readonly (readonly RubySpan[])[];
   /** 読みを問い合わせたときの段階 */
   readonly level: Level;
+  /** 読みを問い合わせたときの直した読み */
+  readonly dictionary: UserDictionary;
 }
 
-/** 読み直しが役に立たなかった理由。outdated は、待つ間にほかの読み直しや段階の変更があったとき */
+/** 読み直しが役に立たなかった理由。outdated は、待つ間にほかの読み直しや段階・直した読みの変更があったとき */
 type RereadError = ReadingError | 'outdated';
 
 /** ページごとに取っておくもの */
@@ -192,8 +207,19 @@ const log = createLogger('ruby-layer');
  * @returns ルビの層の部品
  */
 export function createRubyPages(options: RubyPagesOptions): RubyPages {
-  const readTexts = options.readTexts ?? ((texts, level) => requestReadings(texts, { level }));
+  const readTexts =
+    options.readTexts ??
+    ((texts, level, userDictionary) => requestReadings(texts, { level, userDictionary }));
+  const dictionaryFeed = options.userDictionary ?? storedUserDictionary;
   let settings = options.settings ?? DEFAULT_SETTINGS;
+  let dictionary: UserDictionary = new Map();
+  let isDictionaryChanged = false;
+  // 最初の読みの問い合わせより前に、保存してある直した読みを読み終えておく（load は throw しない）
+  const loadingDictionary = dictionaryFeed.load().then((loaded) => {
+    if (!isDictionaryChanged) dictionary = loaded;
+  });
+  const isOutdated = (data: PageData): boolean =>
+    data.level !== settings.level || data.dictionary !== dictionary;
   const applyStyle = (style: RubyStyle): void => {
     options.root.style.setProperty('--ruby-size', String(RUBY_SIZE_RATIOS[style.size]));
     options.root.style.setProperty('--ruby-color', RUBY_COLORS[style.color]);
@@ -245,15 +271,17 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     entry: PageEntry,
   ): Promise<PageData | undefined> => {
     const current = entries;
-    const content = await view.pdfPage.getTextContent();
+    const [content] = await Promise.all([view.pdfPage.getTextContent(), loadingDictionary]);
     const page = redirected(extractPageText(content), content, forced);
     options.onPageText?.(pageNumber, page.blocks.length > 0);
     const { level } = settings;
-    if (page.blocks.length === 0) return { page, spans: [], level };
+    const used = dictionary;
+    if (page.blocks.length === 0) return { page, spans: [], level, dictionary: used };
     const startedAt = performance.now();
     const result = await readTexts(
       page.blocks.map((block) => block.text),
       level,
+      used,
     );
     performance.measure(READINGS_MEASURE, { start: startedAt });
     if (!result.ok) {
@@ -264,7 +292,7 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       return undefined;
     }
     if (current === entries) markFailure(pageNumber, undefined);
-    return { page, spans: result.value, level };
+    return { page, spans: result.value, level, dictionary: used };
   };
 
   // 文と読みは取っておき、描き終えたときに待つ。待つ前に失敗しても、ここでログに残して undefined にする
@@ -301,7 +329,7 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     entry.layer = showRubyLayer(view.div, view.viewport, entry.boxes, entry.layer);
   };
 
-  // かたまりを blocks に置きかえ、変わったかたまりを今の段階で読み直す。段階が変わっていれば、すべて読み直す。
+  // かたまりを blocks に置きかえ、変わったかたまりを今の段階で読み直す。段階か直した読みが変わっていれば、すべて読み直す。
   // 読めたら取っておいた文と読みを置きかえ、置き場所は次に出すときに出し直す
   const reread = async (
     pageNumber: number,
@@ -310,8 +338,10 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     blocks: readonly TextBlock[],
   ): Promise<Result<PageData, RereadError>> => {
     const { level } = settings;
+    const used = dictionary;
+    const isAllOutdated = isOutdated(data);
     const targets = blocks.flatMap((block, index) =>
-      level !== data.level || block !== data.page.blocks[index] ? [{ index, block }] : [],
+      isAllOutdated || block !== data.page.blocks[index] ? [{ index, block }] : [],
     );
     const result: ReadingResult =
       targets.length === 0
@@ -319,15 +349,26 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
         : await readTexts(
             targets.map(({ block }) => block.text),
             level,
+            used,
           );
     if (!result.ok) return result;
-    // 別の PDF に移ったとき・ほかの読み直しが先に済んだとき・段階がまた変わったときは、古い読みで上書きしない
-    if (entries.get(pageNumber) !== entry || entry.resolved !== data || level !== settings.level) {
+    // 別の PDF に移ったとき・ほかの読み直しが先に済んだとき・段階や直した読みがまた変わったときは、古い読みで上書きしない
+    if (
+      entries.get(pageNumber) !== entry ||
+      entry.resolved !== data ||
+      level !== settings.level ||
+      used !== dictionary
+    ) {
       return { ok: false, error: 'outdated' };
     }
     const spans = [...data.spans];
     for (const [order, { index }] of targets.entries()) spans[index] = result.value[order] ?? [];
-    const updated: PageData = { page: { ...data.page, blocks: [...blocks] }, spans, level };
+    const updated: PageData = {
+      page: { ...data.page, blocks: [...blocks] },
+      spans,
+      level,
+      dictionary: used,
+    };
     const rebuilt = targets.filter(({ index, block }) => block !== data.page.blocks[index]);
     if (rebuilt.length > 0 && entry.exact !== undefined && entry.drawn !== undefined) {
       const exact = new Map(entry.exact);
@@ -372,7 +413,20 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     options.onPageShown?.(pageNumber);
   };
 
-  return {
+  // ルビの層を出しているページを、今のページに近い順に出し直す。描いている途中のページは、描き終えたときに今の設定で出す
+  const refreshShown = async (): Promise<void> => {
+    const pages = [...entries]
+      .filter(([, entry]) => entry.layer?.isConnected === true && entry.watching === undefined)
+      .map(([pageNumber]) => pageNumber);
+    await Promise.all(
+      nearestFirst(pages, options.currentPageNumber?.() ?? 1).map(async (pageNumber) => {
+        const view = options.getPageView(pageNumber);
+        if (view !== undefined) await rubyPages.handlePageRendered({ source: view, pageNumber });
+      }),
+    );
+  };
+
+  const rubyPages: RubyPages = {
     handlePageRender(event) {
       const view = options.getPageView(event.pageNumber);
       if (view === undefined || view !== event.source) return;
@@ -406,16 +460,16 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
         entry.resolved = data;
         markUncertain(event.pageNumber, data.page);
       }
-      // 前の段階で読んだページは、文と字の位置はそのままに、読みだけ問い合わせ直す
+      // 前の段階・直した読みで読んだページは、文と字の位置はそのままに、読みだけ問い合わせ直す
       const { resolved } = entry;
-      if (resolved.level !== settings.level) {
+      if (isOutdated(resolved)) {
         const result = await reread(event.pageNumber, entry, resolved, resolved.page.blocks);
         if (current !== entries || renders !== entry.renders) return;
         if (result.ok) {
           markFailure(event.pageNumber, undefined);
         } else if (result.error !== 'outdated') {
           // 今のルビは残し、「もう一度」で読み直せるようにする
-          log.error('段階を変えたページの読みを出せませんでした', result.error);
+          log.error('段階か直した読みを変えたページの読みを出せませんでした', result.error);
           markFailure(event.pageNumber, view);
         }
       }
@@ -460,17 +514,13 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       if (change.isSizeChanged) {
         for (const entry of entries.values()) entry.boxes = undefined;
       }
-      if (!change.isLevelChanged && !change.isSizeChanged) return;
-      // 描いている途中のページは、描き終えたときに今の設定で出し直す
-      const pages = [...entries]
-        .filter(([, entry]) => entry.layer?.isConnected === true && entry.watching === undefined)
-        .map(([pageNumber]) => pageNumber);
-      await Promise.all(
-        nearestFirst(pages, options.currentPageNumber?.() ?? 1).map(async (pageNumber) => {
-          const view = options.getPageView(pageNumber);
-          if (view !== undefined) await this.handlePageRendered({ source: view, pageNumber });
-        }),
-      );
+      if (change.isLevelChanged || change.isSizeChanged) await refreshShown();
+    },
+
+    async applyUserDictionary(next) {
+      isDictionaryChanged = true;
+      dictionary = next;
+      await refreshShown();
     },
 
     async retryFailed() {
@@ -490,6 +540,13 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       options.onReadingFailureChange?.(false);
     },
   };
+  // 設定の画面やほかの Chrome で直した読みを変えたら、開き直さずに反映する
+  dictionaryFeed.watch((next) => {
+    rubyPages.applyUserDictionary(next).catch((error: unknown) => {
+      log.error('変わった直した読みをルビに反映する途中で予想外の失敗がありました', error);
+    });
+  });
+  return rubyPages;
 }
 
 /**
