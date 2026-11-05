@@ -89,6 +89,30 @@
     "message": "もう一度",
     "description": "リーダーのバーのボタン。読みを出せなかったページを、もう一度問い合わせる"
   },
+  "viewer_bar_rubyAmount": {
+    "message": "ルビ：$AMOUNT$",
+    "description": "リーダーのバーの、今のルビの量を出すボタンの文字。押すと設定の画面が開く",
+    "placeholders": {
+      "amount": {
+        "content": "$1",
+        "example": "3年までの漢字には付けない"
+      }
+    }
+  },
+  "viewer_bar_rubyAmountName": {
+    "message": "$TEXT$（ルビの設定を開く）",
+    "description": "ルビの量のボタンの、読み上げ用の名前。見えている文字のあとに、押すと何が起きるかを足す",
+    "placeholders": {
+      "text": {
+        "content": "$1",
+        "example": "ルビ：3年までの漢字には付けない"
+      }
+    }
+  },
+  "viewer_bar_rubyAmountTitle": {
+    "message": "ルビの設定を開く",
+    "description": "ルビの量のボタンにマウスを乗せたときの説明"
+  },
   "viewer_password_label": {
     "message": "この PDF にはパスワードがかかっています。パスワードを入れてください。",
     "description": "パスワード付きの PDF を開くときの、入力欄の名前"
@@ -184,6 +208,34 @@
   "viewer_direction_uncertain": {
     "message": "（向きに自信がありません）",
     "description": "かたまりの向きの切り替えの名前の終わりに足す（読み上げ用）"
+  },
+  "common_level_all": {
+    "message": "すべての漢字に付ける",
+    "description": "ルビの量が「なし」（すべての漢字にルビ）のときの説明。リーダーのバーと設定の画面に出す"
+  },
+  "common_level_grade": {
+    "message": "$GRADE$年までの漢字には付けない",
+    "description": "ルビの量が小学校の学年のときの説明。リーダーのバーと設定の画面に出す",
+    "placeholders": {
+      "grade": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "common_level_middle": {
+    "message": "中$GRADE$までの漢字には付けない",
+    "description": "ルビの量が中学の目安のときの説明。リーダーのバーと設定の画面に出す",
+    "placeholders": {
+      "grade": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "common_level_joyo": {
+    "message": "常用漢字には付けない",
+    "description": "ルビの量が「常用漢字すべて」のときの説明。リーダーのバーと設定の画面に出す"
   },
   "options_page_title": {
     "message": "ルビの設定 - よみがなPDF",
