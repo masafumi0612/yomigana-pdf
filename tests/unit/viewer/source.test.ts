@@ -8,14 +8,14 @@ describe('readViewerParams', () => {
   it('file の引数がないとき、開く URL はない', () => {
     expect(readViewerParams('', EXTENSION_ORIGIN)).toEqual({
       ok: true,
-      value: { pdfUrl: undefined },
+      value: { pdfUrl: undefined, hasCredentials: false },
     });
   });
 
   it('file の引数が空のとき、開く URL はない', () => {
     expect(readViewerParams('?file=', EXTENSION_ORIGIN)).toEqual({
       ok: true,
-      value: { pdfUrl: undefined },
+      value: { pdfUrl: undefined, hasCredentials: false },
     });
   });
 
@@ -23,21 +23,21 @@ describe('readViewerParams', () => {
     const search = `?file=${encodeURIComponent('https://example.com/a b.pdf?x=1')}`;
     expect(readViewerParams(search, EXTENSION_ORIGIN)).toEqual({
       ok: true,
-      value: { pdfUrl: 'https://example.com/a%20b.pdf?x=1' },
+      value: { pdfUrl: 'https://example.com/a%20b.pdf?x=1', hasCredentials: false },
     });
   });
 
   it('file の URL のとき、開いてよい', () => {
     expect(readViewerParams('?file=file:///C:/a.pdf', EXTENSION_ORIGIN)).toEqual({
       ok: true,
-      value: { pdfUrl: 'file:///C:/a.pdf' },
+      value: { pdfUrl: 'file:///C:/a.pdf', hasCredentials: false },
     });
   });
 
   it('この拡張の中の URL のとき、開いてよい', () => {
     expect(readViewerParams(`?file=${EXTENSION_ORIGIN}/a.pdf`, EXTENSION_ORIGIN)).toEqual({
       ok: true,
-      value: { pdfUrl: `${EXTENSION_ORIGIN}/a.pdf` },
+      value: { pdfUrl: `${EXTENSION_ORIGIN}/a.pdf`, hasCredentials: false },
     });
   });
 
@@ -59,6 +59,35 @@ describe('readViewerParams', () => {
     expect(readViewerParams('?file=a.pdf', EXTENSION_ORIGIN)).toEqual({
       ok: false,
       error: 'invalid-url',
+    });
+  });
+
+  it('自動で移されたとき、符号化されていない元の URL をそのまま読み、Cookie を付ける', () => {
+    const search = '?DNR:https://example.com/a.pdf?x=1&y=2';
+    expect(readViewerParams(search, EXTENSION_ORIGIN)).toEqual({
+      ok: true,
+      value: { pdfUrl: 'https://example.com/a.pdf?x=1&y=2', hasCredentials: true },
+    });
+  });
+
+  it('自動で移されたとき、元の URL が file でも読める', () => {
+    expect(readViewerParams('?DNR:file:///C:/a.pdf', EXTENSION_ORIGIN)).toEqual({
+      ok: true,
+      value: { pdfUrl: 'file:///C:/a.pdf', hasCredentials: true },
+    });
+  });
+
+  it('自動で移されたが元の URL が空のとき、開く URL はない', () => {
+    expect(readViewerParams('?DNR:', EXTENSION_ORIGIN)).toEqual({
+      ok: true,
+      value: { pdfUrl: undefined, hasCredentials: false },
+    });
+  });
+
+  it('自動で移されたが開いてはいけない URL のとき、開かない', () => {
+    expect(readViewerParams('?DNR:javascript:alert(1)', EXTENSION_ORIGIN)).toEqual({
+      ok: false,
+      error: 'unsupported-protocol',
     });
   });
 });

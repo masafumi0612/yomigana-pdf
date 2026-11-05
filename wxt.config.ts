@@ -27,8 +27,14 @@ export default defineConfig({
     default_locale: 'ja',
     // PDF の自動切り替えに使う DNR の応答ヘッダの条件が 128 から
     minimum_chrome_version: '128',
-    // 辞書を offscreen document の中の Worker で1回だけ読み込むため
-    permissions: ['offscreen'],
+    // offscreen：辞書を offscreen document の中の Worker で1回だけ読み込むため。
+    // declarativeNetRequestWithHostAccess：許可されたサイトの PDF だけをリーダーに移すため。
+    // storage：自動で移すスイッチの値を残すため
+    permissions: ['offscreen', 'declarativeNetRequestWithHostAccess', 'storage'],
+    // すべてのサイトを読む権限は、利用者が自動で移すことを選んだときに後から許可してもらう
+    optional_host_permissions: ['<all_urls>'],
+    // 他のサイトの PDF の移し先として、ページ全体や枠の中でリーダーを開けるようにする
+    web_accessible_resources: [{ resources: ['viewer.html'], matches: ['<all_urls>'] }],
   },
   hooks: {
     // 辞書・pdf.js のデータはリポジトリに入れず、ビルドのたびに node_modules から写す。

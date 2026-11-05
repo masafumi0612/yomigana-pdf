@@ -23,14 +23,40 @@
         <output id="zoom-level" class="bar-zoom"></output>
         <button id="zoom-in" class="bar-button bar-icon" type="button">+</button>
       </div>
+      <div id="ruby-failed" class="bar-group" hidden>
+        <span id="ruby-failed-text" class="bar-alert" role="status"></span>
+        <button id="ruby-retry" class="bar-button" type="button"></button>
+      </div>
       <div class="bar-group">
         <button id="open-file" class="bar-button" type="button" hidden></button>
         <button id="open-native" class="bar-button" type="button" hidden></button>
       </div>
       <input id="file-input" type="file" accept="application/pdf,.pdf" hidden />
     </header>
+    <div class="notices">
+      <form id="password-form" class="notice" hidden>
+        <label id="password-label" for="password-input" class="notice-text"></label>
+        <input
+          id="password-input"
+          class="bar-field notice-field"
+          type="password"
+          autocomplete="off"
+          required
+        />
+        <button id="password-submit" class="bar-button notice-button" type="submit"></button>
+        <p id="password-error" class="notice-error" role="alert" hidden></p>
+      </form>
+      <div id="no-text-notice" class="notice" hidden>
+        <p id="no-text-text" class="notice-text" role="status"></p>
+        <button id="no-text-close" class="bar-button notice-button" type="button"></button>
+      </div>
+    </div>
     <main>
       <p id="status" class="status" role="status" hidden></p>
+      <div id="failure-actions" class="status-actions" hidden>
+        <button id="failure-choose" class="bar-button status-button" type="button"></button>
+        <button id="failure-native" class="bar-button status-button" type="button"></button>
+      </div>
       <div id="viewer-container" class="viewer-container" tabindex="0">
         <div id="viewer" class="pdfViewer"></div>
       </div>
