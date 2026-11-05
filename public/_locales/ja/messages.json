@@ -100,5 +100,67 @@
   "viewer_notice_close": {
     "message": "閉じる",
     "description": "案内を閉じるボタン"
+  },
+  "viewer_notice_directionHint": {
+    "message": "文字の向きが違うところがあれば直せます",
+    "description": "向きの自信がない文字のかたまりがあるときの案内（バーの下）"
+  },
+  "viewer_notice_directionStart": {
+    "message": "直す",
+    "description": "文字の向きを直すモードに入るボタン（案内の中）"
+  },
+  "viewer_menu_directionFix": {
+    "message": "文字の向きを直す…",
+    "description": "紙面を右クリックしたときのメニューの項目。文字の向きを直すモードに入る"
+  },
+  "viewer_direction_barText": {
+    "message": "向きが違うところは、正しいほうを押してください",
+    "description": "文字の向きを直すモードの間、バーに出す案内"
+  },
+  "viewer_direction_allVertical": {
+    "message": "すべて縦書き",
+    "description": "文字の向きを直すモードのバーのボタン。すべてのかたまりを縦書きにする"
+  },
+  "viewer_direction_allHorizontal": {
+    "message": "すべて横書き",
+    "description": "文字の向きを直すモードのバーのボタン。すべてのかたまりを横書きにする"
+  },
+  "viewer_direction_done": {
+    "message": "終わる",
+    "description": "文字の向きを直すモードのバーのボタン。モードを終える"
+  },
+  "viewer_direction_vertical": {
+    "message": "縦書き",
+    "description": "文字のかたまりの向きの切り替えの、縦書き"
+  },
+  "viewer_direction_verticalReading": {
+    "message": "たてがき",
+    "description": "縦書きのルビ"
+  },
+  "viewer_direction_horizontal": {
+    "message": "横書き",
+    "description": "文字のかたまりの向きの切り替えの、横書き"
+  },
+  "viewer_direction_horizontalReading": {
+    "message": "よこがき",
+    "description": "横書きのルビ"
+  },
+  "viewer_direction_toggle": {
+    "message": "このかたまりは$CURRENT$です。押すと$NEXT$に変えます",
+    "description": "かたまりの向きの切り替えの名前（読み上げ用）",
+    "placeholders": {
+      "current": {
+        "content": "$1",
+        "example": "縦書き"
+      },
+      "next": {
+        "content": "$2",
+        "example": "横書き"
+      }
+    }
+  },
+  "viewer_direction_uncertain": {
+    "message": "（向きに自信がありません）",
+    "description": "かたまりの向きの切り替えの名前の終わりに足す（読み上げ用）"
   }
 }
