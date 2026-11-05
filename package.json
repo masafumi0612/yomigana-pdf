@@ -25,7 +25,7 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build",
     "licenses:check": "node scripts/check-licenses.ts",
     "test-pdfs:make": "node scripts/test-pdfs/make.ts",
-    "test-pdfs:check": "node scripts/test-pdfs/check.ts",
+    "test-pdfs:check": "vitest run --config vitest.test-pdfs.config.ts",
     "data:build": "node data/build-kanji.ts"
   },
   "simple-git-hooks": {
@@ -41,7 +41,6 @@
   },
   "dependencies": {
     "@patdx/kuromoji": "1.0.4",
-    "kuromoji": "0.1.2",
     "pdfjs-dist": "6.4.299"
   },
   "devDependencies": {
@@ -51,7 +50,6 @@
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.1",
     "@types/fontkit": "2.0.9",
-    "@types/kuromoji": "0.1.3",
     "@types/node": "24.19.2",
     "@vitest/coverage-v8": "5.0.5",
     "eslint": "10.14.0",
