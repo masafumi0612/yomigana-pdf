@@ -1,21 +1,25 @@
 // リポジトリに入れたテスト用 PDF を pdf.js（pdfjs-dist、Node）で確かめる。
 // 文字が取り出せるか、縦書きが縦書きとして書かれているか、もとからあるルビが見つかるか、
 // 画像だけの PDF に文字がないか、使うフォントが決めたとおりか、など。
-//   node scripts/test-pdfs/check.ts [フォルダ]      （ないときは test-pdfs/out。word/ の中も見る）
-//   VERBOSE=1 を付けると、組み直した段落の文を出す
-// 1つでも合わなければ終了コード 1。フォントも Chromium も要らない（Linux の CI でも動く）。
+// 文の取り出しは、拡張のリーダーと同じ処理（src/pdf/page-text.ts）を使う。
+// 拡張の処理を読み込むので、Vitest で動かす（npm run test-pdfs:check、設定は vitest.test-pdfs.config.ts）。
+//   TEST_PDF_DIR=フォルダ を付けると、そのフォルダを見る（ないときは test-pdfs/out。word/ の中も見る）
+//   VERBOSE=1 を付けると、取り出した文を出す
+// フォントも Chromium も要らない（Linux の CI でも動く）。
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
+import { describe, expect, it } from 'vitest';
+
+import { extractPageText } from '@/pdf/page-text';
+import type { TextBlock } from '@/pdf/types';
 
 import { EXPECTATIONS } from './expectations.ts';
-import type { Paragraph, TextItemLike } from './text-layout.ts';
-import { layoutPage, paragraphs } from './text-layout.ts';
 
 const ROOT = join(import.meta.dirname, '..', '..');
-const DIR = resolve(process.argv[2] ?? join(ROOT, 'test-pdfs', 'out'));
+const DIR = resolve(process.env.TEST_PDF_DIR ?? join(ROOT, 'test-pdfs', 'out'));
 // 比べる用の Chromium の印刷は、リポジトリに入れないので確かめない
 const SKIPPED_DIRS = new Set(['chrome-print']);
 // 部首・縦書き用の形・互換漢字の符号（Chromium の印刷で漢字がこうなることがある）。
@@ -33,7 +37,7 @@ interface PdfFacts {
   radicals: string;
   images: number;
   verticalFonts: number;
-  paragraphs: Paragraph[];
+  blocks: TextBlock[];
   rubyMarked: Set<string>;
   notMarked: Set<string>;
   fonts: string[];
@@ -73,7 +77,7 @@ async function readPdf(bytes: Uint8Array): Promise<PdfFacts> {
     radicals: '',
     images: 0,
     verticalFonts: 0,
-    paragraphs: [],
+    blocks: [],
     rubyMarked: new Set(),
     notMarked: new Set(),
     fonts: [],
@@ -96,12 +100,10 @@ async function readPdf(bytes: Uint8Array): Promise<PdfFacts> {
       if (style.vertical) verticalFonts.add(key);
     }
     const texts = content.items.filter((it): it is TextItem => 'str' in it && !!it.str.trim());
-    const items: TextItemLike[] = texts.map((it) => ({
+    const items = texts.map((it) => ({
       str: it.str,
       dir: it.dir,
       transform: it.transform as number[],
-      width: it.width,
-      height: it.height,
     }));
     facts.items += items.length;
     facts.ttb += items.filter((it) => it.dir === 'ttb').length;
@@ -115,9 +117,9 @@ async function readPdf(bytes: Uint8Array): Promise<PdfFacts> {
           .join(''),
       )
       .join('');
-    for (const p of paragraphs(layoutPage(items).lines)) {
-      facts.paragraphs.push(p);
-      for (const g of p.glyphs) (g.hasRuby ? facts.rubyMarked : facts.notMarked).add(g.norm);
+    for (const block of extractPageText(content).blocks) {
+      facts.blocks.push(block);
+      for (const g of block.glyphs) (g.hasRuby ? facts.rubyMarked : facts.notMarked).add(g.norm);
     }
   }
   facts.verticalFonts = verticalFonts.size;
@@ -126,8 +128,8 @@ async function readPdf(bytes: Uint8Array): Promise<PdfFacts> {
   return facts;
 }
 
-const textOf = (ps: Paragraph[]): string =>
-  ps.map((p) => p.glyphs.map((g) => g.norm).join('')).join('\n');
+const textOf = (blocks: TextBlock[]): string =>
+  blocks.map((b) => b.glyphs.map((g) => g.norm).join('')).join('\n');
 const missingIn = (text: string, words: string[] | undefined): string[] =>
   (words ?? []).filter((w) => !text.includes(w.normalize('NFKC')));
 
@@ -148,9 +150,9 @@ function problemsOf(name: string, facts: PdfFacts): string[] {
     return problems;
   }
   if (!facts.items) problems.push('文字が取り出せない');
-  const all = textOf(facts.paragraphs);
-  const vertical = textOf(facts.paragraphs.filter((p) => p.vertical));
-  const horizontal = textOf(facts.paragraphs.filter((p) => !p.vertical));
+  const all = textOf(facts.blocks);
+  const vertical = textOf(facts.blocks.filter((b) => b.direction === 'vertical'));
+  const horizontal = textOf(facts.blocks.filter((b) => b.direction === 'horizontal'));
   const missing = [
     ...missingIn(all, exp.words),
     ...missingIn(vertical, exp.verticalWords).map((w) => `${w}（縦）`),
@@ -183,30 +185,36 @@ function problemsOf(name: string, facts: PdfFacts): string[] {
   return problems;
 }
 
-let failed = 0;
-const seen = new Set<string>();
-for (const path of listPdfs(DIR)) {
-  const name = relative(DIR, path)
-    .replaceAll('\\', '/')
-    .replace(/\.pdf$/, '');
-  seen.add(name);
-  const bytes = new Uint8Array(readFileSync(path));
-  const facts = await readPdf(bytes);
-  const problems = problemsOf(name, facts);
-  if (problems.length) failed++;
-  console.log(
-    `${problems.length ? 'NG' : 'OK'}  ${name}.pdf: ${String(facts.pages)} ページ、文字のかたまり ${String(facts.items)} 個（ttb ${String(facts.ttb)}、横倒し ${String(facts.rotated)}）、縦書きのフォント ${String(facts.verticalFonts)} 個、画像 ${String(facts.images)} 個`,
-  );
-  console.log(`      フォント：${facts.fonts.join(', ') || '(なし)'}`);
-  for (const p of problems) console.log(`      - ${p}`);
+/** 1つの PDF の読んだ結果を、1行ずつの報告にする */
+function describeFacts(name: string, facts: PdfFacts): string[] {
+  const lines = [
+    `${name}.pdf: ${String(facts.pages)} ページ、文字のかたまり ${String(facts.items)} 個（ttb ${String(facts.ttb)}、横倒し ${String(facts.rotated)}）、縦書きのフォント ${String(facts.verticalFonts)} 個、画像 ${String(facts.images)} 個`,
+    `  フォント：${facts.fonts.join(', ') || '(なし)'}`,
+  ];
   if (process.env.VERBOSE) {
-    for (const p of facts.paragraphs) {
-      console.log(`      ${p.vertical ? '縦' : '横'}| ${p.glyphs.map((g) => g.norm).join('')}`);
+    for (const b of facts.blocks) {
+      lines.push(
+        `  ${b.direction === 'vertical' ? '縦' : '横'}| ${b.glyphs.map((g) => g.norm).join('')}`,
+      );
     }
   }
+  return lines;
 }
-for (const name of Object.keys(EXPECTATIONS).filter((n) => !seen.has(n))) {
-  failed++;
-  console.log(`NG  ${name}.pdf: ファイルがない`);
-}
-process.exitCode = failed ? 1 : 0;
+
+const names = listPdfs(DIR).map((path) =>
+  relative(DIR, path)
+    .replaceAll('\\', '/')
+    .replace(/\.pdf$/, ''),
+);
+
+describe('テスト用 PDF', () => {
+  it.each(names)('%s.pdf が、決めたとおりに読める', async (name) => {
+    const facts = await readPdf(new Uint8Array(readFileSync(join(DIR, `${name}.pdf`))));
+    console.log(describeFacts(name, facts).join('\n'));
+    expect(problemsOf(name, facts)).toEqual([]);
+  });
+
+  it('決めたことのある PDF が、すべてフォルダにある', () => {
+    expect(Object.keys(EXPECTATIONS).filter((n) => !names.includes(n))).toEqual([]);
+  });
+});
