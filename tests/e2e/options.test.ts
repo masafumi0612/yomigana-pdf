@@ -1,13 +1,42 @@
+import { readFile } from 'node:fs/promises';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { join } from 'node:path';
+
 import type { Locator, Page } from '@playwright/test';
 import type { browser } from 'wxt/browser';
 
-import { expect, hostAccessTest, setAutoRedirect, test } from './fixtures';
+import { expect, hostAccessTest, setAutoRedirect, test, TEST_PDF_DIR } from './fixtures';
 
 /** 拡張の画面の中で動かす関数から使う、拡張の API（型だけ。中身は拡張の画面にある） */
 declare const chrome: typeof browser;
 
+/** 開くテスト用 PDF。ルビが付くはずの字と読み */
+const PDF = { file: 'horizontal-print.pdf', base: '筒', reading: 'とう' };
+
+/** 辞書の読み込みを含めて、最初のルビが出るまで待つ時間の上限（ミリ秒） */
+const FIRST_RUBY_TIMEOUT_MS = 15_000;
+
 /** 目当ての場所に着くまで Tab を押す回数の上限 */
 const MAX_TABS = 30;
+
+let server: Server;
+let pdfOrigin: string;
+
+// URL から開くのを確かめるため、テスト用 PDF を返すだけのサーバーを立てる
+test.beforeAll(async () => {
+  const data = await readFile(join(TEST_PDF_DIR, PDF.file));
+  server = createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'application/pdf' });
+    response.end(data);
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  pdfOrigin = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
+});
+
+test.afterAll(async () => {
+  await new Promise((resolve) => server.close(resolve));
+});
 
 /**
  * 設定の画面の URL を作る。
@@ -157,6 +186,76 @@ test('もどすのをやめたとき、設定は変わらない', async ({ page,
   await expect(page.getByRole('button', { name: 'もどす', exact: true })).toBeHidden();
   await expect(reset).toBeFocused();
   await expect(page.getByRole('status')).toHaveText('');
+});
+
+hostAccessTest(
+  'Web の PDF の URL を入れて Enter を押したとき、ルビ付きでリーダーが開く',
+  async ({ page, extensionId, context }) => {
+    await openOptions(page, extensionId);
+    const pdfUrl = `${pdfOrigin}/${PDF.file}`;
+
+    await tabTo(page, page.getByLabel('Web の PDF の URL'));
+    await page.keyboard.type(pdfUrl);
+    const [reader] = await Promise.all([
+      context.waitForEvent('page'),
+      page.keyboard.press('Enter'),
+    ]);
+
+    await expect(reader).toHaveURL(
+      `chrome-extension://${extensionId}/viewer.html?file=${encodeURIComponent(pdfUrl)}`,
+    );
+    await expect(reader.locator('#page-total')).toHaveText('/ 1');
+  },
+);
+
+test('http・https でない URL を入れたとき、開かずに理由が出る', async ({ page, extensionId }) => {
+  await openOptions(page, extensionId);
+  const field = page.getByLabel('Web の PDF の URL');
+
+  await tabTo(page, field);
+  await page.keyboard.type('example.com/a.pdf');
+  await page.keyboard.press('Enter');
+
+  await expect(page.getByRole('alert').filter({ hasText: 'URL' })).toHaveText(
+    'http:// か https:// で始まる URL を入れてください。',
+  );
+  await expect(field).toHaveAttribute('aria-invalid', 'true');
+});
+
+test('パソコンの PDF を選んだとき、ルビ付きでリーダーが開く', async ({
+  page,
+  extensionId,
+  context,
+}) => {
+  await openOptions(page, extensionId);
+
+  await tabTo(page, page.getByRole('button', { name: 'パソコンの PDF を選ぶ' }));
+  const chooser = page.waitForEvent('filechooser');
+  await page.keyboard.press('Enter');
+  const [reader] = await Promise.all([
+    context.waitForEvent('page'),
+    (await chooser).setFiles(join(TEST_PDF_DIR, PDF.file)),
+  ]);
+
+  await expect(reader.getByRole('heading', { level: 1 })).toHaveText(PDF.file);
+  await expect(
+    reader.locator(`.page[data-page-number="1"] .ruby-layer [data-base="${PDF.base}"]`),
+  ).toHaveText(PDF.reading, { timeout: FIRST_RUBY_TIMEOUT_MS });
+});
+
+test('PDF でないファイルを選んだとき、開かずに理由が出る', async ({ page, extensionId }) => {
+  await openOptions(page, extensionId);
+
+  await tabTo(page, page.getByRole('button', { name: 'パソコンの PDF を選ぶ' }));
+  const chooser = page.waitForEvent('filechooser');
+  await page.keyboard.press('Enter');
+  await (
+    await chooser
+  ).setFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('png') });
+
+  await expect(page.getByRole('alert').filter({ hasText: 'PDF' })).toHaveText(
+    'PDF のファイルを選んでください。',
+  );
 });
 
 test('ファイルの URL へのアクセスが許可されていないとき、許可の手順を開ける', async ({
