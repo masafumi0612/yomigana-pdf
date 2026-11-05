@@ -6,6 +6,7 @@ import { useHostAccess, useSettings } from './hooks';
 import { message } from './message';
 import { OpenPdfSection } from './open-pdf-section';
 import { ResetSettings } from './reset-settings';
+import { RubyAmountSection } from './ruby-amount-section';
 import { UserDictionarySection } from './user-dictionary-section';
 
 /**
@@ -47,7 +48,7 @@ export function App(): JSX.Element {
           <AutoRedirectSection isEnabled={settings.autoRedirect} hasHostAccess={hasHostAccess} />
         )}
         <OpenPdfSection />
-        {/* ルビの量・ルビの見た目は、ここに場所ごとの部品として足す */}
+        {settings !== undefined && <RubyAmountSection level={settings.level} />}
         <UserDictionarySection />
         <ResetSettings />
       </main>
