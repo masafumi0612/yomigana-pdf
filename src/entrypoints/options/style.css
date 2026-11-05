@@ -19,6 +19,10 @@
   --danger: #a1361b;
   --danger-hover: #7f2a15;
   --error: #b3261e;
+  --welcome-background: #e8f0fb;
+  --welcome-border: #b9cdeb;
+  --welcome-padding: 18px 22px;
+  --welcome-text-width: 360px;
   --focus-ring: 3px solid #1a5fb4;
   --focus-offset: 2px;
   --page-width: 880px;
@@ -43,6 +47,7 @@
   --title-size: 24px;
   --card-title-size: 19px;
   --card-title-main-size: 21px;
+  --welcome-title-size: 16px;
   --dict-word-size: 20px;
   --dict-word-width: 96px;
   --dict-field-width: 180px;
@@ -611,4 +616,32 @@ input {
 /* 欄の名前の1行分だけ下げ、欄とそろえて置く */
 .dict-add {
   margin-top: calc(var(--font-size) * 1.7 + var(--gap-small));
+}
+
+/* 初めて入れた直後の案内 */
+.welcome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  border: 1px solid var(--welcome-border);
+  border-radius: var(--radius-large);
+  padding: var(--welcome-padding);
+  background: var(--welcome-background);
+}
+
+.welcome-text {
+  flex: 1 1 var(--welcome-text-width);
+}
+
+.welcome-title {
+  font-size: var(--welcome-title-size);
+}
+
+/* 報告用の情報のコピー */
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-small);
+  margin: var(--gap-small) 0;
 }

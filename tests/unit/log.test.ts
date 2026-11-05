@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 
-import { clearRecentErrors, createLogger, getRecentErrors } from '@/log';
+import {
+  clearRecentErrors,
+  createLogger,
+  getRecentErrors,
+  getStoredErrors,
+  stripUrls,
+} from '@/log';
 
 /** 残す直近のエラーの数の上限 */
 const MAX_RECENT_ERRORS = 20;
@@ -13,6 +20,7 @@ describe('createLogger', () => {
 
   beforeEach(() => {
     clearRecentErrors();
+    fakeBrowser.reset();
     const silent = () => undefined;
     spies = {
       debug: vi.spyOn(console, 'debug').mockImplementation(silent),
@@ -82,5 +90,72 @@ describe('createLogger', () => {
     const errors = getRecentErrors() as unknown[];
     errors.length = 0;
     expect(getRecentErrors()).toHaveLength(1);
+  });
+
+  it('error の文に URL が混じっているとき、URL を消して残す', () => {
+    createLogger('test').error(
+      '読めませんでした',
+      new Error('Missing PDF "https://example.com/a.pdf".'),
+    );
+    expect(getRecentErrors()[0]?.message).toBe('読めませんでした：Error: Missing PDF "（URL）');
+  });
+
+  it('ほかの部品で出した error も、storage.local から合わせて読める', async () => {
+    createLogger('viewer').error('ルビを出せませんでした');
+    createLogger('background').error('ルールを入れられませんでした');
+
+    // 書き込みは出した順に動くので、前のテストの書き込みが残っていても、最後の2件はこのテストのもの
+    await expect
+      .poll(async () => (await getStoredErrors()).slice(-2).map(({ scope }) => scope))
+      .toEqual(['viewer', 'background']);
+  });
+
+  it('storage.local にも、新しいものから上限の数だけ残す', async () => {
+    const log = createLogger('test');
+    for (let count = 0; count <= MAX_RECENT_ERRORS; count += 1) {
+      log.error(`エラー${String(count)}`);
+    }
+
+    await expect
+      .poll(async () => (await getStoredErrors()).map(({ message }) => message))
+      .toEqual(
+        Array.from({ length: MAX_RECENT_ERRORS }, (_, index) => `エラー${String(index + 1)}`),
+      );
+  });
+
+  it('storage.local の値の形が合わないとき、合うものだけを読む', async () => {
+    await fakeBrowser.storage.local.set({
+      recentErrors: [{ time: 't', scope: 'viewer', message: '読めませんでした' }, { time: 1 }, 'x'],
+    });
+
+    expect(await getStoredErrors()).toEqual([
+      { time: 't', scope: 'viewer', message: '読めませんでした' },
+    ]);
+  });
+
+  it('storage.local がないとき（offscreen など）、この部品で残したものを読む', async () => {
+    vi.spyOn(fakeBrowser, 'storage', 'get').mockReturnValue(undefined as never);
+    createLogger('offscreen').error('辞書を読めませんでした');
+
+    expect((await getStoredErrors()).map(({ scope }) => scope)).toEqual(['offscreen']);
+  });
+
+  it('storage.local に残せないとき、warn を出して動き続ける', async () => {
+    vi.spyOn(fakeBrowser.storage.local, 'set').mockRejectedValue(new Error('QUOTA_BYTES'));
+    createLogger('test').error('読めませんでした');
+
+    await expect.poll(() => spies.warn.mock.calls.length).toBe(1);
+  });
+});
+
+describe('stripUrls', () => {
+  it.each([
+    ['https://example.com/a.pdf', '（URL）'],
+    ['開けません：file:///C:/a.pdf です', '開けません：（URL） です'],
+    ['blob:chrome-extension://abc/1#a.pdf', '（URL）'],
+    ['data:application/pdf;base64,AAAA', '（URL）'],
+    ['TypeError: Failed to fetch', 'TypeError: Failed to fetch'],
+  ])('%s のとき、%s になる', (text, expected) => {
+    expect(stripUrls(text)).toBe(expected);
   });
 });
