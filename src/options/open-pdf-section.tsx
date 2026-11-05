@@ -28,7 +28,7 @@ const URL_ERROR_MESSAGES: Readonly<Record<WebPdfUrlError | 'denied', MessageName
  * リーダーを新しいタブで開く。
  * @param pdfUrl 開く PDF の URL
  */
-function openReader(pdfUrl: string): void {
+export function openReader(pdfUrl: string): void {
   browser.tabs
     .create({ url: readerUrlFor(browser.runtime.getURL('/viewer.html'), pdfUrl) })
     .catch((error: unknown) => {

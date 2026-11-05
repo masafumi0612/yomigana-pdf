@@ -201,6 +201,22 @@
     "message": "変更はすぐ保存されます",
     "description": "設定の画面の見出しの横の、保存のボタンがいらないことの案内"
   },
+  "options_welcome_title": {
+    "message": "インストールありがとうございます",
+    "description": "初めて入れた直後の案内の見出し"
+  },
+  "options_welcome_lead": {
+    "message": "PDF を開くたびに自動でルビを付けるには、下のスイッチをオンにしてください。ルビの量は、あとからいつでも変えられます（最初は、すべての漢字にルビ）。",
+    "description": "初めて入れた直後の案内の説明"
+  },
+  "options_welcome_trySample": {
+    "message": "見本の PDF で試す",
+    "description": "拡張に同梱した見本の PDF をリーダーで開くボタン"
+  },
+  "options_welcome_close": {
+    "message": "閉じる",
+    "description": "初めて入れた直後の案内を閉じるボタン"
+  },
   "options_auto_title": {
     "message": "PDF を開いたら、自動でルビを付ける",
     "description": "自動でリーダーに移すスイッチの見出し"
