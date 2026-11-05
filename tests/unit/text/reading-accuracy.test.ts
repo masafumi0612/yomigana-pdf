@@ -10,13 +10,12 @@ import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { IpadicFeatures, Tokenizer } from 'kuromoji';
-import { builder } from 'kuromoji';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { TestContext } from 'vitest';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { extractPageText } from '@/pdf/page-text';
+import type { WordTokenizer } from '@/text/dictionary';
 import { applyFixups } from '@/text/fixups';
 import { normalizeForAnalysis } from '@/text/normalize';
 import { splitReading } from '@/text/split';
@@ -24,6 +23,7 @@ import { toTokens } from '@/text/tokens';
 import type { SplitResult } from '@/text/types';
 
 import { EXPECTATIONS } from '../../../scripts/test-pdfs/expectations';
+import { loadNodeTokenizer } from '../../helpers/node-dictionary';
 
 /**
  * リポジトリのテスト用 PDF での、字ごとに分けられた割合の下限。
@@ -71,8 +71,6 @@ interface Summary {
   /** 割合・PDF ごとの数・分けられなかった語を並べた文 */
   readonly report: string;
 }
-
-let tokenizerPromise: Promise<Tokenizer<IpadicFeatures>> | undefined;
 
 /**
  * フォルダの中の PDF の名前を挙げる（下のフォルダも見る）。
@@ -123,29 +121,12 @@ async function readBlockTexts(path: string): Promise<string[]> {
 }
 
 /**
- * kuromoji の辞書を、入れた kuromoji の中から読む（1度だけ読み、あとは同じものを使う）。
- * @returns kuromoji の解析器
- */
-async function loadTokenizer(): Promise<Tokenizer<IpadicFeatures>> {
-  tokenizerPromise ??= new Promise((resolve, reject) => {
-    const require = createRequire(import.meta.url);
-    const dicPath = join(dirname(require.resolve('kuromoji/package.json')), 'dict');
-    // 型では error がいつもあることになっているが、うまく読めたときは null が来る
-    builder({ dicPath }).build((error: Error | null, tokenizer) => {
-      if (error === null) resolve(tokenizer);
-      else reject(error);
-    });
-  });
-  return tokenizerPromise;
-}
-
-/**
  * 文を、正規化 → kuromoji → 読みの手直し → 字ごとの分割 の順に通す。
  * @param tokenizer kuromoji の解析器
  * @param text もとの文
  * @returns 語ごとの、字ごとに分けた結果
  */
-function analyze(tokenizer: Tokenizer<IpadicFeatures>, text: string): SplitResult[] {
+function analyze(tokenizer: WordTokenizer, text: string): SplitResult[] {
   const tokens = toTokens(tokenizer.tokenize(normalizeForAnalysis(text).text));
   return applyFixups(tokens, new Map()).map(splitReading);
 }
@@ -157,7 +138,7 @@ function analyze(tokenizer: Tokenizer<IpadicFeatures>, text: string): SplitResul
  * @returns PDF ごとの、漢字を含む語の数と、字ごとに分けられなかった語
  */
 async function tallyPdfs(dir: string, names: readonly string[]): Promise<Tally[]> {
-  const tokenizer = await loadTokenizer();
+  const tokenizer = await loadNodeTokenizer();
   return Promise.all(
     names.map(async (name) => {
       const texts = await readBlockTexts(join(dir, `${name}.pdf`));

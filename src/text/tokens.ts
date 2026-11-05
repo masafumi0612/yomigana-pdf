@@ -8,7 +8,7 @@ const NO_VALUE = '*';
 
 /**
  * kuromoji（IPADIC）の1語のうち、読みの処理で使うところ。
- * `@patdx/kuromoji` の語も `kuromoji` 0.1.2 の語も、この形を持つので渡せる
+ * `@patdx/kuromoji` の語は、この形を持つので渡せる
  */
 export type IpadicWord = Pick<
   IpadicFeatures,
