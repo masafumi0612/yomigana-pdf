@@ -117,6 +117,10 @@
     "message": "直す",
     "description": "文字の向きを直すモードに入るボタン（案内の中）"
   },
+  "viewer_notice_directionClose": {
+    "message": "案内を閉じる",
+    "description": "向きを直せる案内を閉じるボタンの名前（読み上げ用）。見た目は ×"
+  },
   "viewer_menu_directionFix": {
     "message": "文字の向きを直す…",
     "description": "紙面を右クリックしたときのメニューの項目。文字の向きを直すモードに入る"
@@ -164,6 +168,16 @@
       "next": {
         "content": "$2",
         "example": "横書き"
+      }
+    }
+  },
+  "viewer_direction_block": {
+    "message": "$CURRENT$の文字のかたまり",
+    "description": "向きを直すモードの、かたまりの枠の名前（読み上げ用）",
+    "placeholders": {
+      "current": {
+        "content": "$1",
+        "example": "縦書き"
       }
     }
   },

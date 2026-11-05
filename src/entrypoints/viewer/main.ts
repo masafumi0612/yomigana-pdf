@@ -89,6 +89,7 @@ const directionDone = requireElement('direction-done', HTMLButtonElement);
 const directionNotice = requireElement('direction-notice', HTMLDivElement);
 const directionNoticeText = requireElement('direction-notice-text', HTMLParagraphElement);
 const directionNoticeStart = requireElement('direction-notice-start', HTMLButtonElement);
+const directionNoticeClose = requireElement('direction-notice-close', HTMLButtonElement);
 const directionMenu = requireElement('direction-menu', HTMLDivElement);
 const directionMenuItem = requireElement('direction-menu-item', HTMLButtonElement);
 const container = requireElement('viewer-container', HTMLDivElement);
@@ -148,9 +149,11 @@ let initialHash = '';
 // 向きの自信がないかたまりがあるか。あるときだけ、バーの下に向きを直す案内を出す
 let hasUncertainDirection = false;
 let isDirectionEditing = false;
+// 向きを直せる案内を閉じたら、同じ PDF では出し直さない（保存はしない）
+let isDirectionHintDismissed = false;
 
 function updateDirectionNotice(): void {
-  directionNotice.hidden = !hasUncertainDirection || isDirectionEditing;
+  directionNotice.hidden = !hasUncertainDirection || isDirectionEditing || isDirectionHintDismissed;
 }
 
 function updateNoTextNotice(): void {
@@ -215,6 +218,7 @@ noTextText.textContent = message('viewer_notice_noText');
 noTextClose.textContent = message('viewer_notice_close');
 directionNoticeText.textContent = message('viewer_notice_directionHint');
 directionNoticeStart.textContent = message('viewer_notice_directionStart');
+directionNoticeClose.setAttribute('aria-label', message('viewer_notice_directionClose'));
 directionMenuItem.textContent = message('viewer_menu_directionFix');
 directionAllVertical.textContent = message('viewer_direction_allVertical');
 directionAllHorizontal.textContent = message('viewer_direction_allHorizontal');
@@ -266,6 +270,8 @@ function resetNotices(): void {
   hasTextByPage.clear();
   isNoTextDismissed = false;
   updateNoTextNotice();
+  isDirectionHintDismissed = false;
+  updateDirectionNotice();
 }
 
 function setDocumentShown(isShown: boolean): void {
@@ -476,6 +482,11 @@ rubyRetry.addEventListener('click', () => {
     });
 });
 directionNoticeStart.addEventListener('click', enterDirectionEditing);
+directionNoticeClose.addEventListener('click', () => {
+  isDirectionHintDismissed = true;
+  updateDirectionNotice();
+  container.focus();
+});
 directionDone.addEventListener('click', exitDirectionEditing);
 for (const [button, direction] of [
   [directionAllVertical, 'vertical'],
