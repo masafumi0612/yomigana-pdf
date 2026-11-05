@@ -7,7 +7,10 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { browser } from 'wxt/browser';
 
 import { createLogger } from '@/log';
+import { withTimeout } from '@/messaging/timeout';
 import { allowNativeView } from '@/redirect/skip';
+import { DEFAULT_SETTINGS, type Settings } from '@/settings/model';
+import { getSettings, watchSettings } from '@/settings/storage';
 import { installDrawRecorder } from '@/viewer/draw-recorder';
 import {
   formatZoom,
@@ -34,6 +37,9 @@ const EXTERNAL_LINK_REL = 'noopener noreferrer nofollow';
 
 /** pdf.js が読む同梱のデータの置き場所（ビルドで node_modules から写す） */
 const ASSET_BASE = location.origin;
+
+/** 始めに設定を読むのを待つ時間の上限（ミリ秒）。過ぎたら既定で始め、PDF を出すのを止めない */
+const SETTINGS_TIMEOUT_MS = 1000;
 
 const log = createLogger('viewer');
 
@@ -79,8 +85,27 @@ const viewerElement = requireElement('viewer', HTMLDivElement);
 const message = (name: MessageName, substitutions?: string): string =>
   browser.i18n.getMessage(name, substitutions);
 
+/**
+ * 保存した設定を読む。読めないとき・時間がかかるときは、ログに残して既定を使う。
+ * @returns 設定
+ */
+async function loadSettings(): Promise<Settings> {
+  try {
+    const result = await withTimeout(getSettings(), SETTINGS_TIMEOUT_MS);
+    if (result.ok) {
+      return result.value;
+    }
+    log.warn('設定を読むのに時間がかかったので、既定を使います');
+  } catch (error) {
+    log.error('設定を読めなかったので、既定を使います', error);
+  }
+  return DEFAULT_SETTINGS;
+}
+
 // pdf.js が字を描くより前に、字を描いた位置を書き留める用意をする
 const drawRecorder = installDrawRecorder();
+// 表示の部品を読み込む間に、設定も読んでおく
+const loadingSettings = loadSettings();
 
 // 部品の表示（pdf_viewer.mjs）は、読み込むときに pdf.js の本体を globalThis から引く
 Object.assign(globalThis, { pdfjsLib });
@@ -117,6 +142,9 @@ const rubyPages = createRubyPages({
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
   recorder: drawRecorder,
   root: container,
+  // 最初の読みの問い合わせより前に、保存した設定を読み終えておく
+  settings: await loadingSettings,
+  currentPageNumber: () => viewer.currentPageNumber,
   onPageText: (pageNumber, hasText) => {
     hasTextByPage.set(pageNumber, hasText);
     updateNoTextNotice();
@@ -124,6 +152,12 @@ const rubyPages = createRubyPages({
   onReadingFailureChange: (hasFailed) => {
     rubyFailed.hidden = !hasFailed;
   },
+});
+// 設定の画面やほかの Chrome で変えた設定を、開き直さずに反映する
+watchSettings((settings) => {
+  rubyPages.applySettings(settings).catch((error: unknown) => {
+    log.error('変わった設定をルビに反映する途中で予想外の失敗がありました', error);
+  });
 });
 
 // 押しても動かないボタンを見せないよう、表示の部品の読み込みが済んでから文言を入れる
