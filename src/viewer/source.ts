@@ -42,6 +42,23 @@ export function readViewerParams(search: string, extensionOrigin: string): Viewe
 }
 
 /**
+ * 開くときにページ・倍率などを決める、URL の `#` から後ろを取り出す。
+ *
+ * @param pdfUrl - 開く PDF の URL
+ * @param hasCredentials - 自動で移されて開くとき true。このとき元の URL の `#` から後ろは、リーダーの URL に残っている
+ * @param viewerHash - リーダーの URL の `#` から後ろ（`location.hash`、`#` つき）
+ * @returns `#` を除いた文字。なければ空の文字列
+ */
+export function readInitialHash(
+  pdfUrl: string,
+  hasCredentials: boolean,
+  viewerHash: string,
+): string {
+  const hash = hasCredentials ? viewerHash : new URL(pdfUrl).hash;
+  return hash.startsWith('#') ? hash.slice(1) : hash;
+}
+
+/**
  * PDF の URL から、バーに出すファイル名を取り出す。
  *
  * @param url - PDF の URL

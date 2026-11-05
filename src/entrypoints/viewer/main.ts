@@ -11,7 +11,7 @@ import { allowNativeView } from '@/redirect/skip';
 import { installDrawRecorder } from '@/viewer/draw-recorder';
 import { formatZoom, MAX_ZOOM, MIN_ZOOM, nextZoomStep, parsePageNumber } from '@/viewer/navigation';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
-import { fileNameFromUrl, isPdfFile, readViewerParams } from '@/viewer/source';
+import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
 import { isImageOnlyDocument } from '@/viewer/special-cases';
 
 /** 文言のキー */
@@ -19,7 +19,8 @@ type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
 
 /** 開く PDF。URL から読むか、選ばれたファイルを読む */
 type PdfSource =
-  { kind: 'url'; url: string; hasCredentials: boolean } | { kind: 'file'; file: File };
+  | { kind: 'url'; url: string; hasCredentials: boolean; hash: string }
+  | { kind: 'file'; file: File };
 
 /** PDF の中のリンクに付ける rel。開いた先から、このリーダーを触れないようにする */
 const EXTERNAL_LINK_REL = 'noopener noreferrer nofollow';
@@ -95,6 +96,8 @@ linkService.setViewer(viewer);
 const hasTextByPage = new Map<number, boolean>();
 // 案内を閉じたら、同じ PDF では出し直さない
 let isNoTextDismissed = false;
+// 開くときに URL の # から後ろで指されたページ・倍率。ページの数がわかる pagesinit で一度だけ使う
+let initialHash = '';
 
 function updateNoTextNotice(): void {
   noTextNotice.hidden = isNoTextDismissed || !isImageOnlyDocument(hasTextByPage);
@@ -187,6 +190,7 @@ async function openSource(source: PdfSource): Promise<void> {
   fileName.textContent = name;
   document.title = name;
   setNativeUrl(source);
+  initialHash = source.kind === 'url' ? source.hash : '';
   resetNotices();
   showStatus('viewer_main_loading');
 
@@ -293,6 +297,10 @@ function updateZoom(scale: number): void {
 
 eventBus.on('pagesinit', () => {
   viewer.currentScaleValue = 'auto';
+  if (initialHash !== '') {
+    linkService.setHash(initialHash);
+    initialHash = '';
+  }
   pageTotal.textContent = message('viewer_bar_pageTotal', String(viewer.pagesCount));
   pageInput.value = String(viewer.currentPageNumber);
 });
@@ -393,6 +401,7 @@ if (params.ok && params.value.pdfUrl !== undefined) {
     kind: 'url',
     url: params.value.pdfUrl,
     hasCredentials: params.value.hasCredentials,
+    hash: readInitialHash(params.value.pdfUrl, params.value.hasCredentials, location.hash),
   });
 } else {
   // 開いてはいけない URL を渡されたときも、ファイルを選んで開けるようにしておく

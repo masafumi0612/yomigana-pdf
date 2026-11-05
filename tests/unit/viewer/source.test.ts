@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fileNameFromUrl, isPdfFile, readViewerParams } from '@/viewer/source';
+import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
 
 const EXTENSION_ORIGIN = 'chrome-extension://abcdefghijklmnopabcdefghijklmnop';
 
@@ -127,5 +127,21 @@ describe('isPdfFile', () => {
 
   it('種類も名前も PDF でないとき、PDF とみなさない', () => {
     expect(isPdfFile({ name: 'photo.png', type: 'image/png' })).toBe(false);
+  });
+});
+
+describe('readInitialHash', () => {
+  it('自動で移されたとき、リーダーの URL の # から後ろを返す', () => {
+    expect(readInitialHash('https://example.com/a.pdf', true, '#page=3&zoom=150')).toBe(
+      'page=3&zoom=150',
+    );
+  });
+
+  it('file の引数で開くとき、PDF の URL の # から後ろを返す', () => {
+    expect(readInitialHash('https://example.com/a.pdf#page=2', false, '#page=9')).toBe('page=2');
+  });
+
+  it('# から後ろがないとき、空の文字列になる', () => {
+    expect(readInitialHash('https://example.com/a.pdf', true, '')).toBe('');
   });
 });
