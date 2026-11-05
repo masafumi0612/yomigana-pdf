@@ -1,12 +1,15 @@
 /** リーダーの URL で、開く PDF の URL を渡す引数の名前（`viewer.html?file=<URL>`） */
 const FILE_PARAM = 'file';
 
+/** 自動で移されたときに元の URL を渡す印（`viewer.html?DNR:<URL>`）。移す側のルールと合わせる */
+const REDIRECTED_PREFIX = '?DNR:';
+
 /** リーダーが読みに行ってよい URL の種類。ほかの種類（javascript: や data: など）は開かない */
 const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'file:']);
 
 /** URL の引数を読み取った結果 */
 export type ViewerParamsResult =
-  | { ok: true; value: { pdfUrl: string | undefined } }
+  | { ok: true; value: { pdfUrl: string | undefined; hasCredentials: boolean } }
   | { ok: false; error: 'invalid-url' | 'unsupported-protocol' };
 
 /**
@@ -14,12 +17,17 @@ export type ViewerParamsResult =
  *
  * @param search - リーダーの URL の `?` から後ろ（`location.search`）
  * @param extensionOrigin - この拡張の起点（`chrome-extension://<ID>`）。拡張の中の PDF は開いてよい
- * @returns 開く URL。引数がなければ `pdfUrl` は undefined。読めない・開いてはいけない URL は失敗
+ * @returns 開く URL。引数がなければ `pdfUrl` は undefined。読めない・開いてはいけない URL は失敗。
+ *   自動で移されたとき（`?DNR:`）は、ログイン中の PDF も取り直せるよう `hasCredentials` が true
  */
 export function readViewerParams(search: string, extensionOrigin: string): ViewerParamsResult {
-  const raw = new URLSearchParams(search).get(FILE_PARAM);
+  const isRedirected = search.startsWith(REDIRECTED_PREFIX);
+  // 移されたときの URL は符号化されていないので、そのまま後ろを読む
+  const raw = isRedirected
+    ? search.slice(REDIRECTED_PREFIX.length)
+    : new URLSearchParams(search).get(FILE_PARAM);
   if (raw === null || raw === '') {
-    return { ok: true, value: { pdfUrl: undefined } };
+    return { ok: true, value: { pdfUrl: undefined, hasCredentials: false } };
   }
   if (!URL.canParse(raw)) {
     return { ok: false, error: 'invalid-url' };
@@ -30,7 +38,7 @@ export function readViewerParams(search: string, extensionOrigin: string): Viewe
   if (!ALLOWED_PROTOCOLS.has(url.protocol) && !isOwnExtension) {
     return { ok: false, error: 'unsupported-protocol' };
   }
-  return { ok: true, value: { pdfUrl: url.href } };
+  return { ok: true, value: { pdfUrl: url.href, hasCredentials: isRedirected } };
 }
 
 /**

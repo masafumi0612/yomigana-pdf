@@ -12,3 +12,9 @@ export const RUBY_SIZE_RATIO = 0.5;
 
 /** ルビの色の既定（CSS の色）。設定画面ができるまで、この値を使う */
 export const RUBY_COLOR = '#000000';
+
+/** 「PDF を自動でリーダーで開く」の親スイッチを `storage.sync` に入れるときのキー */
+export const AUTO_REDIRECT_STORAGE_KEY = 'autoRedirect';
+
+/** 親スイッチの既定。許可を求める前は、PDF を勝手に移さない */
+export const isAutoRedirectOnByDefault = false;

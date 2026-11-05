@@ -77,7 +77,9 @@ test('開けない URL のとき、Chrome の標準の表示で開くボタン�
     `chrome-extension://${extensionId}/viewer.html?file=${encodeURIComponent(pdfUrl)}`,
   );
 
-  await expect(page.getByRole('button', { name: /Chrome の標準の表示で開く/u })).toBeFocused();
+  await expect(
+    page.locator('#failure-actions').getByRole('button', { name: 'Chrome の標準の表示で開く' }),
+  ).toBeFocused();
 });
 
 test('ページ番号を入れて Enter を押したとき、そのページに移る', async ({ page, extensionId }) => {

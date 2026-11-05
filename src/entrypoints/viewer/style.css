@@ -18,6 +18,10 @@
   --status-width: 40em;
   --status-gap: 24px;
   --status-padding: 8px 16px;
+  --notice-background: #1f2933;
+  --notice-border: #8ab4f8;
+  --notice-error: #f6aea9;
+  --alert-text: #fdd663;
   --font-size: 14px;
   --font-family: system-ui, sans-serif;
 }
@@ -65,7 +69,10 @@ body {
 }
 
 .bar-group[hidden],
-.bar-button[hidden] {
+.bar-button[hidden],
+.notice[hidden],
+.status-actions[hidden],
+.notice-error[hidden] {
   display: none;
 }
 
@@ -116,6 +123,10 @@ body {
   text-align: center;
 }
 
+.bar-alert {
+  color: var(--alert-text);
+}
+
 .bar-field:focus-visible,
 .bar-button:focus-visible,
 .viewer-container:focus-visible {
@@ -140,6 +151,73 @@ body {
   background: var(--bar-background);
   color: var(--bar-text);
   text-align: center;
+}
+
+.status-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: var(--bar-gap);
+  justify-content: center;
+  margin: var(--bar-gap) auto 0;
+}
+
+.status-button {
+  border-color: var(--bar-text-sub);
+  background: var(--bar-background);
+}
+
+/* バーの下に重ねる案内。紙面を押し下げず、閉じられる・入れ直せる */
+.notices {
+  position: fixed;
+  inset: var(--bar-height) 0 auto;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--bar-gap);
+  padding: var(--bar-gap) 16px 0;
+  pointer-events: none;
+}
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bar-gap);
+  align-items: center;
+  box-sizing: border-box;
+  max-width: var(--status-width);
+  margin: 0;
+  padding: var(--status-padding);
+  border: 1px solid var(--notice-border);
+  border-radius: var(--button-radius);
+  background: var(--notice-background);
+  color: var(--bar-text);
+  pointer-events: auto;
+}
+
+.notice-text {
+  margin: 0;
+}
+
+.notice-field {
+  width: 14em;
+  text-align: start;
+}
+
+.notice-button {
+  border-color: var(--bar-text-sub);
+}
+
+.notice-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--notice-error);
+}
+
+.notice-button:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: var(--focus-width);
 }
 
 /* pdf.js の決まりで、紙面の入れ物は absolute で置く */
