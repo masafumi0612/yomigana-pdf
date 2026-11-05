@@ -146,7 +146,7 @@ function placeGlyphs(piece: Piece, isVertical: boolean, evidence: Evidence): Pla
  * @param direction 字の並ぶ向き
  * @returns ラン
  */
-function toRun(glyphs: readonly PlacedGlyph[], direction: Direction): TextRun {
+export function toRun(glyphs: readonly PlacedGlyph[], direction: Direction): TextRun {
   return {
     glyphs,
     text: glyphs.map((glyph) => glyph.ch).join(''),

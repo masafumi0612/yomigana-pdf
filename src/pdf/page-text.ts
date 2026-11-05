@@ -56,7 +56,7 @@ function rubiesIn(
  * @param rubyOf 字ごとの、親字になっているルビ
  * @returns かたまり
  */
-function toBlock(
+export function toBlock(
   lines: readonly TextLine[],
   rubyOf: ReadonlyMap<PlacedGlyph, RubyGroup>,
 ): TextBlock {
