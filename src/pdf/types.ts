@@ -26,6 +26,8 @@ export interface PdfMarkedContent {
 export interface PdfTextStyle {
   /** 縦書きのフォントか */
   readonly vertical?: boolean;
+  /** pdf.js が出す代わりの family（serif・sans-serif・monospace など） */
+  readonly fontFamily?: string;
 }
 
 /** pdf.js の getTextContent() の結果のうち、使うところ */
@@ -63,6 +65,8 @@ export interface Glyph {
   readonly size: number;
   /** PDF の中に、この字のルビがもとからあるか */
   readonly hasRuby: boolean;
+  /** 字を描くフォントの名前（getTextContent() の styles の鍵） */
+  readonly fontName: string;
 }
 
 /** PDF の中にもとからあるルビ */
@@ -97,4 +101,6 @@ export interface TextBlock {
 export interface PageText {
   /** 読む順のかたまり */
   readonly blocks: readonly TextBlock[];
+  /** フォントの名前ごとの書き方（字のフォントが明朝かを見分けるために持つ） */
+  readonly styles: Readonly<Record<string, PdfTextStyle>>;
 }

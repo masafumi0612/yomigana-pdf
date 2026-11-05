@@ -144,6 +144,62 @@ test('横書きのとき、ルビが字の上に出る', async ({ page, extensio
   expect(isAbove(await measureRuby(page, 1, '筒'))).toBe(true);
 });
 
+/**
+ * ルビの font-family と、そのフォントを読み込めたかを調べる。
+ * @param page 画面
+ * @param base 親字（ページに1つだけ出る字にする）
+ * @returns 今の font-family と、読み込んだ同梱フォントの family
+ */
+async function rubyFont(
+  page: Page,
+  base: string,
+): Promise<{ family: string; loaded: string[]; hasGlyphs: boolean }> {
+  return page.evaluate(async (ch) => {
+    const ruby = [...document.querySelectorAll<HTMLElement>('.ruby-layer > span')].find(
+      (element) => element.dataset.base === ch,
+    );
+    const family = ruby === undefined ? '' : getComputedStyle(ruby).fontFamily;
+    await document.fonts.load(`16px ${family}`, ruby?.textContent ?? '');
+    return {
+      family,
+      loaded: [...document.fonts].filter((face) => face.status === 'loaded').map((f) => f.family),
+      hasGlyphs: document.fonts.check(`16px ${family}`, ruby?.textContent ?? ''),
+    };
+  }, base);
+}
+
+test('明朝の PDF のとき、ルビが同梱の明朝になる', async ({ page, extensionId }) => {
+  // 縦書きの物語の本文は Noto Serif JP
+  expect(EXPECTATIONS['vertical-story']?.fonts).toContain('NotoSerifJP-Regular');
+  await openFromFile(page, extensionId, 'vertical-story.pdf');
+  await expect(rubyLayer(page, 1).locator('[data-base="傘"]')).toBeAttached({
+    timeout: FIRST_RUBY_TIMEOUT_MS,
+  });
+
+  const font = await rubyFont(page, '傘');
+
+  expect(font.family).toContain('Yomigana Ruby Serif');
+  expect(font.loaded).toContain('Yomigana Ruby Serif');
+  expect(font.hasGlyphs).toBe(true);
+});
+
+test('ゴシックの PDF のとき、ルビが同梱のゴシックになる', async ({ page, extensionId }) => {
+  // 学年だよりは Noto Sans JP だけ
+  expect(
+    EXPECTATIONS['horizontal-print']?.fonts.every((name) => name.startsWith('NotoSansJP')),
+  ).toBe(true);
+  await openFromFile(page, extensionId, 'horizontal-print.pdf');
+  await expect(rubyLayer(page, 1).locator('[data-base="筒"]')).toBeAttached({
+    timeout: FIRST_RUBY_TIMEOUT_MS,
+  });
+
+  const font = await rubyFont(page, '筒');
+
+  expect(font.family).toContain('Yomigana Ruby Sans');
+  expect(font.loaded).toContain('Yomigana Ruby Sans');
+  expect(font.hasGlyphs).toBe(true);
+});
+
 test('もとからルビのある字のとき、ルビを重ねて付けない', async ({ page, extensionId }) => {
   await openFromFile(page, extensionId, 'existing-ruby.pdf');
   const layer = rubyLayer(page, 1);

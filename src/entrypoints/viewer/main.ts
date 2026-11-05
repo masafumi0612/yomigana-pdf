@@ -209,6 +209,8 @@ async function openSource(source: PdfSource): Promise<void> {
     iccUrl: `${ASSET_BASE}/iccs/`,
     // 拡張の外のフォントを読まない
     useSystemFonts: false,
+    // フォントの名前（Mincho・Gothic など）を取れるようにする。ルビを明朝・ゴシックに合わせるのに使う
+    fontExtraProperties: true,
   });
   currentTask = task;
   // パスワードは入力欄から pdf.js へ渡すだけで、変数・ログ・保存先には残さない

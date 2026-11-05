@@ -67,6 +67,7 @@ function toBlock(
     rect: glyph.rect,
     size: glyph.size,
     hasRuby: rubyOf.has(glyph),
+    fontName: glyph.fontName,
   }));
   const glyphIndexOfChar = glyphs.flatMap((glyph, index) =>
     Array.from({ length: glyph.ch.length }, () => index),
@@ -97,5 +98,8 @@ export function extractPageText(content: PdfTextContent): PageText {
     const group = rubies.find((ruby) => isRubyBase(ruby, glyph));
     if (group !== undefined) rubyOf.set(glyph, group);
   }
-  return { blocks: orderParagraphs(lines).map((paragraph) => toBlock(paragraph, rubyOf)) };
+  return {
+    blocks: orderParagraphs(lines).map((paragraph) => toBlock(paragraph, rubyOf)),
+    styles: content.styles,
+  };
 }

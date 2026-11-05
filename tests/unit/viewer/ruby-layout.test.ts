@@ -17,7 +17,11 @@ import { blockOf, columnGlyphs, rowGlyphs, SIZE } from './make-glyphs';
 const FRAME: PageFrame = { pageX: 0, pageY: 0, pageWidth: 595, pageHeight: 842 };
 /** ルビの字の大きさの割合 */
 const RATIO = 0.5;
-const OPTIONS: RubyLayoutOptions = { sizeRatio: RATIO, rectOf: (glyph) => glyph.rect };
+const OPTIONS: RubyLayoutOptions = {
+  sizeRatio: RATIO,
+  rectOf: (glyph) => glyph.rect,
+  isSerif: () => false,
+};
 
 /**
  * ルビを付ける所を作る。
@@ -53,6 +57,24 @@ describe('layoutRubies', () => {
     const [box] = layoutRubies([block], [[span(0, 1, 'うけたまわ')]], FRAME, OPTIONS);
 
     expect(box).toMatchObject({ left: 55 - 12.5, width: 25 });
+  });
+
+  it('親字が明朝のとき、ルビも明朝にする', () => {
+    const block = blockOf(rowGlyphs('学年', 50, 700), 'horizontal');
+    const options = { ...OPTIONS, isSerif: () => true };
+
+    const [box] = layoutRubies([block], [[span(0, 2, 'がくねん')]], FRAME, options);
+
+    expect(box?.isSerif).toBe(true);
+  });
+
+  it('親字の明朝とゴシックが半々のとき、ゴシックにする', () => {
+    const block = blockOf(rowGlyphs('学年', 50, 700), 'horizontal');
+    const options = { ...OPTIONS, isSerif: (glyph: Glyph) => glyph.ch === '学' };
+
+    const [box] = layoutRubies([block], [[span(0, 2, 'がくねん')]], FRAME, options);
+
+    expect(box?.isSerif).toBe(false);
   });
 
   it('もとからルビのある字にかかるとき、付けない', () => {

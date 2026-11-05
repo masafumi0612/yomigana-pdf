@@ -19,6 +19,7 @@ export function columnGlyphs(text: string, x: number, top: number, size = SIZE):
     rect: { x1: x, x2: x + size, y1: top - (index + 1) * size, y2: top - index * size },
     size,
     hasRuby: false,
+    fontName: 'f1',
   }));
 }
 
@@ -37,6 +38,7 @@ export function rowGlyphs(text: string, left: number, bottom: number, size = SIZ
     rect: { x1: left + index * size, x2: left + (index + 1) * size, y1: bottom, y2: bottom + size },
     size,
     hasRuby: false,
+    fontName: 'f1',
   }));
 }
 

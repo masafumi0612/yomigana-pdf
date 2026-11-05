@@ -26,7 +26,8 @@
     "licenses:check": "node scripts/check-licenses.ts",
     "test-pdfs:make": "node scripts/test-pdfs/make.ts",
     "test-pdfs:check": "node scripts/test-pdfs/check.ts",
-    "data:build": "node data/build-kanji.ts"
+    "data:build": "node data/build-kanji.ts",
+    "fonts:build": "node scripts/build-ruby-fonts.ts"
   },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged",

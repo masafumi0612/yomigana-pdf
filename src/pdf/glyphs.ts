@@ -27,6 +27,8 @@ export interface PlacedGlyph {
   readonly size: number;
   /** 向きの手がかり */
   readonly evidence: Evidence;
+  /** 字を描くフォントの名前 */
+  readonly fontName: string;
 }
 
 /** 1つの片（縦書きと見なした並びは、並び全体）の字 */
@@ -126,7 +128,14 @@ function placeGlyphs(piece: Piece, isVertical: boolean, evidence: Evidence): Pla
         y2: y + scaleY * ASCENT_EM,
       };
     }
-    glyphs.push({ ch, norm: normalizeGlyph(ch), rect, size, evidence });
+    glyphs.push({
+      ch,
+      norm: normalizeGlyph(ch),
+      rect,
+      size,
+      evidence,
+      fontName: piece.item.fontName,
+    });
   }
   return glyphs;
 }

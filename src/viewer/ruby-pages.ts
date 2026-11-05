@@ -8,6 +8,7 @@ import { createLogger } from '@/log';
 import type { ReadingResult } from '@/messaging/messages';
 import { requestReadings } from '@/messaging/reading-client';
 import { extractPageText } from '@/pdf/page-text';
+import { isSerifFont } from '@/pdf/typeface';
 import type { Glyph, PageText, Rect } from '@/pdf/types';
 import type { RubySpan } from '@/text/annotate';
 
@@ -34,7 +35,7 @@ export interface RubyPageView {
   /** Canvas の画素と CSS の画素の比 */
   readonly outputScale?: { readonly sx: number; readonly sy: number } | undefined;
   /** ページ */
-  readonly pdfPage: Pick<PDFPageProxy, 'getTextContent'>;
+  readonly pdfPage: Pick<PDFPageProxy, 'getTextContent' | 'commonObjs'>;
 }
 
 /** pdf.js の pagerender・pagerendered の知らせのうち、使うところ */
@@ -222,9 +223,12 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
         entry.boxes = undefined;
       }
       const { exact } = entry;
+      const { styles } = data.page;
       entry.boxes ??= layoutRubies(data.page.blocks, data.spans, frameOf(view.viewport), {
         sizeRatio: RUBY_SIZE_RATIO,
         rectOf: (glyph) => exact?.get(glyph) ?? glyph.rect,
+        isSerif: (glyph) =>
+          isSerifFont(styles[glyph.fontName], realFontName(view.pdfPage, glyph.fontName)),
       });
       entry.layer = showRubyLayer(view.div, view.viewport, entry.boxes, entry.layer);
       performance.measure(RUBY_LAYER_MEASURE, {
@@ -247,6 +251,21 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       options.onReadingFailureChange?.(false);
     },
   };
+}
+
+/**
+ * フォント自身の名前を引く。描き終えたあとなら、pdf.js が読み込んだフォントの名前が取れる。
+ * @param pdfPage ページ
+ * @param fontName getTextContent() の styles の鍵
+ * @returns フォントの名前。まだ読み込めていないときは undefined
+ */
+function realFontName(
+  pdfPage: Pick<PDFPageProxy, 'commonObjs'>,
+  fontName: string,
+): string | undefined {
+  if (!pdfPage.commonObjs.has(fontName)) return undefined;
+  const font = pdfPage.commonObjs.get(fontName) as { name?: unknown } | undefined;
+  return typeof font?.name === 'string' ? font.name : undefined;
 }
 
 /**
