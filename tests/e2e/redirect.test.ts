@@ -8,6 +8,9 @@ import { expect, redirectTest as test, setAutoRedirect, TEST_PDF_DIR } from './f
 /** どの返し方でも返す PDF */
 const PDF_FILE = 'horizontal-print.pdf';
 
+/** ページを指して開くテストに使う、2ページの PDF */
+const TWO_PAGES_FILE = 'vertical-story.pdf';
+
 /** PDF の返し方（パスと、応答のヘッダ） */
 const PDF_ROUTES: Record<string, Record<string, string>> = {
   '/a.pdf': { 'content-type': 'application/pdf' },
@@ -23,6 +26,7 @@ const PDF_ROUTES: Record<string, Record<string, string>> = {
     'content-disposition': 'attachment; filename="x.pdf"',
   },
   '/login.pdf': { 'content-type': 'application/pdf' },
+  '/two-pages.pdf': { 'content-type': 'application/pdf' },
 };
 
 const PAGE_HTML = `<!doctype html><meta charset="utf-8"><title>page</title>
@@ -33,6 +37,7 @@ const PAGE_HTML = `<!doctype html><meta charset="utf-8"><title>page</title>
 let server: Server;
 let origin: string;
 let pdfData: Buffer;
+let twoPagesData: Buffer;
 
 /**
  * ログインの印（Cookie）があるか調べる。
@@ -45,6 +50,7 @@ function hasSession(headers: IncomingHttpHeaders): boolean {
 
 test.beforeAll(async () => {
   pdfData = await readFile(join(TEST_PDF_DIR, PDF_FILE));
+  twoPagesData = await readFile(join(TEST_PDF_DIR, TWO_PAGES_FILE));
   server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://localhost');
     if (url.pathname === '/page.html') {
@@ -61,7 +67,7 @@ test.beforeAll(async () => {
       return;
     }
     response.writeHead(200, headers);
-    response.end(pdfData);
+    response.end(url.pathname === '/two-pages.pdf' ? twoPagesData : pdfData);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   origin = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
@@ -162,6 +168,32 @@ test.describe('リーダーに移らない', () => {
     await page.locator('#link').click();
 
     await expect(page).toHaveURL(`${origin}/a.pdf`);
+  });
+});
+
+test.describe('URL の # から後ろ', () => {
+  test('# から後ろがあるとき、リーダーの URL に残る', async ({ page }) => {
+    await page.goto(`${origin}/a.pdf#page=3&zoom=150`);
+
+    await expect(page).toHaveURL(/viewer\.html\?DNR:.*#page=3&zoom=150$/u);
+  });
+
+  test('#page= と #zoom= があるとき、そのページ・倍率で開く', async ({ page }) => {
+    await page.goto(`${origin}/two-pages.pdf#page=2&zoom=150`);
+
+    await expect(page.locator('#page-input')).toHaveValue('2');
+    await expect(page.locator('#zoom-level')).toHaveText('150%');
+  });
+
+  test('file の引数で開くとき、PDF の URL の # から後ろでページを決める', async ({
+    page,
+    extensionId,
+  }) => {
+    const target = encodeURIComponent(`${origin}/two-pages.pdf#page=2`);
+
+    await page.goto(`chrome-extension://${extensionId}/viewer.html?file=${target}`);
+
+    await expect(page.locator('#page-input')).toHaveValue('2');
   });
 });
 
