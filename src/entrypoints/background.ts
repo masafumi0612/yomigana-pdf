@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 
 import { createLogger } from '@/log';
+import { startWelcome } from '@/options/welcome';
 import { type DynamicRuleStore, syncRedirectRules } from '@/redirect/register';
 import { clearSkipRule } from '@/redirect/skip';
 import type { SettingKey } from '@/settings/model';
@@ -51,10 +52,14 @@ function openOptions(): void {
 export default defineBackground(() => {
   // 拡張のアイコンを押したら、小さな枠ではなく設定の画面を開く
   browser.action.onClicked.addListener(openOptions);
-  // 初めて入れたときだけ開く。更新のたびには開かない
+  // 初めて入れたときだけ開く。更新のたびには開かない。
+  // 開いた画面が入れた直後の案内を出せるよう、先に印を残す（残せなくても画面は開く）
   browser.runtime.onInstalled.addListener(({ reason }) => {
     if (reason === 'install') {
-      openOptions();
+      startWelcome().then(openOptions, (error: unknown) => {
+        log.error('入れた直後の案内の印を残すのに失敗しました', error);
+        openOptions();
+      });
     }
   });
   // 起動のたびに合わせ直す（拡張の更新でルールが変わったときも、ここで入れ替わる）

@@ -3,10 +3,12 @@ import { join } from 'node:path';
 
 import { defineConfig } from 'wxt';
 
-import { DICTIONARY_DIR } from './src/config';
+import { DICTIONARY_DIR, SAMPLE_PDF_PATH } from './src/config';
 
 /** @patdx/kuromoji のフォルダ（IPADIC の辞書（gzip）とライセンスの文が入っている） */
 const KUROMOJI_DIR = join(import.meta.dirname, 'node_modules', '@patdx', 'kuromoji');
+/** 設定の画面の「見本の PDF で試す」で開く PDF。自分で書いた文と OFL のフォントだけで作ったもの（test-pdfs/README.md） */
+const SAMPLE_PDF = join(import.meta.dirname, 'test-pdfs', 'out', 'sample.pdf');
 /** pdfjs-dist のフォルダ（CMap・標準フォント情報などのデータが入っている） */
 const PDFJS_DIR = join(import.meta.dirname, 'node_modules', 'pdfjs-dist');
 /**
@@ -55,6 +57,7 @@ export default defineConfig({
         }
       }
       files.push(
+        { absoluteSrc: SAMPLE_PDF, relativeDest: SAMPLE_PDF_PATH },
         {
           absoluteSrc: join(import.meta.dirname, 'THIRD_PARTY_NOTICES.md'),
           relativeDest: 'THIRD_PARTY_NOTICES.md',
