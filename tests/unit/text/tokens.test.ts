@@ -1,4 +1,4 @@
-import type { IpadicFeatures } from 'kuromoji';
+import type { IpadicFeatures } from '@patdx/kuromoji';
 import { describe, expect, it } from 'vitest';
 
 import { toTokens } from '@/text/tokens';
