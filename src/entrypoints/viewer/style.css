@@ -25,6 +25,7 @@
   --button-height: 32px;
   --button-padding: 0 12px;
   --button-radius: 4px;
+  --button-border: #80868b;
   --focus-ring: #8ab4f8;
   --focus-width: 2px;
   --page-background: #525659;
@@ -122,6 +123,18 @@ body {
   min-width: var(--button-height);
   padding: 0;
   font-size: 1.25em;
+}
+
+/* 枠を付けて、文字だけのボタンとも見分けやすくする（枠は背景と 3:1 以上） */
+.bar-rotate {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border-color: var(--button-border);
+}
+
+.bar-rotate-icon {
+  flex: none;
 }
 
 .bar-button:hover:not(:disabled) {

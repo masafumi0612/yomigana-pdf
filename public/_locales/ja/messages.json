@@ -37,6 +37,14 @@
     "message": "拡大",
     "description": "リーダーのバーの、紙面を大きくするボタンの名前（読み上げ用）"
   },
+  "viewer_bar_rotate": {
+    "message": "右に回す",
+    "description": "リーダーのバーの、紙面を時計回りに 90 度回すボタンの文字"
+  },
+  "viewer_bar_rotateTitle": {
+    "message": "紙面を右に 90 度回す",
+    "description": "リーダーのバーの、回すボタンにマウスを乗せたときの説明"
+  },
   "viewer_bar_zoomLevel": {
     "message": "倍率",
     "description": "リーダーのバーの、今の倍率の欄の名前（読み上げ用）"
