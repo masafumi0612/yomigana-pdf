@@ -3,6 +3,9 @@
   "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    // 設定の画面は Preact で書く。Vite もこの2つを読んで JSX を変換する
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
   }
 }
