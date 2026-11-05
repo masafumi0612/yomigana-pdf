@@ -7,6 +7,9 @@ const REDIRECTED_PREFIX = '?DNR:';
 /** リーダーが読みに行ってよい URL の種類。ほかの種類（javascript: や data: など）は開かない */
 const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'file:']);
 
+/** 設定の画面で選んだファイルを渡す URL の種類。名前を持たないので、渡す側が `#` の後ろにファイル名を付ける */
+const BLOB_PROTOCOL = 'blob:';
+
 /** URL の引数を読み取った結果 */
 export type ViewerParamsResult =
   | { ok: true; value: { pdfUrl: string | undefined; hasCredentials: boolean } }
@@ -33,8 +36,11 @@ export function readViewerParams(search: string, extensionOrigin: string): Viewe
     return { ok: false, error: 'invalid-url' };
   }
   const url = new URL(raw);
+  // blob: の URL は、後ろに作った側の URL を持つ。この拡張の画面が作ったものだけ開く
+  const owner =
+    url.protocol === BLOB_PROTOCOL && URL.canParse(url.pathname) ? new URL(url.pathname) : url;
   // chrome-extension: は標準の種類でないので、環境によっては origin が "null" になる。自分で組み立てる
-  const isOwnExtension = `${url.protocol}//${url.host}` === extensionOrigin;
+  const isOwnExtension = `${owner.protocol}//${owner.host}` === extensionOrigin;
   if (!ALLOWED_PROTOCOLS.has(url.protocol) && !isOwnExtension) {
     return { ok: false, error: 'unsupported-protocol' };
   }
@@ -54,7 +60,12 @@ export function readInitialHash(
   hasCredentials: boolean,
   viewerHash: string,
 ): string {
-  const hash = hasCredentials ? viewerHash : new URL(pdfUrl).hash;
+  const url = new URL(pdfUrl);
+  // blob: の URL の `#` から後ろは、ページの指定ではなくファイル名
+  if (!hasCredentials && url.protocol === BLOB_PROTOCOL) {
+    return '';
+  }
+  const hash = hasCredentials ? viewerHash : url.hash;
   return hash.startsWith('#') ? hash.slice(1) : hash;
 }
 
@@ -62,22 +73,35 @@ export function readInitialHash(
  * PDF の URL から、バーに出すファイル名を取り出す。
  *
  * @param url - PDF の URL
- * @returns パスの最後の部分（`%` の符号は戻す）。取り出せなければ URL のホスト名か URL そのもの
+ * @returns パスの最後の部分（`%` の符号は戻す）。blob: の URL は `#` の後ろ。
+ *   取り出せなければ URL のホスト名か URL そのもの
  */
 export function fileNameFromUrl(url: string): string {
   if (!URL.canParse(url)) {
     return url;
   }
-  const { pathname, hostname } = new URL(url);
+  const { pathname, hostname, protocol, hash } = new URL(url);
+  if (protocol === BLOB_PROTOCOL && hash.length > 1) {
+    return decodeOrKeep(hash.slice(1));
+  }
   const last = pathname.slice(pathname.lastIndexOf('/') + 1);
   if (last === '') {
     return hostname === '' ? url : hostname;
   }
+  return decodeOrKeep(last);
+}
+
+/**
+ * `%` の符号を戻す。
+ *
+ * @param text - 戻す文字
+ * @returns 戻した文字。壊れた `%` の並びは、戻さずにそのまま見せる
+ */
+function decodeOrKeep(text: string): string {
   try {
-    return decodeURIComponent(last);
+    return decodeURIComponent(text);
   } catch {
-    // 壊れた % の並びは、戻さずにそのまま見せる
-    return last;
+    return text;
   }
 }
 
