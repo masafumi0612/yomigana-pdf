@@ -3,7 +3,6 @@
 // ページの文・読み・字の位置・ルビの置き場所はページごとに取っておき、拡大・回転で描き直しても問い合わせ直さない。
 import type { PageViewport, PDFPageProxy } from 'pdfjs-dist';
 
-import { RUBY_COLOR, RUBY_SIZE_RATIO } from '@/config';
 import { createLogger } from '@/log';
 import type { ReadingResult } from '@/messaging/messages';
 import { requestReadings } from '@/messaging/reading-client';
@@ -12,6 +11,7 @@ import { extractPageText } from '@/pdf/page-text';
 import { type BlockRebuilder, createBlockRebuilder } from '@/pdf/rebuild-block';
 import { isSerifFont } from '@/pdf/typeface';
 import type { Direction, Glyph, PageText, PdfTextContent, Rect, TextBlock } from '@/pdf/types';
+import { DEFAULT_SETTINGS, RUBY_COLORS, RUBY_SIZE_RATIOS } from '@/settings/model';
 import type { RubySpan } from '@/text/annotate';
 
 import type { DrawRecorder } from './draw-recorder';
@@ -25,6 +25,11 @@ import { invertMatrix, type Matrix, multiplyMatrix, toMatrix } from './transform
 export const READINGS_MEASURE = 'yomigana-pdf:readings';
 /** ページを描き終えてから、ルビの層を出すまでの時間を測る名前（performance.measure） */
 export const RUBY_LAYER_MEASURE = 'yomigana-pdf:ruby-layer';
+
+/** ルビの字の大きさ（親字の大きさに対する割合）。保存した設定を読むようになるまで、既定を使う */
+const RUBY_SIZE_RATIO = RUBY_SIZE_RATIOS[DEFAULT_SETTINGS.rubyStyle.size];
+/** ルビの色（CSS の色）。保存した設定を読むようになるまで、既定を使う */
+const RUBY_COLOR = RUBY_COLORS[DEFAULT_SETTINGS.rubyStyle.color];
 
 /** pdf.js のページの表示（PDFPageView）のうち、使うところ */
 export interface RubyPageView {

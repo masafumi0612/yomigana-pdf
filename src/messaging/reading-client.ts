@@ -1,9 +1,9 @@
 // リーダーから読みを問い合わせる呼び出し口
 import { browser } from 'wxt/browser';
 
-import { DEFAULT_LEVEL } from '@/config';
 import { createLogger } from '@/log';
 import type { Result } from '@/result';
+import { DEFAULT_SETTINGS } from '@/settings/model';
 import type { Level, UserDictionary } from '@/text/types';
 
 import {
@@ -18,7 +18,7 @@ import { isReadingResult } from './validate';
 
 /** 読みの問い合わせの細かい指定。どれも省ける */
 export interface ReadingClientOptions {
-  /** 利用者が選んだ段階。既定は DEFAULT_LEVEL */
+  /** 利用者が選んだ段階。既定は設定の既定（DEFAULT_SETTINGS.level） */
   readonly level?: Level;
   /** 利用者が直した読み・足した言葉。既定は空 */
   readonly userDictionary?: UserDictionary;
@@ -53,7 +53,7 @@ export async function requestReadings(
     target: OFFSCREEN_TARGET,
     type: READ_TEXTS_TYPE,
     texts,
-    level: options.level ?? DEFAULT_LEVEL,
+    level: options.level ?? DEFAULT_SETTINGS.level,
     userDictionary: [...(options.userDictionary ?? new Map<string, string>())],
   };
   let reply: Result<unknown, 'timeout'>;
