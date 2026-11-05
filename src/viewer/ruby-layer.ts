@@ -11,6 +11,8 @@ import type { RubyBox } from './ruby-layout';
 export const RUBY_LAYER_CLASS = 'ruby-layer';
 /** 縦書きのルビの class */
 const VERTICAL_CLASS = 'ruby-vertical';
+/** 親字が明朝のルビの class（ルビも明朝にする） */
+const SERIF_CLASS = 'ruby-serif';
 
 /**
  * ページにルビの層を出す。前に出した層がまだページにあれば、それを使い、大きさと向きだけ合わせ直す。
@@ -47,7 +49,8 @@ export function showRubyLayer(
  */
 function toElement(box: RubyBox): HTMLSpanElement {
   const element = document.createElement('span');
-  if (box.isVertical) element.className = VERTICAL_CLASS;
+  if (box.isVertical) element.classList.add(VERTICAL_CLASS);
+  if (box.isSerif) element.classList.add(SERIF_CLASS);
   element.textContent = box.ruby;
   element.dataset.base = box.base;
   const { style } = element;

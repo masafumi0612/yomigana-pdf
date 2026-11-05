@@ -1,3 +1,16 @@
+/* ルビ用の仮名だけのフォント（Noto Serif JP・Noto Sans JP の部分集合。SIL OFL 1.1）。拡張に同梱し、外からは読まない */
+@font-face {
+  font-family: 'Yomigana Ruby Serif';
+  src: url('../../assets/fonts/ruby-serif.woff2') format('woff2');
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'Yomigana Ruby Sans';
+  src: url('../../assets/fonts/ruby-sans.woff2') format('woff2');
+  font-weight: 400;
+}
+
 /* 色は WCAG 2.2 AA を満たす組み合わせ（文字は 4.5:1 以上、枠は 3:1 以上） */
 :root {
   --bar-height: 48px;
@@ -24,6 +37,8 @@
   --alert-text: #fdd663;
   --font-size: 14px;
   --font-family: system-ui, sans-serif;
+  --ruby-font-serif: 'Yomigana Ruby Serif', serif;
+  --ruby-font-sans: 'Yomigana Ruby Sans', sans-serif;
 }
 
 html,
@@ -245,7 +260,7 @@ body {
   left: 0;
   transform-origin: 0 0;
   color: var(--ruby-color);
-  font-family: var(--font-family);
+  font-family: var(--ruby-font-sans);
   line-height: 1;
   pointer-events: none;
   user-select: none;
@@ -257,6 +272,10 @@ body {
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+}
+
+.ruby-layer > .ruby-serif {
+  font-family: var(--ruby-font-serif);
 }
 
 .ruby-layer > .ruby-vertical {

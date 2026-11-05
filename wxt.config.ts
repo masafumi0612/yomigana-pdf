@@ -62,6 +62,11 @@ export default defineConfig({
           absoluteSrc: join(KUROMOJI_DIR, 'LICENSE-2.0.txt'),
           relativeDest: 'licenses/Apache-2.0.txt',
         },
+        // ルビのフォント（仮名だけの部分集合）の著作権表示とライセンスの文
+        {
+          absoluteSrc: join(import.meta.dirname, 'src', 'assets', 'fonts', 'OFL.txt'),
+          relativeDest: 'licenses/OFL-1.1.txt',
+        },
       );
     },
   },

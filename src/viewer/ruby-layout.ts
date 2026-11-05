@@ -39,6 +39,8 @@ export interface RubyBox {
   readonly baseSize: number;
   /** 行間がせまいときに縮める割合（1 なら縮めない） */
   readonly shrink: number;
+  /** 親字が明朝なら true（ルビも明朝にする）。ゴシックと見分けられないときは false */
+  readonly isSerif: boolean;
 }
 
 /** ルビの置き方 */
@@ -51,6 +53,12 @@ export interface RubyLayoutOptions {
    * @returns 字の箱（PDF の座標）
    */
   readonly rectOf: (glyph: Glyph) => Rect;
+  /**
+   * 字のフォントが明朝か
+   * @param glyph 字
+   * @returns 明朝なら true
+   */
+  readonly isSerif: (glyph: Glyph) => boolean;
 }
 
 /** 行間がせまいときに縮める割合の下限（これより小さくすると読みにくい） */
@@ -205,6 +213,7 @@ function placeSegment(
     ...toPageBox(rect, frame),
     baseSize,
     shrink,
+    isSerif: segment.glyphs.filter(options.isSerif).length * 2 > segment.glyphs.length,
   };
 }
 
