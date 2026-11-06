@@ -1,0 +1,4 @@
+# GitHub Pages（このフォルダを公開する）の設定。日本語のページとして出す
+title: よみがなPDF
+description: PDF の漢字によみがな（ルビ）を自動で付ける Chrome 拡張機能
+lang: ja
