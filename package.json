@@ -27,7 +27,8 @@
     "test-pdfs:make": "node scripts/test-pdfs/make.ts",
     "test-pdfs:check": "vitest run --config vitest.test-pdfs.config.ts",
     "data:build": "node data/build-kanji.ts",
-    "fonts:build": "node scripts/build-ruby-fonts.ts"
+    "fonts:build": "node scripts/build-ruby-fonts.ts",
+    "icons:build": "node scripts/build-icons.ts"
   },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged",
