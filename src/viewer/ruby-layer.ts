@@ -15,6 +15,8 @@ export const RUBY_BAND_CLASS = 'ruby-band';
 const VERTICAL_CLASS = 'ruby-vertical';
 /** 親字が明朝のルビの class（ルビも明朝にする） */
 const SERIF_CLASS = 'ruby-serif';
+/** 字を親字の長さに均等に並べるルビの class。字ごとに子の要素にする */
+const SPREAD_CLASS = 'ruby-spread';
 
 /**
  * ページにルビの層を出す。前に出した層がまだページにあれば、それを使い、大きさと向きだけ合わせ直す。
@@ -53,14 +55,26 @@ function toElement(box: RubyBox): HTMLSpanElement {
   const element = document.createElement('span');
   if (box.isVertical) element.classList.add(VERTICAL_CLASS);
   if (box.isSerif) element.classList.add(SERIF_CLASS);
-  element.textContent = box.ruby;
+  if (box.isSpread) {
+    element.classList.add(SPREAD_CLASS);
+    element.append(
+      ...Array.from(box.ruby, (ch) => {
+        const char = document.createElement('span');
+        char.textContent = ch;
+        return char;
+      }),
+    );
+  } else {
+    element.textContent = box.ruby;
+  }
   element.dataset.base = box.base;
   const { style } = element;
   style.left = scaled(box.left);
   style.top = scaled(box.top);
   style.width = scaled(box.width);
   style.height = scaled(box.height);
-  style.fontSize = `calc(var(--ruby-size) * ${scaled(box.baseSize * box.shrink)})`;
+  // 字の大きさは置き場所を決めたときの値を使う。箱の太さと同じなので、字が箱からあふれない
+  style.fontSize = scaled(box.fontSize);
   return element;
 }
 
