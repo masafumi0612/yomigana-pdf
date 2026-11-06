@@ -226,8 +226,8 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
   });
   const isOutdated = (data: PageData): boolean =>
     data.level !== settings.level || data.dictionary !== dictionary;
+  // 字の大きさは置き場所を決めるときに入れる（大きさを変えたら置き直す）ので、ここでは色と帯だけ
   const applyStyle = (style: RubyStyle): void => {
-    options.root.style.setProperty('--ruby-size', String(RUBY_SIZE_RATIOS[style.size]));
     options.root.style.setProperty('--ruby-color', RUBY_COLORS[style.color]);
     options.root.classList.toggle(RUBY_BAND_CLASS, style.hasBand);
   };

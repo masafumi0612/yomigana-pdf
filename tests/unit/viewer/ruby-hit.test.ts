@@ -26,6 +26,8 @@ function rubyBox(area: Rect, surface = '図鑑'): RubyBox {
     height: 0,
     baseSize: 10,
     shrink: 1,
+    fontSize: 5,
+    isSpread: false,
     isSerif: false,
     area,
     word: { surface, reading: 'ずかん', isUserFixed: false },

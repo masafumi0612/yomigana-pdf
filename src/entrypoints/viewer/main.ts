@@ -23,6 +23,7 @@ import {
   parsePageNumber,
 } from '@/viewer/navigation';
 import { createPageMenu } from '@/viewer/page-menu';
+import { createPrintNotice, isPrintShortcut } from '@/viewer/print-notice';
 import { createReadingFixDialog } from '@/viewer/reading-fix-dialog';
 import { rubyAmountLabel } from '@/viewer/ruby-amount';
 import { findRuby, type RubyFinderOptions } from '@/viewer/ruby-hit';
@@ -71,6 +72,7 @@ const rubyAmount = requireElement('ruby-amount', HTMLButtonElement);
 const rubyAmountText = requireElement('ruby-amount-text', HTMLSpanElement);
 const openFile = requireElement('open-file', HTMLButtonElement);
 const openNative = requireElement('open-native', HTMLButtonElement);
+const printNoticeText = requireElement('print-notice', HTMLParagraphElement);
 const fileInput = requireElement('file-input', HTMLInputElement);
 const status = requireElement('status', HTMLParagraphElement);
 const failureActions = requireElement('failure-actions', HTMLDivElement);
@@ -216,6 +218,7 @@ const rubyFinder: RubyFinderOptions = {
 const readingFixDialog = createReadingFixDialog(() => {
   container.focus();
 });
+const printNotice = createPrintNotice({ onOpenNative: goNative });
 const pageMenu = createPageMenu({
   menu: pageMenuElement,
   rubyGroup: rubyMenuGroup,
@@ -248,6 +251,7 @@ rubyAmount.hidden = false;
 openFile.textContent = message('viewer_bar_openFile');
 openFile.hidden = false;
 openNative.textContent = message('viewer_bar_openNative');
+printNoticeText.textContent = message('viewer_print_notice');
 container.setAttribute('aria-label', message('viewer_main_document'));
 failureChoose.textContent = message('viewer_main_chooseFile');
 failureNative.textContent = message('viewer_main_openNative');
@@ -588,6 +592,18 @@ document.addEventListener('pointerdown', (event) => {
     pageMenu.close();
   }
 });
+// ブラウザーの印刷は紙面の見えている範囲しか出せないので、止めて案内を出す。
+// Chrome のメニューからの印刷は止められないので、印刷用の CSS で同じ案内を出す
+document.addEventListener(
+  'keydown',
+  (event) => {
+    if (!isPrintShortcut(event)) return;
+    event.preventDefault();
+    pageMenu.close();
+    printNotice.open();
+  },
+  { capture: true },
+);
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   if (!pageMenuElement.hidden) {
