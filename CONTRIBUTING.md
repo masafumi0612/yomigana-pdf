@@ -17,6 +17,7 @@
 | `npm run test-pdfs:check` | リポジトリに入れたテスト用 PDF を確かめる                                             |
 | `npm run licenses:check`  | 拡張に入る部品のライセンスを確かめる                                                  |
 | `npm run accuracy:local`  | 手元の PDF で読みの精度を測る（環境変数 `YOMIGANA_LOCAL_PDF_DIR` があるときだけ）     |
+| `npm run icons:build`     | 拡張のアイコンの PNG を SVG から作り直す（下の「10. アイコン」）                      |
 
 ## 3. ブランチとコミット
 
@@ -74,3 +75,10 @@
 3. GitHub Actions の「リリース」が、確認をして zip を作り、下書きのリリースに付ける。タグと版が合わないときは失敗する
 4. 下書きのリリースで、変更の一覧と zip の中身を確かめてから公開する
 5. ストアへの提出は自動にしていない。公開した zip を取り出して、Chrome ウェブストアの管理画面から手でアップロードする
+
+## 10. アイコン
+
+1. 元の絵は `src/assets/icon/` の SVG。128px・48px は `icon.svg`、32px は `icon-32.svg`（ルビを省く）、16px は `icon-16.svg`（字を線と四角にする）
+2. 字はフォントを使わず、SVG の path で描く（パソコンに入っているフォントの字形は、ライセンスがわからないので写さない）
+3. SVG を直したら `npm run icons:build` で `public/icon/16.png`・`32.png`・`48.png`・`128.png` を作り直し、PNG もコミットする。WXT がこの PNG を manifest の `icons` に入れ、ツールバーの絵（`action.default_icon`）は `wxt.config.ts` で同じ PNG を指す
+4. 128px は、Chrome ウェブストアの決まり（絵は 96×96、周りの 16px ずつは透明）に合わせ、`icon.svg` を真ん中の 96×96 に縮めて撮る（`scripts/build-icons.ts`）。16・32・48px は縮めない

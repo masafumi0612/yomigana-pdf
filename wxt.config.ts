@@ -18,6 +18,13 @@ const PDFJS_DIR = join(import.meta.dirname, 'node_modules', 'pdfjs-dist');
 const PDFJS_ASSET_DIRS = ['cmaps', 'standard_fonts', 'iccs', 'wasm'];
 const isPdfjsAssetIncluded = (file: string): boolean =>
   !file.startsWith('quickjs') && !file.endsWith('.js');
+/** ツールバーのアイコン。PNG は scripts/build-icons.ts が src/assets/icon/ の SVG から作る */
+const ACTION_ICONS = {
+  16: 'icon/16.png',
+  32: 'icon/32.png',
+  48: 'icon/48.png',
+  128: 'icon/128.png',
+};
 
 // 設定の一覧：https://wxt.dev/api/config.html
 export default defineConfig({
@@ -37,8 +44,10 @@ export default defineConfig({
     optional_host_permissions: ['<all_urls>'],
     // 他のサイトの PDF の移し先として、ページ全体や枠の中でリーダーを開けるようにする
     web_accessible_resources: [{ resources: ['viewer.html'], matches: ['<all_urls>'] }],
-    // 拡張のアイコン。小さな枠（popup）は付けず、押したら設定の画面を開く（background.ts）
-    action: {},
+    // 拡張のアイコン。小さな枠（popup）は付けず、押したら設定の画面を開く（background.ts）。
+    // icons は WXT が public/icon/<大きさ>.png から入れるが、action の絵は popup がないと
+    // 入れてくれないので、ここで同じ PNG を指す
+    action: { default_icon: ACTION_ICONS },
   },
   hooks: {
     // 辞書・pdf.js のデータはリポジトリに入れず、ビルドのたびに node_modules から写す。
