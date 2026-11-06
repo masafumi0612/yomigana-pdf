@@ -23,7 +23,9 @@ import {
   parsePageNumber,
 } from '@/viewer/navigation';
 import { createPageMenu } from '@/viewer/page-menu';
+import { createReadingFixDialog } from '@/viewer/reading-fix-dialog';
 import { rubyAmountLabel } from '@/viewer/ruby-amount';
+import { findRuby, type RubyFinderOptions } from '@/viewer/ruby-hit';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
 import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
 import { isImageOnlyDocument } from '@/viewer/special-cases';
@@ -96,6 +98,9 @@ const directionNoticeText = requireElement('direction-notice-text', HTMLParagrap
 const directionNoticeStart = requireElement('direction-notice-start', HTMLButtonElement);
 const directionNoticeClose = requireElement('direction-notice-close', HTMLButtonElement);
 const pageMenuElement = requireElement('page-menu', HTMLDivElement);
+const rubyMenuGroup = requireElement('ruby-menu-group', HTMLDivElement);
+const rubyMenuTitle = requireElement('ruby-menu-title', HTMLDivElement);
+const fixMenuItem = requireElement('fix-menu-item', HTMLButtonElement);
 const directionMenuItem = requireElement('direction-menu-item', HTMLButtonElement);
 const settingsMenuItem = requireElement('settings-menu-item', HTMLButtonElement);
 const container = requireElement('viewer-container', HTMLDivElement);
@@ -204,7 +209,22 @@ const directionEditor = createDirectionEditor({
   pages: rubyPages,
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
 });
-const pageMenu = createPageMenu({ menu: pageMenuElement });
+const rubyFinder: RubyFinderOptions = {
+  pages: rubyPages,
+  getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
+};
+const readingFixDialog = createReadingFixDialog(() => {
+  container.focus();
+});
+const pageMenu = createPageMenu({
+  menu: pageMenuElement,
+  rubyGroup: rubyMenuGroup,
+  rubyTitle: rubyMenuTitle,
+  fixItem: fixMenuItem,
+  onFix: (ruby) => {
+    readingFixDialog.open(ruby);
+  },
+});
 // 設定の画面やほかの Chrome で変えた設定を、開き直さずに反映する
 watchSettings((settings) => {
   showRubyAmount(settings.level);
@@ -241,6 +261,7 @@ noTextClose.textContent = message('viewer_notice_close');
 directionNoticeText.textContent = message('viewer_notice_directionHint');
 directionNoticeStart.textContent = message('viewer_notice_directionStart');
 directionNoticeClose.setAttribute('aria-label', message('viewer_notice_directionClose'));
+fixMenuItem.textContent = message('viewer_menu_fixReading');
 directionMenuItem.textContent = message('viewer_menu_directionFix');
 settingsMenuItem.textContent = message('viewer_menu_openSettings');
 directionAllVertical.textContent = message('viewer_direction_allVertical');
@@ -533,19 +554,25 @@ const canOpenMenu = (): boolean =>
 container.addEventListener('contextmenu', (event) => {
   if (!canOpenMenu()) return;
   event.preventDefault();
-  pageMenu.open({ x: event.clientX, y: event.clientY });
+  const point = { x: event.clientX, y: event.clientY };
+  pageMenu.open(point, findRuby(rubyFinder, point, { maxDistance: 0 }));
 });
 // メニューのキーは、離したときにも（焦点のあるメニューの項目に）contextmenu が来るので、標準のメニューを出さない
 pageMenuElement.addEventListener('contextmenu', (event) => {
   event.preventDefault();
 });
-// メニューのキー・Shift+F10 では、見えている所の真ん中にメニューを出す
+// メニューのキー・Shift+F10 では、見えている所の真ん中にいちばん近いルビのメニューを、そのルビの下に出す
 container.addEventListener('keydown', (event) => {
   if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
   if (!canOpenMenu()) return;
   event.preventDefault();
   const area = container.getBoundingClientRect();
-  pageMenu.open({ x: area.left + area.width / 2, y: area.top + area.height / 2 });
+  const center = { x: area.left + area.width / 2, y: area.top + area.height / 2 };
+  const ruby = findRuby(rubyFinder, center, { maxDistance: Infinity, within: area });
+  pageMenu.open(
+    ruby === undefined ? center : { x: ruby.rect.left, y: ruby.rect.top + ruby.rect.height },
+    ruby,
+  );
 });
 directionMenuItem.addEventListener('click', () => {
   pageMenu.close();

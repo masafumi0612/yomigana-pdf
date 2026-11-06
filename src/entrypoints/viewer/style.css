@@ -491,10 +491,19 @@ main {
   font-size: 0.65em;
 }
 
-/* 紙面のメニューの項目を縦に並べる */
-.menu {
+/* 紙面のメニューの項目を縦に並べる。ルビの上で開いたときだけ、頭にルビの見出しと区切りを出す */
+:root {
+  --menu-title-padding: 4px 12px;
+}
+
+.menu,
+.menu-group {
   display: flex;
   flex-direction: column;
+}
+
+.menu-group[hidden] {
+  display: none;
 }
 
 .menu-item {
@@ -504,4 +513,137 @@ main {
 .menu-item:focus-visible {
   outline: var(--focus-width) solid var(--focus-ring);
   outline-offset: calc(var(--focus-width) * -1);
+}
+
+.menu-title {
+  padding: var(--menu-title-padding);
+  color: var(--bar-text-sub);
+  white-space: nowrap;
+}
+
+.menu-separator {
+  margin: var(--menu-padding) 0;
+  border-top: 1px solid var(--button-border);
+}
+
+/* ルビの右クリックから開く、読みを直す窓と、保存の知らせ。窓はルビの近くに置く（位置は開くときに決める） */
+:root {
+  --fix-width: 20em;
+  --fix-gap: 8px;
+  --fix-padding: 16px;
+  --fix-word-size: 1.5em;
+  --fix-field-height: 36px;
+  --fix-on-primary: #1f2933;
+  --fix-backdrop: rgb(0 0 0 / 20%);
+}
+
+.fix-dialog {
+  position: fixed;
+  inset: auto;
+  box-sizing: border-box;
+  width: var(--fix-width);
+  max-width: calc(100vw - 2 * var(--fix-gap));
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--notice-border);
+  border-radius: var(--button-radius);
+  background: var(--notice-background);
+  color: var(--bar-text);
+}
+
+.fix-dialog::backdrop {
+  background: var(--fix-backdrop);
+}
+
+.fix-form,
+.fix-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.fix-form {
+  gap: var(--fix-gap);
+  padding: var(--fix-padding);
+}
+
+.fix-title {
+  margin: 0;
+  font-size: var(--font-size);
+  font-weight: normal;
+}
+
+.fix-word {
+  font-size: var(--fix-word-size);
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+
+.fix-caption,
+.fix-note {
+  color: var(--bar-text-sub);
+}
+
+.fix-error,
+.fix-note {
+  margin: 0;
+}
+
+.fix-error {
+  color: var(--notice-error);
+}
+
+.fix-error:empty {
+  display: none;
+}
+
+/* 欄はバーの欄（.bar-field）の形で、幅だけ窓に合わせる */
+.fix-input {
+  width: auto;
+  height: var(--fix-field-height);
+  padding: 0 var(--fix-gap);
+  text-align: start;
+}
+
+.fix-input[aria-invalid='true'] {
+  border-color: var(--notice-error);
+}
+
+.fix-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fix-gap);
+  justify-content: flex-end;
+}
+
+/* 元に戻すは、決める・やめると離して左に置く */
+.fix-restore {
+  margin-inline-end: auto;
+}
+
+/* 決めるは、ほかのボタンと見分けられるよう塗る */
+.fix-save,
+.fix-save:hover:not(:disabled) {
+  border-color: var(--focus-ring);
+  background: var(--focus-ring);
+  color: var(--fix-on-primary);
+}
+
+/* 保存の知らせ。紙面の下に重ね、知らせがないときは見せない（読み上げのために要素は残す） */
+.fix-status {
+  position: fixed;
+  bottom: var(--status-gap);
+  left: 50%;
+  z-index: 3;
+  max-width: calc(100vw - 2 * var(--fix-padding));
+  margin: 0;
+  padding: var(--status-padding);
+  border-radius: var(--button-radius);
+  background: var(--bar-background);
+  color: var(--bar-text);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.fix-status:empty {
+  padding: 0;
 }
