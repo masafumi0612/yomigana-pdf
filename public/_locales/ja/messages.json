@@ -149,6 +149,16 @@
     "message": "文字の向きを直す…",
     "description": "紙面を右クリックしたときのメニューの項目。文字の向きを直すモードに入る"
   },
+  "viewer_fix_surfaceInvalid": {
+    "message": "この言葉は、直した読みに入れられません（漢字を含む $COUNT$ 字までの言葉だけ入れられます）。",
+    "description": "ルビのもとになった語が、直した読みの決まりに合わないときに出す",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "20"
+      }
+    }
+  },
   "viewer_direction_barText": {
     "message": "向きが違うところは、正しいほうを押してください",
     "description": "文字の向きを直すモードの間、バーに出す案内"

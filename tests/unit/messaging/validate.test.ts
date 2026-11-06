@@ -17,7 +17,8 @@ const REQUEST: ReadingRequest = {
   level: 'g3',
   userDictionary: [['林', 'はやし']],
 };
-const SPAN = { start: 0, end: 1, ruby: 'がっ', isAlways: false };
+const WORD = { surface: '学校', reading: 'がっこう', isUserFixed: false };
+const SPAN = { start: 0, end: 1, ruby: 'がっ', isAlways: false, word: WORD };
 
 describe('LEVELS', () => {
   it('all と、漢字の段階のすべてを、習う順に並べたものになる', () => {
@@ -63,6 +64,16 @@ describe('isReadingResult', () => {
     ['終わりが頭より前', { ok: true, value: [[{ ...SPAN, start: 1, end: 1 }]] }],
     ['ルビが文字列でない', { ok: true, value: [[{ ...SPAN, ruby: 1 }]] }],
     ['いつも付けるかが真偽値でない', { ok: true, value: [[{ ...SPAN, isAlways: 'yes' }]] }],
+    ['語がない', { ok: true, value: [[{ ...SPAN, word: undefined }]] }],
+    [
+      '語の書き方が文字列でない',
+      { ok: true, value: [[{ ...SPAN, word: { ...WORD, surface: 1 } }]] },
+    ],
+    ['語の読みが文字列でない', { ok: true, value: [[{ ...SPAN, word: { ...WORD, reading: 1 } }]] }],
+    [
+      '直した読みかが真偽値でない',
+      { ok: true, value: [[{ ...SPAN, word: { ...WORD, isUserFixed: 'yes' } }]] },
+    ],
   ])('%sとき、false になる', (_label, value) => {
     expect(isReadingResult(value)).toBe(false);
   });

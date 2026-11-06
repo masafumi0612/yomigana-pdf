@@ -3,7 +3,7 @@
 // 箱はページの左上からの長さ（PDF の単位）で出し、画面では pdf.js の倍率（--total-scale-factor）をかける。
 import { unionRect } from '@/pdf/rect';
 import type { Glyph, Rect, TextBlock } from '@/pdf/types';
-import type { RubySpan } from '@/text/annotate';
+import type { RubySpan, RubyWord } from '@/text/annotate';
 
 import { splitLines } from './block-lines';
 
@@ -41,6 +41,10 @@ export interface RubyBox {
   readonly shrink: number;
   /** 親字が明朝なら true（ルビも明朝にする）。ゴシックと見分けられないときは false */
   readonly isSerif: boolean;
+  /** ルビと親字を合わせて囲む箱（PDF の座標）。ルビの層は押せないので、押した所のルビを位置で探すのに使う */
+  readonly area: Rect;
+  /** ルビのもとになった語 */
+  readonly word: RubyWord;
 }
 
 /** ルビの置き方 */
@@ -94,7 +98,7 @@ export function layoutRubies(
     const lineOf = lineNumbers(block);
     for (const span of spans[index] ?? []) {
       for (const segment of segmentsOf(block, span, lineOf)) {
-        boxes.push(placeSegment(segment, block, obstacles, frame, options));
+        boxes.push(placeSegment(segment, span.word, block, obstacles, frame, options));
       }
     }
   }
@@ -169,6 +173,7 @@ export function splitReading(ruby: string, counts: readonly number[]): string[] 
 /**
  * 行の中の1つ分のルビを、親字の外側（縦書きは右、横書きは上）に置く。
  * @param segment 行の中の1つ分
+ * @param word ルビのもとになった語
  * @param block かたまり（向きを見る）
  * @param obstacles ページのすべての字の箱
  * @param frame ページの箱
@@ -177,6 +182,7 @@ export function splitReading(ruby: string, counts: readonly number[]): string[] 
  */
 function placeSegment(
   segment: RubySegment,
+  word: RubyWord,
   block: Pick<TextBlock, 'direction'>,
   obstacles: readonly Rect[],
   frame: PageFrame,
@@ -214,6 +220,8 @@ function placeSegment(
     baseSize,
     shrink,
     isSerif: segment.glyphs.filter(options.isSerif).length * 2 > segment.glyphs.length,
+    area: unionRect([base, rect]),
+    word,
   };
 }
 

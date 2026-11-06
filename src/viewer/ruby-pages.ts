@@ -137,6 +137,12 @@ export interface RubyPages {
    */
   blocksOf(pageNumber: number): readonly TextBlock[];
   /**
+   * ページに出しているルビを引く。
+   * @param pageNumber ページ番号（1 から）
+   * @returns 出しているルビ。層を出していないページ・置き直す途中のページは空
+   */
+  rubiesOf(pageNumber: number): readonly RubyBox[];
+  /**
    * ルビの層を出しているページを挙げる。
    * @returns ページ番号（小さい順）
    */
@@ -490,6 +496,11 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
 
     blocksOf(pageNumber) {
       return entries.get(pageNumber)?.resolved?.page.blocks ?? [];
+    },
+
+    rubiesOf(pageNumber) {
+      const entry = entries.get(pageNumber);
+      return entry?.layer?.isConnected === true ? (entry.boxes ?? []) : [];
     },
 
     shownPages() {

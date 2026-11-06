@@ -1,5 +1,5 @@
 // 受け取ったメッセージの形を確かめる。拡張を更新した直後は、古い版の部品と混ざることがあるため
-import type { RubySpan } from '@/text/annotate';
+import type { RubySpan, RubyWord } from '@/text/annotate';
 import type { Level } from '@/text/types';
 
 import {
@@ -97,7 +97,22 @@ function isRubySpan(value: unknown): value is RubySpan {
     value.start >= 0 &&
     value.start < value.end &&
     isString(value.ruby) &&
-    typeof value.isAlways === 'boolean'
+    typeof value.isAlways === 'boolean' &&
+    isRubyWord(value.word)
+  );
+}
+
+/**
+ * ルビのもとになった語の形をしているか。
+ * @param value 確かめるもの
+ * @returns 形が合っていれば true
+ */
+function isRubyWord(value: unknown): value is RubyWord {
+  return (
+    isRecord(value) &&
+    isString(value.surface) &&
+    isString(value.reading) &&
+    typeof value.isUserFixed === 'boolean'
   );
 }
 
