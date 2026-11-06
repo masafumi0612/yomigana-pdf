@@ -320,9 +320,18 @@ main {
   display: none;
 }
 
+/* 印刷では紙面だけを出す。バー・案内・メニュー・窓・向きを直す枠は、印刷物に写さない */
 @media print {
-  .bar {
-    display: none;
+  .bar,
+  .notices,
+  .menu,
+  .status,
+  .status-actions,
+  .fix-dialog,
+  .fix-dialog::backdrop,
+  .fix-status,
+  .direction-layer {
+    display: none !important;
   }
 }
 

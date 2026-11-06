@@ -366,3 +366,31 @@ test('モードの間に紙面を回したとき、枠が回した紙面に付�
   await frame.locator('.direction-toggle').getByText('横書き').click();
   await expect.poll(() => verticalRubies(page)).toBeLessThan(before);
 });
+
+/** 狭い窓の幅（px） */
+const NARROW_WIDTH_PX = 400;
+
+for (const file of [UNMARKED_VERTICAL, MIXED, MIXED_LAYOUT]) {
+  test(`幅が狭い窓のとき、どのかたまりの切り替えも紙面の中に収まる（${file}）`, async ({
+    page,
+    extensionId,
+  }) => {
+    await page.setViewportSize({ width: NARROW_WIDTH_PX, height: 800 });
+    await openFromFile(page, extensionId, file);
+    await waitForRuby(page);
+    await page.locator('.page[data-page-number="1"]').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: '文字の向きを直す…' }).click();
+    await expect(visibleToggles(page)).toHaveCount(1);
+    const paper = await page.locator('.page[data-page-number="1"]').boundingBox();
+    const count = await frames(page).count();
+
+    for (let index = 0; index < count; index++) {
+      await frames(page).nth(index).focus();
+      const box = await visibleToggles(page).boundingBox();
+      expect(box?.x).toBeGreaterThanOrEqual((paper?.x ?? 0) - 1);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
+        (paper?.x ?? 0) + (paper?.width ?? 0) + 1,
+      );
+    }
+  });
+}

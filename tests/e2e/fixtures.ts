@@ -60,9 +60,45 @@ async function launchWithExtension(
   });
   // 初めて入れた拡張は、設定の画面をタブで開く。空のタブが使われることもあるので、
   // テストの画面が途中で開き直されないよう、開き終わるまで待つ
-  const optionsUrl = `chrome-extension://${await findExtensionId(context)}/options.html`;
-  await expect.poll(() => context.pages().some((page) => page.url() === optionsUrl)).toBe(true);
+  await waitForOptionsPage(
+    context,
+    `chrome-extension://${await findExtensionId(context)}/options.html`,
+  );
   return context;
+}
+
+/**
+ * 設定の画面が開き終わるまで待つ。
+ *
+ * 画面を開く合図は、拡張の service worker が立ち上がって入れた直後の処理を終えたあとに出る。
+ * 負荷が高いと、その合図は一定の時間（expect の既定は 5 秒）を超えて遅れる。
+ * 時間を決めて見に行くと、遅れた分だけ失敗するので、画面の増える・移るという出来事を待つ。
+ * 画面は、すでに開いていることも、空のタブが設定の画面に移ることも、新しく増えることもある。
+ * そのため、今ある画面と、これから増える画面のどちらも、移る出来事を見張る。
+ * URL が変わった時点では読み込みの途中なので、読み込みが終わるまで待ってから返す。
+ * 途中で画面を閉じられると、あとのテストが開く画面の読み込みが遅れることがあるため。
+ * 待つ時間はテスト全体の上限に任せる。
+ * @param context 拡張を入れた Chromium の画面の集まり
+ * @param url 設定の画面の URL
+ */
+async function waitForOptionsPage(context: BrowserContext, url: string): Promise<void> {
+  const opened = await new Promise<Page>((resolve) => {
+    const watched = new Set<Page>();
+    const check = (page: Page): void => {
+      if (page.url() === url) resolve(page);
+    };
+    const watch = (page: Page): void => {
+      if (watched.has(page)) return;
+      watched.add(page);
+      page.on('framenavigated', () => {
+        check(page);
+      });
+      check(page);
+    };
+    context.on('page', watch);
+    context.pages().forEach(watch);
+  });
+  await opened.waitForLoadState('load');
 }
 
 /**
