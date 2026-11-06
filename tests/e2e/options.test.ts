@@ -290,7 +290,7 @@ test('ファイルの URL へのアクセスが許可されているとき、許
   await expect(page.getByRole('button', { name: '許可の手順' })).toHaveCount(0);
 });
 
-test('「ライセンスと出典」を押したとき、同梱した文書が開く', async ({
+test('「ライセンスと出典」を押したとき、ライセンスと出典の画面が新しいタブで開く', async ({
   page,
   extensionId,
   context,
@@ -298,10 +298,71 @@ test('「ライセンスと出典」を押したとき、同梱した文書が�
   await openOptions(page, extensionId);
 
   await tabTo(page, page.getByRole('link', { name: 'ライセンスと出典' }));
-  const [notices] = await Promise.all([context.waitForEvent('page'), page.keyboard.press('Enter')]);
+  const [licenses] = await Promise.all([
+    context.waitForEvent('page'),
+    page.keyboard.press('Enter'),
+  ]);
 
-  await expect(notices).toHaveURL(`chrome-extension://${extensionId}/THIRD_PARTY_NOTICES.md`);
-  await expect(notices.locator('body')).toContainText('kuromoji');
+  await expect(licenses).toHaveURL(`chrome-extension://${extensionId}/licenses.html`);
+  await expect(licenses.getByRole('heading', { level: 1 })).toHaveText('ライセンスと出典');
+});
+
+test.describe('ライセンスと出典の画面', () => {
+  test.beforeEach(async ({ page, extensionId }) => {
+    await page.goto(`chrome-extension://${extensionId}/licenses.html`);
+  });
+
+  for (const { name, copyright } of [
+    { name: 'PDF.js', copyright: 'Copyright 2024 Mozilla Foundation' },
+    { name: 'kuromoji.js', copyright: 'Copyright 2014 Takuya Asano' },
+    { name: 'IPADIC', copyright: 'Nara Institute of Science' },
+    { name: 'Noto Serif JP', copyright: 'Noto Serif JP: Copyright 2017-2023 Adobe' },
+    { name: 'Preact', copyright: 'Copyright (c) 2015-present Jason Miller' },
+  ]) {
+    test(`${name} の場所に、著作権表示が出る`, async ({ page }) => {
+      await expect(page.getByRole('region', { name })).toContainText(copyright);
+    });
+  }
+
+  test('この拡張のライセンスの場所に、MIT License の文が出る', async ({ page }) => {
+    const section = page.getByRole('region', { name: 'よみがなPDF' });
+
+    await expect(section).toContainText('MIT License');
+    await expect(section).toContainText('masafumi0612');
+  });
+
+  test('ライセンスの全文の見出しを Enter で押したとき、全文が開く', async ({ page }) => {
+    const summary = page.getByText('Apache License, Version 2.0（kuromoji.js・PDF.js）');
+
+    await tabTo(page, summary);
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByText('TERMS AND CONDITIONS FOR USE')).toBeVisible();
+  });
+
+  test('同梱した文書そのものへのリンクがある', async ({ page }) => {
+    const links = page.getByRole('contentinfo').getByRole('link');
+
+    await expect(links).toHaveText([
+      'THIRD_PARTY_NOTICES.md',
+      'LICENSE',
+      'licenses/Apache-2.0.txt',
+      'licenses/OFL-1.1.txt',
+    ]);
+  });
+});
+
+test('「プライバシーポリシー」のリンクが、公開しているページを新しいタブで開く', async ({
+  page,
+  extensionId,
+}) => {
+  await openOptions(page, extensionId);
+
+  const link = page.getByRole('link', { name: 'プライバシーポリシー' });
+
+  await expect(link).toHaveAttribute('href', 'https://masafumi0612.github.io/yomigana-pdf/privacy');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener');
 });
 
 test('拡張の版が出る', async ({ page, extensionId }) => {

@@ -364,6 +364,12 @@ input {
   padding-left: var(--gap-large);
 }
 
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-small) var(--gap-large);
+}
+
 .link {
   color: var(--accent);
 }
