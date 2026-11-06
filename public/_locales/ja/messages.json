@@ -171,6 +171,22 @@
     "message": "ルビの設定を開く",
     "description": "紙面を右クリックしたときのメニューの項目。設定の画面を開く"
   },
+  "viewer_print_title": {
+    "message": "印刷について",
+    "description": "印刷しようとしたときに出す案内の窓の見出し"
+  },
+  "viewer_print_notice": {
+    "message": "ルビ付きの印刷は次の版で対応します。今は Chrome の標準の表示で開くと印刷できます。",
+    "description": "印刷しようとしたときに出す案内の文。印刷の画面で紙面の代わりに出す文にも使う"
+  },
+  "viewer_print_openNative": {
+    "message": "標準の表示で開く",
+    "description": "印刷の案内の窓のボタン。同じ PDF を Chrome のもとからある表示で開き直す"
+  },
+  "viewer_print_close": {
+    "message": "閉じる",
+    "description": "印刷の案内の窓を閉じるボタン"
+  },
   "viewer_fix_title": {
     "message": "読みを直す",
     "description": "読みを直す窓の見出しの、語の前に出す小さい字"
