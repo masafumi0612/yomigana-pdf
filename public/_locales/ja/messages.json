@@ -149,9 +149,51 @@
     "message": "文字の向きを直す…",
     "description": "紙面を右クリックしたときのメニューの項目。文字の向きを直すモードに入る"
   },
+  "viewer_menu_rubyTitle": {
+    "message": "「$BASE$（$RUBY$）」のルビ",
+    "description": "ルビの上で右クリックしたときの、メニューの頭の見出し",
+    "placeholders": {
+      "base": {
+        "content": "$1",
+        "example": "鑑"
+      },
+      "ruby": {
+        "content": "$2",
+        "example": "かん"
+      }
+    }
+  },
+  "viewer_menu_fixReading": {
+    "message": "読みを直す…",
+    "description": "ルビの上で右クリックしたときのメニューの項目。ルビのもとになった語の読みを直す窓を開く"
+  },
   "viewer_menu_openSettings": {
     "message": "ルビの設定を開く",
     "description": "紙面を右クリックしたときのメニューの項目。設定の画面を開く"
+  },
+  "viewer_fix_title": {
+    "message": "読みを直す",
+    "description": "読みを直す窓の見出しの、語の前に出す小さい字"
+  },
+  "viewer_fix_readingLabel": {
+    "message": "読み（ひらがな）",
+    "description": "読みを直す窓の、読みの欄の名前"
+  },
+  "viewer_fix_note": {
+    "message": "直した読みは、ほかの PDF でも使います。設定画面の「直した読み」で一覧を見られます。",
+    "description": "読みを直す窓の下の説明"
+  },
+  "viewer_fix_save": {
+    "message": "決める",
+    "description": "読みを直す窓の、直した読みを保存するボタン"
+  },
+  "viewer_fix_cancel": {
+    "message": "やめる",
+    "description": "読みを直す窓を、保存せずに閉じるボタン"
+  },
+  "viewer_fix_restore": {
+    "message": "元に戻す",
+    "description": "読みを直す窓の、直した読みを消すボタン（直した読みのある語のときだけ出す）"
   },
   "viewer_fix_surfaceInvalid": {
     "message": "この言葉は、直した読みに入れられません（漢字を含む $COUNT$ 字までの言葉だけ入れられます）。",
@@ -160,6 +202,30 @@
       "count": {
         "content": "$1",
         "example": "20"
+      }
+    }
+  },
+  "viewer_fix_saved": {
+    "message": "「$WORD$」の読みを「$READING$」にしました。",
+    "description": "読みを直す窓で保存したあとに出す知らせ",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "図鑑"
+      },
+      "reading": {
+        "content": "$2",
+        "example": "ずかん"
+      }
+    }
+  },
+  "viewer_fix_restored": {
+    "message": "「$WORD$」の読みを元に戻しました。",
+    "description": "読みを直す窓で元に戻したあとに出す知らせ",
+    "placeholders": {
+      "word": {
+        "content": "$1",
+        "example": "図鑑"
       }
     }
   },
