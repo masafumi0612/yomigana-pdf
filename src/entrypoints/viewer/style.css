@@ -320,7 +320,13 @@ main {
   display: none;
 }
 
-/* 印刷では紙面だけを出す。バー・案内・メニュー・窓・向きを直す枠は、印刷物に写さない */
+/* 印刷の案内の文。画面では隠しておき、印刷のときだけ出す */
+.print-notice {
+  display: none;
+}
+
+/* 印刷は紙面を出さず、案内の文だけを1枚に出す（紙面の入れ物はスクロールの枠なので、見えている範囲しか出せない）。
+   バー・案内・メニュー・窓・向きを直す枠も、印刷物に写さない */
 @media print {
   .bar,
   .notices,
@@ -330,8 +336,19 @@ main {
   .fix-dialog,
   .fix-dialog::backdrop,
   .fix-status,
-  .direction-layer {
+  .print-dialog,
+  .print-dialog::backdrop,
+  .direction-layer,
+  main {
     display: none !important;
+  }
+
+  .print-notice {
+    display: block;
+    margin: 0;
+    padding: var(--print-padding);
+    color: #000;
+    font-size: var(--print-font-size);
   }
 }
 
@@ -544,6 +561,9 @@ main {
   --fix-field-height: 36px;
   --fix-on-primary: #1f2933;
   --fix-backdrop: rgb(0 0 0 / 20%);
+  --print-width: 24em;
+  --print-padding: 16px;
+  --print-font-size: 14pt;
 }
 
 .fix-dialog {
@@ -655,4 +675,43 @@ main {
 
 .fix-status:empty {
   padding: 0;
+}
+
+/* 印刷の案内の窓。読みを直す窓と同じ色・枠で、画面の真ん中に出す */
+.print-dialog {
+  box-sizing: border-box;
+  width: var(--print-width);
+  max-width: calc(100vw - 2 * var(--fix-gap));
+  padding: 0;
+  border: 1px solid var(--notice-border);
+  border-radius: var(--button-radius);
+  background: var(--notice-background);
+  color: var(--bar-text);
+}
+
+.print-dialog::backdrop {
+  background: var(--fix-backdrop);
+}
+
+.print-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fix-gap);
+  padding: var(--fix-padding);
+}
+
+.print-title,
+.print-text {
+  margin: 0;
+}
+
+.print-title {
+  font-size: var(--font-size);
+}
+
+.print-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fix-gap);
+  justify-content: flex-end;
 }

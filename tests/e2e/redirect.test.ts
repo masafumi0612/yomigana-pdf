@@ -211,3 +211,22 @@ test('Chrome の標準の表示で開くを押したとき、リーダーに戻�
   await page.waitForTimeout(1000);
   expect(page.url()).toBe(`${origin}/a.pdf`);
 });
+
+test('印刷の案内の［標準の表示で開く］を押したとき、リーダーに戻されずに標準の表示に移る', async ({
+  page,
+  extensionId,
+}) => {
+  await page.goto(`${origin}/a.pdf`);
+  await expect(page).toHaveURL(viewerUrlPattern(extensionId));
+
+  await expect(page.locator('#page-total')).toHaveText('/ 1');
+  await page.locator('#viewer-container').focus();
+
+  await page.keyboard.press('Control+P');
+  await expect(page.locator('dialog[open]')).toHaveCount(1);
+  await page.locator('.print-dialog').getByRole('button', { name: '標準の表示で開く' }).click();
+
+  await expect(page).toHaveURL(`${origin}/a.pdf`);
+  await page.waitForTimeout(1000);
+  expect(page.url()).toBe(`${origin}/a.pdf`);
+});

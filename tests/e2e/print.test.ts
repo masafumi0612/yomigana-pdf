@@ -5,19 +5,114 @@ const UNMARKED_VERTICAL = 'word/word-vertical.pdf';
 /** ルビが出るまで待つ時間の上限（ミリ秒）。辞書の読み込みを含む */
 const RUBY_TIMEOUT_MS = 15_000;
 
-test('印刷の見た目のとき、バーと案内が見えず、紙面は見える', async ({ page, extensionId }) => {
+/** 印刷の案内の文 */
+const PRINT_NOTICE =
+  'ルビ付きの印刷は次の版で対応します。今は Chrome の標準の表示で開くと印刷できます。';
+
+test('印刷の見た目のとき、バーと案内と紙面が見えず、印刷の案内の文だけが見える', async ({
+  page,
+  extensionId,
+}) => {
   await openFromFile(page, extensionId, UNMARKED_VERTICAL);
   await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
     timeout: RUBY_TIMEOUT_MS,
   });
   await expect(page.locator('#bar')).toBeVisible();
   await expect(page.getByText('文字の向きが違うところがあれば直せます')).toBeVisible();
+  await expect(page.locator('#print-notice')).toBeHidden();
 
   await page.emulateMedia({ media: 'print' });
 
   await expect(page.locator('#bar')).toBeHidden();
   await expect(page.locator('.notices .notice').filter({ visible: true })).toHaveCount(0);
-  await expect(page.locator('.page[data-page-number="1"]')).toBeVisible();
+  await expect(page.locator('.page[data-page-number="1"]')).toBeHidden();
+  await expect(page.locator('#print-notice')).toBeVisible();
+  await expect(page.locator('#print-notice')).toHaveText(PRINT_NOTICE);
+});
+
+test('Ctrl+P を押したとき、印刷の案内が出て、［閉じる］で閉じて焦点が戻る', async ({
+  page,
+  extensionId,
+}) => {
+  await openFromFile(page, extensionId, UNMARKED_VERTICAL);
+  await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
+    timeout: RUBY_TIMEOUT_MS,
+  });
+  await page.locator('#viewer-container').focus();
+
+  await page.keyboard.press('Control+P');
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(PRINT_NOTICE);
+  await expect(dialog.getByRole('button', { name: '標準の表示で開く' })).toBeFocused();
+
+  await dialog.getByRole('button', { name: '閉じる' }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('#viewer-container')).toBeFocused();
+});
+
+test('印刷の案内が出ているとき、Esc で閉じる', async ({ page, extensionId }) => {
+  await openFromFile(page, extensionId, UNMARKED_VERTICAL);
+  await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
+    timeout: RUBY_TIMEOUT_MS,
+  });
+
+  await page.keyboard.press('Control+P');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await expect(page.getByRole('dialog')).toBeHidden();
+});
+
+test('Ctrl+P を続けて押したとき、案内は1つだけ出る', async ({ page, extensionId }) => {
+  await openFromFile(page, extensionId, UNMARKED_VERTICAL);
+  await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
+    timeout: RUBY_TIMEOUT_MS,
+  });
+
+  await page.keyboard.press('Control+P');
+  await page.keyboard.press('Control+P');
+
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await expect(page.locator('dialog[open]')).toHaveCount(1);
+});
+
+test('向きを直すモードのとき Ctrl+P を押すと、案内が出て、Esc で案内だけが閉じる', async ({
+  page,
+  extensionId,
+}) => {
+  await openFromFile(page, extensionId, UNMARKED_VERTICAL);
+  await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
+    timeout: RUBY_TIMEOUT_MS,
+  });
+  await page.getByRole('button', { name: '直す' }).click();
+  await expect(page.locator('#direction-bar')).toBeVisible();
+
+  await page.keyboard.press('Control+P');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.locator('#direction-bar')).toBeVisible();
+});
+
+test('ページのメニューが開いているとき Ctrl+P を押すと、メニューが閉じて案内が出る', async ({
+  page,
+  extensionId,
+}) => {
+  await openFromFile(page, extensionId, UNMARKED_VERTICAL);
+  await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
+    timeout: RUBY_TIMEOUT_MS,
+  });
+  await page.locator('.page[data-page-number="1"]').click({ button: 'right' });
+  await expect(page.locator('#page-menu')).toBeVisible();
+
+  await page.keyboard.press('Control+P');
+
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.locator('#page-menu')).toBeHidden();
 });
 
 test('印刷の見た目のとき、向きを直す枠と切り替えが見えない', async ({ page, extensionId }) => {
@@ -45,4 +140,26 @@ test('印刷の見た目のとき、右クリックのメニューが見えな�
   await page.emulateMedia({ media: 'print' });
 
   await expect(page.locator('#page-menu')).toBeHidden();
+});
+
+test('読みを直す窓が開いているとき Ctrl+P を押すと、案内が1つだけ出て、閉じると読みを直す窓に戻る', async ({
+  page,
+  extensionId,
+}) => {
+  await openFromFile(page, extensionId, 'horizontal-print.pdf');
+  const ruby = page.locator('.page[data-page-number="1"] .ruby-layer [data-base="筒"]');
+  await expect(ruby).toBeAttached({ timeout: RUBY_TIMEOUT_MS });
+  const box = await ruby.boundingBox();
+  if (box === null) throw new Error('ルビが見えていない');
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+  await page.getByRole('menuitem', { name: '読みを直す…' }).click();
+  await expect(page.getByLabel('読み（ひらがな）')).toBeFocused();
+
+  await page.keyboard.press('Control+P');
+
+  await expect(page.locator('dialog[open]')).toHaveCount(2);
+  await expect(page.locator('.print-dialog')).toContainText(PRINT_NOTICE);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog[open]')).toHaveCount(1);
+  await expect(page.getByLabel('読み（ひらがな）')).toBeFocused();
 });
