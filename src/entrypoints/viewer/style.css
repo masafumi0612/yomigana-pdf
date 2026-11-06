@@ -15,7 +15,9 @@
 :root {
   --bar-height: 48px;
   --bar-gap: 12px;
-  --bar-padding: 0 16px;
+  --bar-padding: 8px 16px;
+  --bar-row-gap: 8px;
+  --bar-name-min-width: 6em;
   --bar-background: #323639;
   --bar-text: #f1f3f4;
   --bar-text-sub: #bdc1c6;
@@ -66,27 +68,32 @@ body {
   margin: 0;
 }
 
+/* バーが折り返して高くなっても紙面の場所がずれないよう、バーと紙面は縦に並べる */
 body {
+  display: flex;
+  flex-direction: column;
   background: var(--page-background);
   font: var(--font-size) / 1.5 var(--font-family);
 }
 
 .bar {
-  position: fixed;
-  inset: 0 0 auto;
+  position: relative;
   z-index: 1;
   display: flex;
-  gap: var(--bar-gap);
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--bar-row-gap) var(--bar-gap);
   align-items: center;
-  height: var(--bar-height);
+  box-sizing: border-box;
+  min-height: var(--bar-height);
   padding: var(--bar-padding);
   background: var(--bar-background);
   color: var(--bar-text);
 }
 
 .bar-name {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 1 1 0;
+  min-width: var(--bar-name-min-width);
   margin: 0;
   overflow: hidden;
   font-size: var(--font-size);
@@ -98,8 +105,10 @@ body {
 .bar-group {
   display: flex;
   flex: none;
-  gap: var(--bar-gap);
+  flex-wrap: wrap;
+  gap: var(--bar-row-gap) var(--bar-gap);
   align-items: center;
+  max-width: 100%;
 }
 
 .bar-group[hidden],
@@ -208,7 +217,7 @@ body {
   box-sizing: border-box;
   width: fit-content;
   max-width: var(--status-width);
-  margin: calc(var(--bar-height) + var(--status-gap)) auto 0;
+  margin: var(--status-gap) auto 0;
   padding: var(--status-padding);
   border-radius: var(--button-radius);
   background: var(--bar-background);
@@ -232,14 +241,16 @@ body {
 
 /* バーの下に重ねる案内。紙面を押し下げず、閉じられる・入れ直せる */
 .notices {
-  position: fixed;
-  inset: var(--bar-height) 0 auto;
+  position: relative;
   z-index: 2;
   display: flex;
+  flex: none;
+  top: var(--bar-gap);
+  height: 0;
   flex-direction: column;
   align-items: center;
   gap: var(--bar-gap);
-  padding: var(--bar-gap) 16px 0;
+  padding: 0 16px;
   pointer-events: none;
 }
 
@@ -292,10 +303,16 @@ body {
   outline-offset: var(--focus-width);
 }
 
+main {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
 /* pdf.js の決まりで、紙面の入れ物は absolute で置く */
 .viewer-container {
   position: absolute;
-  inset: var(--bar-height) 0 0;
+  inset: 0;
   overflow: auto;
 }
 
