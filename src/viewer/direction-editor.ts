@@ -57,6 +57,23 @@ interface Selection {
 }
 
 /**
+ * 切り替えが紙面の左右からはみ出さないよう、横にずらして収める。
+ * 枠が紙面の右の端に近いと、枠の左に合わせた切り替えが右に切れるため。
+ * 見えているときの大きさで測るので、出したあとに呼ぶ。
+ * @param toggle 切り替え
+ */
+function keepInPage(toggle: HTMLElement): void {
+  const page = toggle.closest<HTMLElement>('.page');
+  if (page === null || toggle.hidden) return;
+  toggle.style.translate = '';
+  const paper = page.getBoundingClientRect();
+  const box = toggle.getBoundingClientRect();
+  // 右に切れるぶんを左に戻し、それで左に切れるなら、左の端に合わせる（左を優先する）
+  const shift = Math.max(Math.min(0, paper.right - box.right), paper.left - box.left);
+  if (shift !== 0) toggle.style.translate = `${shift.toFixed(2)}px`;
+}
+
+/**
  * 向きの名前（文言）を引く。
  * @param direction 向き
  * @returns 縦書き・横書き
@@ -122,7 +139,9 @@ export function createDirectionEditor(options: DirectionEditorOptions): Directio
       const isOn = isSelected(Number(frame.dataset.page), Number(frame.dataset.index));
       frame.dataset.selected = String(isOn);
       const toggle = frame.querySelector<HTMLElement>(`.${TOGGLE_CLASS}`);
-      if (toggle !== null) toggle.hidden = !isOn;
+      if (toggle === null) continue;
+      toggle.hidden = !isOn;
+      keepInPage(toggle);
     }
   };
 
@@ -236,6 +255,10 @@ export function createDirectionEditor(options: DirectionEditorOptions): Directio
     view.div.append(layer);
     // 層は回さず、回したあとの紙面の大きさにだけ合わせる
     setLayerDimensions(layer, view.viewport, true, false);
+    // 層が紙面に入って大きさが決まってから、選んだかたまりの切り替えを収める
+    for (const toggle of layer.querySelectorAll<HTMLElement>(`.${TOGGLE_CLASS}`)) {
+      keepInPage(toggle);
+    }
     if (focusedIndex !== undefined) {
       const frame = layer.querySelector<HTMLElement>(`[data-index="${focusedIndex}"]`);
       const target = isToggleFocused
