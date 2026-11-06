@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Glyph, Rect } from '@/pdf/types';
-import type { RubySpan } from '@/text/annotate';
+import type { RubySpan, RubyWord } from '@/text/annotate';
 import {
   layoutRubies,
   type PageFrame,
   roomOutside,
+  type RubyBox,
   type RubyLayoutOptions,
   splitReading,
   toPageBox,
@@ -192,5 +193,199 @@ describe('toPageBox', () => {
       width: 10,
       height: 10,
     });
+  });
+});
+
+/**
+ * ルビのもとになった語を作る。別の語は別の物にする。
+ * @param surface 語の書き方
+ * @returns 語
+ */
+function wordOf(surface: string): RubyWord {
+  return { surface, reading: '', isUserFixed: false };
+}
+
+/**
+ * 語のルビを付ける所を作る。
+ * @param start 頭の位置
+ * @param end 終わりの次の位置
+ * @param ruby ルビ
+ * @param word ルビのもとになった語
+ * @returns ルビを付ける所
+ */
+function wordSpan(start: number, end: number, ruby: string, word: RubyWord): RubySpan {
+  return { start, end, ruby, isAlways: false, word };
+}
+
+/** 行の向きの、箱の頭と終わり（読む向きに進むほど大きい） */
+function along(box: RubyBox): { start: number; end: number } {
+  return box.isVertical
+    ? { start: box.top, end: box.top + box.height }
+    : { start: box.left, end: box.left + box.width };
+}
+
+/**
+ * 同じ行のルビの箱のうち、重なる組があるか。
+ * @param boxes 同じ行のルビ
+ * @returns 重なる組があれば true
+ */
+function hasOverlap(boxes: readonly RubyBox[]): boolean {
+  return boxes.some((a, i) =>
+    boxes.some((b, j) => {
+      if (i >= j) return false;
+      const p = along(a);
+      const q = along(b);
+      return Math.min(p.end, q.end) - Math.max(p.start, q.start) > 1e-6;
+    }),
+  );
+}
+
+/**
+ * ルビの箱の中心の、親字の中心からのずれ。
+ * @param box ルビ
+ * @param baseStart 親字の頭の端（行の向き。縦書きはページの上からの長さ）
+ * @param baseLength 親字の長さ
+ * @returns ずれの大きさ
+ */
+function shiftOf(box: RubyBox, baseStart: number, baseLength: number): number {
+  const { start, end } = along(box);
+  return Math.abs((start + end) / 2 - (baseStart + baseLength / 2));
+}
+
+/** 縦書き・横書きの行を作る。どちらも親字の頭の端（行の向き）が 100 になる */
+const DIRECTIONS = [
+  {
+    name: '縦書き',
+    block: (text: string) => blockOf(columnGlyphs(text, 300, FRAME.pageHeight - 100), 'vertical'),
+    thickness: (box: RubyBox) => box.width,
+  },
+  {
+    name: '横書き',
+    block: (text: string) => blockOf(rowGlyphs(text, 100, 400), 'horizontal'),
+    thickness: (box: RubyBox) => box.height,
+  },
+] as const;
+
+for (const { name, block, thickness } of DIRECTIONS) {
+  describe(`layoutRubies 同じ行の隣のルビ（${name}）`, () => {
+    it('別の語の、親字より長いルビが隣り合うとき、同じ行のどの2つの箱も重ならない', () => {
+      const [west, teacher] = [wordOf('西'), wordOf('先生')];
+      const spans = [
+        wordSpan(0, 1, 'にしにし', west),
+        wordSpan(1, 2, 'せんせん', teacher),
+        wordSpan(2, 3, 'せいせい', teacher),
+      ];
+
+      const boxes = layoutRubies([block('西先生')], [spans], FRAME, OPTIONS);
+
+      expect(hasOverlap(boxes)).toBe(false);
+    });
+
+    it('ずらせば入るとき、字を縮めずに、親字の大きさの半分までずらして避ける', () => {
+      const spans = [
+        wordSpan(0, 1, 'にしに', wordOf('西')),
+        wordSpan(1, 2, 'せんせ', wordOf('先')),
+      ];
+
+      const boxes = layoutRubies([block('西先')], [spans], FRAME, OPTIONS);
+
+      expect(hasOverlap(boxes)).toBe(false);
+      expect(boxes.map((box) => box.shrink)).toEqual([1, 1]);
+      expect(boxes.map((box, index) => shiftOf(box, 100 + index * SIZE, SIZE))).toEqual([2.5, 2.5]);
+    });
+
+    it('ずらしても入らないとき、字を小さくして、親字から半分より離さない', () => {
+      const spans = Array.from('一二三', (ch, index) =>
+        wordSpan(index, index + 1, 'ああああああ', wordOf(ch)),
+      );
+
+      const boxes = layoutRubies([block('一二三')], [spans], FRAME, OPTIONS);
+
+      expect(hasOverlap(boxes)).toBe(false);
+      expect(boxes.every((box) => box.shrink < 1)).toBe(true);
+      expect(
+        boxes.every((box, index) => shiftOf(box, 100 + index * SIZE, SIZE) <= SIZE / 2 + 1e-6),
+      ).toBe(true);
+    });
+
+    it('字を小さくしたとき、字の大きさと箱の太さが合い、字が箱の長さに収まる', () => {
+      const spans = Array.from('一二三', (ch, index) =>
+        wordSpan(index, index + 1, 'ああああああ', wordOf(ch)),
+      );
+
+      const boxes = layoutRubies([block('一二三')], [spans], FRAME, OPTIONS);
+
+      for (const box of boxes) {
+        expect(box.fontSize).toBeCloseTo(SIZE * RATIO * box.shrink);
+        expect(thickness(box)).toBeCloseTo(box.fontSize);
+        const { start, end } = along(box);
+        expect(end - start).toBeGreaterThanOrEqual(6 * box.fontSize - 1e-6);
+      }
+    });
+
+    it('隣の字にルビがないとき、今までと同じく親字の中心から両側にはみ出す', () => {
+      const [box] = layoutRubies([block('承る')], [[span(0, 1, 'うけたまわ')]], FRAME, OPTIONS);
+
+      expect(box?.shrink).toBe(1);
+      expect(box === undefined ? undefined : along(box)).toEqual({
+        start: 100 + 5 - 12.5,
+        end: 100 + 5 + 12.5,
+      });
+    });
+
+    it('同じ語の隣り合う字のルビが重なるとき、まとめて合わせた親字の中心に置く', () => {
+      const school = wordOf('小学');
+      const spans = [wordSpan(0, 1, 'しょう', school), wordSpan(1, 2, 'がっ', school)];
+
+      const boxes = layoutRubies([block('小学')], [spans], FRAME, OPTIONS);
+
+      expect(boxes).toHaveLength(1);
+      expect(boxes[0]).toMatchObject({ base: '小学', ruby: 'しょうがっ', shrink: 1 });
+      expect(boxes[0] === undefined ? undefined : along(boxes[0])).toEqual({
+        start: 100 + 10 - 12.5,
+        end: 100 + 10 + 12.5,
+      });
+    });
+
+    it('同じ語でも、字ごとのルビが重ならないとき、まとめずに字ごとに置く', () => {
+      const grade = wordOf('学年');
+      const spans = [wordSpan(0, 1, 'がく', grade), wordSpan(1, 2, 'ねん', grade)];
+
+      const boxes = layoutRubies([block('学年')], [spans], FRAME, OPTIONS);
+
+      expect(boxes.map((box) => [box.base, box.ruby, box.isSpread])).toEqual([
+        ['学', 'がく', false],
+        ['年', 'ねん', false],
+      ]);
+    });
+
+    it('別の語どうしのルビが重なるとき、まとめない', () => {
+      const spans = [
+        wordSpan(0, 1, 'にしに', wordOf('西')),
+        wordSpan(1, 2, 'せんせ', wordOf('先')),
+      ];
+
+      const boxes = layoutRubies([block('西先')], [spans], FRAME, OPTIONS);
+
+      expect(boxes.map((box) => box.base)).toEqual(['西', '先']);
+    });
+  });
+}
+
+describe('layoutRubies 熟語のルビ', () => {
+  it('まとめた字が合わせた親字より短いとき、親字の長さに均等に並べる', () => {
+    // 字の送りが字の大きさより狭い PDF（親字の箱が少し重なる）
+    const glyphs = [...rowGlyphs('学', 50, 700), ...rowGlyphs('校', 58, 700)];
+    const school = wordOf('学校');
+    const spans = [wordSpan(0, 1, 'がっ', school), wordSpan(1, 2, 'こう', school)];
+
+    const [box, ...rest] = layoutRubies([blockOf(glyphs, 'horizontal')], [spans], FRAME, {
+      ...OPTIONS,
+      sizeRatio: 0.45,
+    });
+
+    expect(rest).toEqual([]);
+    expect(box).toMatchObject({ base: '学校', ruby: 'がっこう', isSpread: true, left: 50 });
+    expect(box?.width).toBeCloseTo(18);
   });
 });

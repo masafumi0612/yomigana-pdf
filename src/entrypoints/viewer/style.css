@@ -387,6 +387,11 @@ main {
   writing-mode: vertical-rl;
 }
 
+/* 同じ語の字のルビをまとめたもの。合わせた親字の長さに、字を 1:2:1 の空きで均等に並べる */
+.ruby-layer > .ruby-spread {
+  justify-content: space-around;
+}
+
 /* 文字の向きを直すモード。バーを青にして、変わったことが分かるようにする */
 .bar--editing {
   background: var(--edit-bar-background);

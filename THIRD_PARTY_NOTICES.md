@@ -136,7 +136,7 @@ Copyright 2024 Mozilla Foundation
 
 ## Noto Serif JP・Noto Sans JP（ルビのフォント）
 
-ルビの字に使う、仮名だけのフォントです。Noto Serif JP と Noto Sans JP（太さ 400）から、平仮名・片仮名の字だけを取り出して作りました（`npm run fonts:build`、`scripts/build-ruby-fonts.ts`）。作った `ruby-serif.woff2`・`ruby-sans.woff2` は拡張機能に同梱し、外からは読みません。字の形は変えていません。
+ルビの字に使う、仮名だけのフォントです。Noto Serif JP と Noto Sans JP（太さ 400）から、平仮名・片仮名の字だけを取り出し、縦書きの送りの表を足して作りました（`npm run fonts:build`、`scripts/build-ruby-fonts.ts`）。作った `ruby-serif.woff2`・`ruby-sans.woff2` は拡張機能に同梱し、外からは読みません。字の形は変えていません。
 
 - 入手先：https://github.com/notofonts/noto-cjk 、https://fonts.google.com/noto
 - ライセンス：SIL Open Font License, Version 1.1（全文は拡張機能の中の `licenses/OFL-1.1.txt`、または https://openfontlicense.org ）

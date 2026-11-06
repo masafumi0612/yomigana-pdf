@@ -2,7 +2,7 @@
 //   npm run fonts:build
 // 元のフォント（Noto Serif JP・Noto Sans JP の可変フォント。どちらも SIL OFL 1.1）は、
 // リポジトリの外の環境変数 RUBY_FONT_SRC_DIR のフォルダ（なければ C:/Windows/Fonts）から読む。
-// 太さ 400 に当てて仮名だけの部分集合にし、WOFF2 に包む（できたファイルをコミットする）
+// 太さ 400 に当てて仮名だけの部分集合にし、縦書きの送りの表を足して、WOFF2 に包む（できたファイルをコミットする）
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,10 +43,33 @@ const RANGE_HIRAGANA_KATAKANA = (1 << 17) | (1 << 18);
 /** OS/2 の文字コードの範囲：日本語（JIS） */
 const CODE_PAGE_JIS = 1 << 17;
 /** WOFF2 の表の印の番号（決まった並び）。glyf・loca は変換なし（3）で入れる */
-const WOFF2_TAGS = ['cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name', 'OS/2', 'post'] as const;
-const WOFF2_GLYF = 10;
-const WOFF2_LOCA = 11;
+const WOFF2_TAGS: Readonly<Record<string, number>> = {
+  cmap: 0,
+  head: 1,
+  hhea: 2,
+  hmtx: 3,
+  maxp: 4,
+  name: 5,
+  'OS/2': 6,
+  post: 7,
+  glyf: 10,
+  loca: 11,
+  vhea: 23,
+  vmtx: 24,
+};
 const WOFF2_NULL_TRANSFORM = 3;
+// 縦書きの送りの表（vhea・vmtx）。この表がないと、Chrome は縦書きの1字の送りを
+// 字の上と下の高さの和（明朝は約 1.44 字）にして、ルビの字の間が空き、隣のルビに重なる
+const VHEA_BYTES = 36;
+const VHEA_VERSION = 0x00010000;
+const VMTX_RECORD_BYTES = 4;
+/** 縦書きの字の上の端（字の大きさに対する割合）。和文の字の枠（下 0.12・上 0.88）の上の端 */
+const VERTICAL_ORIGIN_EM = 0.88;
+// head・maxp・glyf の中の場所（バイト）
+const HEAD_INDEX_TO_LOC_FORMAT = 50;
+const MAXP_NUM_GLYPHS = 4;
+const GLYF_Y_MIN = 4;
+const GLYF_Y_MAX = 8;
 const WOFF2_TRANSFORM_SHIFT = 6;
 const BASE128_BITS = 7;
 
@@ -196,11 +219,13 @@ function base128(value: number): number[] {
  */
 function wrapWoff2(tables: Tables): Uint8Array {
   const names = [...tables.keys()].sort();
-  const flagOf = (name: string): number =>
-    name === 'glyf' || name === 'loca'
-      ? (name === 'glyf' ? WOFF2_GLYF : WOFF2_LOCA) |
-        (WOFF2_NULL_TRANSFORM << WOFF2_TRANSFORM_SHIFT)
-      : (WOFF2_TAGS as readonly string[]).indexOf(name);
+  const flagOf = (name: string): number => {
+    const tag = WOFF2_TAGS[name];
+    if (tag === undefined) throw new Error(`${name} の表は WOFF2 の決まった並びにない`);
+    return name === 'glyf' || name === 'loca'
+      ? tag | (WOFF2_NULL_TRANSFORM << WOFF2_TRANSFORM_SHIFT)
+      : tag;
+  };
   const directory = names.flatMap((name) => [
     flagOf(name),
     ...base128(tables.get(name)?.length ?? 0),
@@ -223,6 +248,66 @@ function wrapWoff2(tables: Tables): Uint8Array {
   v.setUint32(20, compressed.length);
   out.set(body, WOFF2_HEADER_BYTES);
   return out;
+}
+
+/**
+ * 字形ごとの、上の端と下の端（glyf の外枠）を読む。
+ * @param tables 表の名前と中身（head・maxp・loca・glyf がある）
+ * @returns 字形の番号の順の、上と下の端。輪郭のない字形は undefined
+ */
+function glyphYExtents(tables: Tables): ({ yMin: number; yMax: number } | undefined)[] {
+  const viewOf = (name: string): DataView => {
+    const table = tables.get(name) ?? new Uint8Array(0);
+    return new DataView(table.buffer, table.byteOffset, table.byteLength);
+  };
+  const isLongLoca = viewOf('head').getInt16(HEAD_INDEX_TO_LOC_FORMAT) === 1;
+  const count = viewOf('maxp').getUint16(MAXP_NUM_GLYPHS);
+  const loca = viewOf('loca');
+  const glyf = viewOf('glyf');
+  const offsetOf = (index: number): number =>
+    isLongLoca ? loca.getUint32(index * 4) : loca.getUint16(index * 2) * 2;
+  return Array.from({ length: count }, (_, index) => {
+    const start = offsetOf(index);
+    if (offsetOf(index + 1) === start) return undefined;
+    return { yMin: glyf.getInt16(start + GLYF_Y_MIN), yMax: glyf.getInt16(start + GLYF_Y_MAX) };
+  });
+}
+
+/**
+ * 縦書きの送りの表（vhea・vmtx）を作る。どの字も送りは1字で、字の上の端を和文の字の枠の上の端に合わせる。
+ * @param tables 表の名前と中身（head・maxp・loca・glyf がある）
+ * @param unitsPerEm 1字の長さ（フォントの単位）
+ * @returns vhea と vmtx の表
+ */
+function buildVerticalMetrics(
+  tables: Tables,
+  unitsPerEm: number,
+): { vhea: Uint8Array; vmtx: Uint8Array } {
+  const extents = glyphYExtents(tables);
+  const origin = Math.round(unitsPerEm * VERTICAL_ORIGIN_EM);
+  const tops = extents.map((extent) => (extent === undefined ? 0 : origin - extent.yMax));
+  const drawn = extents.flatMap((extent, index) =>
+    extent === undefined ? [] : [{ top: tops[index] ?? 0, height: extent.yMax - extent.yMin }],
+  );
+  const vmtx = bytes(extents.length * VMTX_RECORD_BYTES, (v) => {
+    for (const [index, top] of tops.entries()) {
+      v.setUint16(index * VMTX_RECORD_BYTES, unitsPerEm);
+      v.setInt16(index * VMTX_RECORD_BYTES + 2, top);
+    }
+  });
+  const vhea = bytes(VHEA_BYTES, (v) => {
+    v.setUint32(0, VHEA_VERSION);
+    v.setInt16(4, unitsPerEm / 2);
+    v.setInt16(6, -unitsPerEm / 2);
+    v.setUint16(10, unitsPerEm);
+    v.setInt16(12, Math.min(...drawn.map((glyph) => glyph.top)));
+    v.setInt16(14, Math.min(...drawn.map((glyph) => unitsPerEm - glyph.top - glyph.height)));
+    v.setInt16(16, Math.max(...drawn.map((glyph) => glyph.top + glyph.height)));
+    // 縦書きの文字の間の線（カーソル）は横向き
+    v.setInt16(20, 1);
+    v.setUint16(34, extents.length);
+  });
+  return { vhea, vmtx };
 }
 
 /**
@@ -259,6 +344,9 @@ function buildFont(fontDir: string, output: (typeof OUTPUTS)[number]): Uint8Arra
     }
   }
   const tables = readTables(font.encode());
+  const { vhea, vmtx } = buildVerticalMetrics(tables, font.unitsPerEm);
+  tables.set('vhea', vhea);
+  tables.set('vmtx', vmtx);
   tables.set('cmap', buildCmap(glyphOf));
   tables.set(
     'OS/2',
