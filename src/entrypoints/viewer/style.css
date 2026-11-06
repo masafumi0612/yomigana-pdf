@@ -490,3 +490,18 @@ main {
 .direction-option rt {
   font-size: 0.65em;
 }
+
+/* 紙面のメニューの項目を縦に並べる */
+.menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-item {
+  text-align: start;
+}
+
+.menu-item:focus-visible {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: calc(var(--focus-width) * -1);
+}
