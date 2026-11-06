@@ -62,6 +62,9 @@ const fileName = requireElement('file-name', HTMLHeadingElement);
 const pageGroup = requireElement('page-group', HTMLDivElement);
 const pageInput = requireElement('page-input', HTMLInputElement);
 const pageTotal = requireElement('page-total', HTMLSpanElement);
+const directionEntry = requireElement('direction-entry', HTMLButtonElement);
+const directionEntryLabel = requireElement('direction-entry-label', HTMLSpanElement);
+const directionEntryMark = requireElement('direction-entry-mark', HTMLSpanElement);
 const zoomGroup = requireElement('zoom-group', HTMLDivElement);
 const zoomOut = requireElement('zoom-out', HTMLButtonElement);
 const zoomLevel = requireElement('zoom-level', HTMLOutputElement);
@@ -95,10 +98,6 @@ const directionBarText = requireElement('direction-bar-text', HTMLParagraphEleme
 const directionAllVertical = requireElement('direction-all-vertical', HTMLButtonElement);
 const directionAllHorizontal = requireElement('direction-all-horizontal', HTMLButtonElement);
 const directionDone = requireElement('direction-done', HTMLButtonElement);
-const directionNotice = requireElement('direction-notice', HTMLDivElement);
-const directionNoticeText = requireElement('direction-notice-text', HTMLParagraphElement);
-const directionNoticeStart = requireElement('direction-notice-start', HTMLButtonElement);
-const directionNoticeClose = requireElement('direction-notice-close', HTMLButtonElement);
 const pageMenuElement = requireElement('page-menu', HTMLDivElement);
 const rubyMenuGroup = requireElement('ruby-menu-group', HTMLDivElement);
 const rubyMenuTitle = requireElement('ruby-menu-title', HTMLDivElement);
@@ -168,16 +167,8 @@ const hasTextByPage = new Map<number, boolean>();
 let isNoTextDismissed = false;
 // 開くときに URL の # から後ろで指されたページ・倍率。ページの数がわかる pagesinit で一度だけ使う
 let initialHash = '';
-
-// 向きの自信がないかたまりがあるか。あるときだけ、バーの下に向きを直す案内を出す
-let hasUncertainDirection = false;
+// 向きを直すモードの間か
 let isDirectionEditing = false;
-// 向きを直せる案内を閉じたら、同じ PDF では出し直さない（保存はしない）
-let isDirectionHintDismissed = false;
-
-function updateDirectionNotice(): void {
-  directionNotice.hidden = !hasUncertainDirection || isDirectionEditing || isDirectionHintDismissed;
-}
 
 function updateNoTextNotice(): void {
   noTextNotice.hidden = isNoTextDismissed || !isImageOnlyDocument(hasTextByPage);
@@ -202,11 +193,17 @@ const rubyPages = createRubyPages({
   onPageShown: (pageNumber) => {
     directionEditor.refreshPage(pageNumber);
   },
-  onUncertainChange: (hasUncertain) => {
-    hasUncertainDirection = hasUncertain;
-    updateDirectionNotice();
+  onUncertainChange: () => {
+    updateDirectionMark();
   },
 });
+
+// 見ているページに向きの自信がないかたまりがあるときだけ、向きを直すボタンに小さな印を付けて、直せることをそっと知らせる。
+// ページ番号や1〜2字のかたまりでも自信は低くなりやすいので、紙面に重なる案内は出さない
+function updateDirectionMark(): void {
+  directionEntryMark.hidden = !rubyPages.hasUncertainDirection(viewer.currentPageNumber);
+}
+
 const directionEditor = createDirectionEditor({
   pages: rubyPages,
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
@@ -262,9 +259,9 @@ passwordSubmit.textContent = message('viewer_password_open');
 passwordError.textContent = message('viewer_password_incorrect');
 noTextText.textContent = message('viewer_notice_noText');
 noTextClose.textContent = message('viewer_notice_close');
-directionNoticeText.textContent = message('viewer_notice_directionHint');
-directionNoticeStart.textContent = message('viewer_notice_directionStart');
-directionNoticeClose.setAttribute('aria-label', message('viewer_notice_directionClose'));
+directionEntryLabel.textContent = message('viewer_bar_directionFix');
+directionEntry.title = message('viewer_bar_directionFixTitle');
+directionEntryMark.setAttribute('aria-label', message('viewer_bar_directionUncertain'));
 fixMenuItem.textContent = message('viewer_menu_fixReading');
 directionMenuItem.textContent = message('viewer_menu_directionFix');
 settingsMenuItem.textContent = message('viewer_menu_openSettings');
@@ -295,7 +292,6 @@ function enterDirectionEditing(): void {
   bar.classList.add('bar--editing');
   directionBar.hidden = false;
   directionBarText.textContent = message('viewer_direction_barText');
-  updateDirectionNotice();
   directionEditor.enter();
 }
 
@@ -307,7 +303,6 @@ function exitDirectionEditing(): void {
   bar.classList.remove('bar--editing');
   directionBar.hidden = true;
   directionBarText.textContent = '';
-  updateDirectionNotice();
   container.focus();
 }
 
@@ -318,8 +313,6 @@ function resetNotices(): void {
   hasTextByPage.clear();
   isNoTextDismissed = false;
   updateNoTextNotice();
-  isDirectionHintDismissed = false;
-  updateDirectionNotice();
 }
 
 function setDocumentShown(isShown: boolean): void {
@@ -466,6 +459,7 @@ eventBus.on('pagesinit', () => {
 });
 eventBus.on('pagechanging', ({ pageNumber }: { pageNumber: number }) => {
   pageInput.value = String(pageNumber);
+  updateDirectionMark();
 });
 eventBus.on('scalechanging', ({ scale }: { scale: number }) => {
   updateZoom(scale);
@@ -535,12 +529,7 @@ rubyRetry.addEventListener('click', () => {
       rubyRetry.disabled = false;
     });
 });
-directionNoticeStart.addEventListener('click', enterDirectionEditing);
-directionNoticeClose.addEventListener('click', () => {
-  isDirectionHintDismissed = true;
-  updateDirectionNotice();
-  container.focus();
-});
+directionEntry.addEventListener('click', enterDirectionEditing);
 directionDone.addEventListener('click', exitDirectionEditing);
 for (const [button, direction] of [
   [directionAllVertical, 'vertical'],

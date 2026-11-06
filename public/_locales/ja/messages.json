@@ -29,6 +29,18 @@
       }
     }
   },
+  "viewer_bar_directionFix": {
+    "message": "向きを直す",
+    "description": "リーダーのバーの、ページ番号の隣のボタンの文字。文字の向きを直すモードに入る"
+  },
+  "viewer_bar_directionFixTitle": {
+    "message": "文字の向き（縦書き・横書き）を直す",
+    "description": "リーダーのバーの、向きを直すボタンにマウスを乗せたときの説明"
+  },
+  "viewer_bar_directionUncertain": {
+    "message": "向きがはっきりしない所があります",
+    "description": "向きを直すボタンに付ける印の名前（読み上げ用）。見ているページに、向きの自信がない文字のかたまりがあるときに付ける"
+  },
   "viewer_bar_zoomOut": {
     "message": "縮小",
     "description": "リーダーのバーの、紙面を小さくするボタンの名前（読み上げ用）"
@@ -132,18 +144,6 @@
   "viewer_notice_close": {
     "message": "閉じる",
     "description": "案内を閉じるボタン"
-  },
-  "viewer_notice_directionHint": {
-    "message": "文字の向きが違うところがあれば直せます",
-    "description": "向きの自信がない文字のかたまりがあるときの案内（バーの下）"
-  },
-  "viewer_notice_directionStart": {
-    "message": "直す",
-    "description": "文字の向きを直すモードに入るボタン（案内の中）"
-  },
-  "viewer_notice_directionClose": {
-    "message": "案内を閉じる",
-    "description": "向きを直せる案内を閉じるボタンの名前（読み上げ用）。見た目は ×"
   },
   "viewer_menu_directionFix": {
     "message": "文字の向きを直す…",

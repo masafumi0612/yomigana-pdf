@@ -110,10 +110,10 @@ export interface RubyPagesOptions {
    */
   readonly onPageShown?: (pageNumber: number) => void;
   /**
-   * 向きの自信がないかたまりのあるページがあるか（なしからあり、ありからなし）が変わったときに呼ぶ
-   * @param hasUncertain 自信がないかたまりが1つでもあれば true
+   * ページに向きの自信がないかたまりがあるか（なしからあり、ありからなし）が変わったときに呼ぶ
+   * @param pageNumber ページ番号（1 から）。別の PDF を開くために取っておいたものを捨てたときは undefined
    */
-  readonly onUncertainChange?: (hasUncertain: boolean) => void;
+  readonly onUncertainChange?: (pageNumber: number | undefined) => void;
 }
 
 /** ページごとにルビの層を重ねる部品 */
@@ -142,6 +142,12 @@ export interface RubyPages {
    * @returns 出しているルビ。層を出していないページ・置き直す途中のページは空
    */
   rubiesOf(pageNumber: number): readonly RubyBox[];
+  /**
+   * ページに向きの自信がないかたまりがあるかを引く。
+   * @param pageNumber ページ番号（1 から）
+   * @returns 自信がないかたまりが1つでもあれば true。文をまだ取り出していないページは false
+   */
+  hasUncertainDirection(pageNumber: number): boolean;
   /**
    * ルビの層を出しているページを挙げる。
    * @returns ページ番号（小さい順）
@@ -238,12 +244,11 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
   /** 向きの自信がないかたまりのあるページ */
   const uncertainPages = new Set<number>();
   const markUncertain = (pageNumber: number, page: PageText): void => {
-    const before = uncertainPages.size;
-    if (page.blocks.some(isDirectionUncertain)) uncertainPages.add(pageNumber);
+    const isUncertainBefore = uncertainPages.has(pageNumber);
+    const isUncertain = page.blocks.some(isDirectionUncertain);
+    if (isUncertain) uncertainPages.add(pageNumber);
     else uncertainPages.delete(pageNumber);
-    if ((before === 0) !== (uncertainPages.size === 0)) {
-      options.onUncertainChange?.(uncertainPages.size > 0);
-    }
+    if (isUncertainBefore !== isUncertain) options.onUncertainChange?.(pageNumber);
   };
   const failed = createFailedPages<RubyPageView>();
   const markFailure = (pageNumber: number, view: RubyPageView | undefined): void => {
@@ -498,6 +503,10 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       return entries.get(pageNumber)?.resolved?.page.blocks ?? [];
     },
 
+    hasUncertainDirection(pageNumber) {
+      return uncertainPages.has(pageNumber);
+    },
+
     rubiesOf(pageNumber) {
       const entry = entries.get(pageNumber);
       return entry?.layer?.isConnected === true ? (entry.boxes ?? []) : [];
@@ -552,7 +561,7 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       entries = new Map();
       forced = undefined;
       uncertainPages.clear();
-      options.onUncertainChange?.(false);
+      options.onUncertainChange?.(undefined);
       failed.clear();
       options.onReadingFailureChange?.(false);
     },

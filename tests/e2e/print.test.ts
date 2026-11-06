@@ -1,7 +1,9 @@
 import { expect, openFromFile, test } from './fixtures';
 
-/** 縦書きの印がなく、向きを直せる案内が出る Word の PDF */
+/** 縦書きの印がなく、向きの自信がないかたまりがある Word の PDF */
 const UNMARKED_VERTICAL = 'word/word-vertical.pdf';
+/** 文字が画像になっている、スキャンしたような PDF（バーの下に案内が出る） */
+const SCANNED = 'scanned-like.pdf';
 /** ルビが出るまで待つ時間の上限（ミリ秒）。辞書の読み込みを含む */
 const RUBY_TIMEOUT_MS = 15_000;
 
@@ -13,12 +15,11 @@ test('印刷の見た目のとき、バーと案内と紙面が見えず、印�
   page,
   extensionId,
 }) => {
-  await openFromFile(page, extensionId, UNMARKED_VERTICAL);
-  await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
-    timeout: RUBY_TIMEOUT_MS,
-  });
+  // バーの下に案内が出る PDF で確かめる
+  await openFromFile(page, extensionId, SCANNED);
+  await expect(page.locator('.page[data-page-number="1"] canvas')).toBeVisible();
   await expect(page.locator('#bar')).toBeVisible();
-  await expect(page.getByText('文字の向きが違うところがあれば直せます')).toBeVisible();
+  await expect(page.getByText('この PDF は文字が画像になっている')).toBeVisible();
   await expect(page.locator('#print-notice')).toBeHidden();
 
   await page.emulateMedia({ media: 'print' });
@@ -87,7 +88,7 @@ test('向きを直すモードのとき Ctrl+P を押すと、案内が出て、
   await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
     timeout: RUBY_TIMEOUT_MS,
   });
-  await page.getByRole('button', { name: '直す' }).click();
+  await page.getByRole('button', { name: '向きを直す' }).click();
   await expect(page.locator('#direction-bar')).toBeVisible();
 
   await page.keyboard.press('Control+P');
@@ -120,7 +121,7 @@ test('印刷の見た目のとき、向きを直す枠と切り替えが見え�
   await expect(page.locator('.ruby-layer > span').first()).toBeAttached({
     timeout: RUBY_TIMEOUT_MS,
   });
-  await page.getByRole('button', { name: '直す' }).click();
+  await page.getByRole('button', { name: '向きを直す' }).click();
   await expect(page.locator('.direction-toggle').first()).toBeVisible();
 
   await page.emulateMedia({ media: 'print' });

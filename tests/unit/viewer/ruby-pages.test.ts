@@ -38,12 +38,18 @@ const view: RubyPageView = {
 
 /**
  * 読みの問い合わせを、テストが答えるまで待たせる部品を作る。
+ * @param onUncertainChange 向きの自信がないかたまりのあるページが変わったときに呼ぶもの
  * @returns 待たせている読みと、ルビの層の部品
  */
-function setUp(): { pending: PendingRead[]; pages: RubyPages; settings: Settings } {
+function setUp(onUncertainChange: (pageNumber: number | undefined) => void = () => undefined): {
+  pending: PendingRead[];
+  pages: RubyPages;
+  settings: Settings;
+} {
   const pending: PendingRead[] = [];
   const settings: Settings = { ...DEFAULT_SETTINGS, level: 'all' };
   const pages = createRubyPages({
+    onUncertainChange,
     getPageView: () => view,
     recorder: { watch: () => undefined, take: () => [] } satisfies DrawRecorder,
     root: {
@@ -144,5 +150,57 @@ describe('createRubyPages', () => {
     await answerUntilDone(pending, changing);
 
     expect([read?.level, pages.blocksOf(1)[0]?.direction]).toEqual(['g3', 'horizontal']);
+  });
+});
+
+describe('向きの自信がないかたまりのあるページ', () => {
+  it('自信がないかたまりのあるページを出したとき、そのページに自信がないかたまりがあるとわかる', async () => {
+    const { pending, pages } = setUp();
+
+    await showFirstPage(pending, pages);
+
+    expect(pages.hasUncertainDirection(1)).toBe(true);
+  });
+
+  it('自信がないかたまりのあるページを出したとき、そのページの番号で知らせる', async () => {
+    const onUncertainChange = vi.fn();
+    const { pending, pages } = setUp(onUncertainChange);
+
+    await showFirstPage(pending, pages);
+
+    expect(onUncertainChange.mock.calls).toEqual([[1]]);
+  });
+
+  it('まだ文を取り出していないページのとき、自信がないかたまりはないとされる', async () => {
+    const { pending, pages } = setUp();
+    await showFirstPage(pending, pages);
+
+    expect(pages.hasUncertainDirection(2)).toBe(false);
+  });
+
+  it('自信がなかったかたまりの向きを決めたとき、そのページに自信がないかたまりはなくなり、知らせが来る', async () => {
+    const onUncertainChange = vi.fn();
+    const { pending, pages } = setUp(onUncertainChange);
+    await showFirstPage(pending, pages);
+
+    await answerUntilDone(pending, pages.setBlockDirection(1, 0, 'vertical'));
+
+    expect([pages.hasUncertainDirection(1), onUncertainChange.mock.calls]).toEqual([
+      false,
+      [[1], [1]],
+    ]);
+  });
+
+  it('別の PDF を開くために捨てたとき、自信がないかたまりのあるページはなくなり、番号なしで知らせる', async () => {
+    const onUncertainChange = vi.fn();
+    const { pending, pages } = setUp(onUncertainChange);
+    await showFirstPage(pending, pages);
+
+    pages.reset();
+
+    expect([pages.hasUncertainDirection(1), onUncertainChange.mock.lastCall]).toEqual([
+      false,
+      [undefined],
+    ]);
   });
 });

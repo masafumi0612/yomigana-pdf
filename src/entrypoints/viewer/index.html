@@ -17,6 +17,28 @@
           autocomplete="off"
         />
         <span id="page-total" class="bar-sub"></span>
+        <button id="direction-entry" class="bar-button bar-direction bar-normal" type="button">
+          <svg
+            class="bar-direction-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M5 3v12" />
+            <path d="M2 12l3 3 3-3" />
+            <path d="M9 20h12" />
+            <path d="M18 17l3 3-3 3" />
+          </svg>
+          <span id="direction-entry-label"></span>
+          <span id="direction-entry-mark" class="bar-direction-mark" role="img" hidden></span>
+        </button>
       </div>
       <div id="zoom-group" class="bar-group" hidden>
         <button id="zoom-out" class="bar-button bar-icon" type="button">−</button>
@@ -97,11 +119,6 @@
         <button id="password-submit" class="bar-button notice-button" type="submit"></button>
         <p id="password-error" class="notice-error" role="alert" hidden></p>
       </form>
-      <div id="direction-notice" class="notice" hidden>
-        <p id="direction-notice-text" class="notice-text" role="status"></p>
-        <button id="direction-notice-start" class="bar-button notice-button" type="button"></button>
-        <button id="direction-notice-close" class="bar-button notice-close" type="button">×</button>
-      </div>
       <div id="no-text-notice" class="notice" hidden>
         <p id="no-text-text" class="notice-text" role="status"></p>
         <button id="no-text-close" class="bar-button notice-button" type="button"></button>
