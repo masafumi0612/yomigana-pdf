@@ -61,6 +61,17 @@
   --level-choice-height: 60px;
   --always-padding: 16px 20px;
   --always-item-width: 180px;
+  --band-field-width: 200px;
+  --choice-height: 44px;
+  --segment-width: 76px;
+  --preview-width: 260px;
+  --preview-padding: 20px 24px;
+  --preview-font-size: 22px;
+  --preview-vertical-height: 300px;
+  --preview-vertical-font-size: 20px;
+  --paper: #f5f1e8;
+  --paper-text: #111111;
+  --ruby-band: #ffffff;
 }
 
 @media (max-width: 600px) {
@@ -541,6 +552,173 @@ input {
   font-family: var(--font-family-serif);
   font-size: var(--dict-word-size);
   line-height: 2.1;
+}
+
+/* ルビの見た目：選ぶ欄 */
+.look-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-large);
+}
+
+.look-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-small);
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+/* 帯の説明は長いので、横に並べきれないときは折り返す */
+.look-field-band {
+  flex: 1 1 var(--band-field-width);
+}
+
+.look-field legend {
+  margin-bottom: var(--gap-small);
+  padding: 0;
+}
+
+.segments {
+  display: flex;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+}
+
+.segment,
+.color-choice {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap-small);
+  min-height: var(--choice-height);
+  cursor: pointer;
+}
+
+.segment {
+  min-width: var(--segment-width);
+  background: var(--card-background);
+}
+
+/* 焦点の線が切れないよう、外の枠で切らずに、両端の角だけを丸める */
+.segment:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.segment:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.segment + .segment {
+  border-left: 1px solid var(--field-border);
+}
+
+.segment:has(:checked) {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.color-choice {
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 0 var(--gap);
+}
+
+.color-choice:has(:checked) {
+  border-color: var(--accent);
+  background: var(--selected-background);
+}
+
+/* 中のラジオボタンは隠しているので、枠に焦点の線を出す */
+.segment:has(:focus-visible),
+.color-choice:has(:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.color-swatch {
+  width: var(--choice-mark-size);
+  height: var(--choice-mark-size);
+  border-radius: 50%;
+}
+
+.band-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-small);
+  min-height: var(--choice-height);
+  cursor: pointer;
+}
+
+.band-choice input {
+  width: var(--choice-mark-size);
+  height: var(--choice-mark-size);
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.band-note {
+  margin-top: calc(var(--gap-small) * -1);
+  padding-left: calc(var(--choice-mark-size) + var(--gap-small));
+  color: var(--text-sub);
+  font-size: var(--font-size-tiny);
+}
+
+/* ルビの見た目：見本。紙の色はオレンジのルビとも 4.5:1 以上の差がある */
+.previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--preview-width), 1fr));
+  gap: var(--gap);
+}
+
+.preview {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-small);
+  border-radius: var(--radius-medium);
+  padding: var(--preview-padding);
+  background: var(--paper);
+}
+
+.preview-label {
+  color: var(--text-sub);
+  font-size: var(--font-size-tiny);
+}
+
+.preview-text {
+  color: var(--paper-text);
+  font-family: var(--font-family-serif);
+  font-size: var(--preview-font-size);
+  line-height: 2.4;
+  white-space: pre-line;
+}
+
+.preview-text rt {
+  border-radius: 3px;
+  color: var(--preview-ruby-color);
+  font-size: var(--preview-ruby-size);
+}
+
+.previews-band .preview-text rt {
+  background: var(--ruby-band);
+}
+
+.preview-vertical {
+  height: var(--preview-vertical-height);
+}
+
+.preview-vertical .preview-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-self: center;
+  font-size: var(--preview-vertical-font-size);
+  line-height: 2;
+  writing-mode: vertical-rl;
 }
 
 .dict-local {

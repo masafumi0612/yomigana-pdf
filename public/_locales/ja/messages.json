@@ -471,6 +471,74 @@
     "message": "｜生憎《あいにく》・｜身体《からだ》",
     "description": "3つめの種類の見本。｜字《ルビ》の形でルビを付ける"
   },
+  "options_look_title": {
+    "message": "ルビの見た目",
+    "description": "ルビの大きさ・色・帯を選ぶ場所の見出し"
+  },
+  "options_look_lead": {
+    "message": "ルビの字の形は、紙面の字に合わせて明朝かゴシックにします。",
+    "description": "ルビの見た目の場所の説明"
+  },
+  "options_look_size": {
+    "message": "大きさ",
+    "description": "ルビの大きさの選択肢のまとまりの名前"
+  },
+  "options_look_sizeS": {
+    "message": "小さめ",
+    "description": "ルビの大きさの選択肢（小）"
+  },
+  "options_look_sizeM": {
+    "message": "ふつう",
+    "description": "ルビの大きさの選択肢（中）"
+  },
+  "options_look_sizeL": {
+    "message": "大きめ",
+    "description": "ルビの大きさの選択肢（大）"
+  },
+  "options_look_color": {
+    "message": "色",
+    "description": "ルビの色の選択肢のまとまりの名前"
+  },
+  "options_look_colorInk": {
+    "message": "黒",
+    "description": "ルビの色の選択肢"
+  },
+  "options_look_colorBlue": {
+    "message": "青",
+    "description": "ルビの色の選択肢"
+  },
+  "options_look_colorOrange": {
+    "message": "オレンジ",
+    "description": "ルビの色の選択肢"
+  },
+  "options_look_band": {
+    "message": "背景",
+    "description": "ルビの後ろの帯のチェックボックスのまとまりの名前"
+  },
+  "options_look_bandLabel": {
+    "message": "ルビの後ろに白い帯を付ける",
+    "description": "ルビの後ろに白い帯を敷くチェックボックスの名前"
+  },
+  "options_look_bandNote": {
+    "message": "行の間がせまい PDF で読みやすくなります",
+    "description": "白い帯のチェックボックスの下の説明"
+  },
+  "options_look_horizontal": {
+    "message": "見本（横書き）",
+    "description": "ルビの見た目の、横書きの見本の名前"
+  },
+  "options_look_horizontalText": {
+    "message": "｜今日《きょう》は図書館で｜薔《ば》｜薇《ら》の図｜鑑《かん》を見た。",
+    "description": "横書きの見本の文。｜字《ルビ》の形でルビを付ける"
+  },
+  "options_look_vertical": {
+    "message": "見本（縦書き）",
+    "description": "ルビの見た目の、縦書きの見本の名前"
+  },
+  "options_look_verticalText": {
+    "message": "｜今日《きょう》は朝から雨だった。\n少年は｜窓《まど》｜辺《べ》で図｜鑑《かん》を\nひらいた。",
+    "description": "縦書きの見本の文。｜字《ルビ》の形でルビを付け、改行で列を分ける"
+  },
   "options_dict_title": {
     "message": "直した読み",
     "description": "直した読みの場所の見出し"
