@@ -821,7 +821,51 @@
   },
   "options_about_licenses": {
     "message": "ライセンスと出典",
-    "description": "同梱した部品のライセンスと辞書の出典の文書を開くリンク"
+    "description": "同梱した部品のライセンスと辞書の出典の画面を開くリンク"
+  },
+  "options_about_privacyPolicy": {
+    "message": "プライバシーポリシー",
+    "description": "プライバシーポリシーのページ（ウェブ）を新しいタブで開くリンク"
+  },
+  "licenses_page_title": {
+    "message": "ライセンスと出典 - よみがなPDF",
+    "description": "ライセンスと出典の画面のタブの名前"
+  },
+  "licenses_header_title": {
+    "message": "ライセンスと出典",
+    "description": "ライセンスと出典の画面の見出し"
+  },
+  "licenses_main_loadFailed": {
+    "message": "文書を読み込めませんでした。下の「同梱した文書」から開いてください。",
+    "description": "同梱の文書を読めなかったときに出す"
+  },
+  "licenses_own_title": {
+    "message": "よみがなPDF",
+    "description": "この拡張そのもののライセンスの場所の見出し"
+  },
+  "licenses_own_note": {
+    "message": "この拡張機能は MIT License で公開しています。",
+    "description": "この拡張そのもののライセンスの説明"
+  },
+  "licenses_full_title": {
+    "message": "ライセンスの全文",
+    "description": "ライセンスの全文の場所の見出し"
+  },
+  "licenses_full_note": {
+    "message": "上のライブラリ・辞書・フォントが使っているライセンスの全文です。押すと開きます。",
+    "description": "ライセンスの全文の場所の説明"
+  },
+  "licenses_full_apache": {
+    "message": "Apache License, Version 2.0（kuromoji.js・PDF.js）",
+    "description": "Apache License 2.0 の全文を開く"
+  },
+  "licenses_full_ofl": {
+    "message": "SIL Open Font License, Version 1.1（Noto Serif JP・Noto Sans JP）",
+    "description": "SIL Open Font License 1.1 の全文を開く"
+  },
+  "licenses_files_title": {
+    "message": "同梱した文書",
+    "description": "拡張に同梱した文書そのものへのリンクの見出し"
   },
   "options_about_copyReport": {
     "message": "報告用の情報をコピー",

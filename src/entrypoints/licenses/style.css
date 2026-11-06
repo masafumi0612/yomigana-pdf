@@ -1,0 +1,64 @@
+/* ライセンスと出典の画面。色・間隔は設定の画面（../options/style.css）の変数を使う */
+:root {
+  --license-text-size: 12px;
+  --license-text-padding: 12px 16px;
+  --table-cell-padding: 6px 10px;
+}
+
+.license-text {
+  margin: 0;
+  border-radius: var(--radius);
+  padding: var(--license-text-padding);
+  background: var(--page-background);
+  color: var(--text);
+  font-size: var(--license-text-size);
+  line-height: 1.6;
+  /* 長い行も横にはみ出さないよう折り返す */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.notice-list {
+  padding-left: var(--gap-large);
+}
+
+.notice-subtitle {
+  font-size: var(--font-size-large);
+}
+
+code {
+  overflow-wrap: anywhere;
+}
+
+.link {
+  overflow-wrap: anywhere;
+}
+
+.notice-table {
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+
+.notice-table th,
+.notice-table td {
+  border: 1px solid var(--line-strong);
+  padding: var(--table-cell-padding);
+  text-align: left;
+  vertical-align: top;
+}
+
+.notice-table th {
+  background: var(--page-background);
+}
+
+.license-full summary {
+  min-height: var(--control-height);
+  color: var(--accent);
+  font-weight: 700;
+  line-height: var(--control-height);
+  cursor: pointer;
+}
+
+.license-full summary:hover {
+  color: var(--accent-hover);
+}
