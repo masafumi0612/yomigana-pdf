@@ -81,4 +81,4 @@
 1. 元の絵は `src/assets/icon/` の SVG。128px・48px は `icon.svg`、32px は `icon-32.svg`（ルビを省く）、16px は `icon-16.svg`（字を線と四角にする）
 2. 字はフォントを使わず、SVG の path で描く（パソコンに入っているフォントの字形は、ライセンスがわからないので写さない）
 3. SVG を直したら `npm run icons:build` で `public/icon/16.png`・`32.png`・`48.png`・`128.png` を作り直し、PNG もコミットする。WXT がこの PNG を manifest の `icons` に入れ、ツールバーの絵（`action.default_icon`）は `wxt.config.ts` で同じ PNG を指す
-4. Chrome ウェブストアの決まりでは、128px のアイコンは絵を 96×96 ほどにし、周りの 16px ずつは透明にする
+4. 128px は、Chrome ウェブストアの決まり（絵は 96×96、周りの 16px ずつは透明）に合わせ、`icon.svg` を真ん中の 96×96 に縮めて撮る（`scripts/build-icons.ts`）。16・32・48px は縮めない
