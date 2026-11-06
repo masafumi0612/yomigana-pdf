@@ -22,6 +22,7 @@ import {
   nextZoomStep,
   parsePageNumber,
 } from '@/viewer/navigation';
+import { createPageMenu } from '@/viewer/page-menu';
 import { rubyAmountLabel } from '@/viewer/ruby-amount';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
 import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
@@ -94,8 +95,9 @@ const directionNotice = requireElement('direction-notice', HTMLDivElement);
 const directionNoticeText = requireElement('direction-notice-text', HTMLParagraphElement);
 const directionNoticeStart = requireElement('direction-notice-start', HTMLButtonElement);
 const directionNoticeClose = requireElement('direction-notice-close', HTMLButtonElement);
-const directionMenu = requireElement('direction-menu', HTMLDivElement);
+const pageMenuElement = requireElement('page-menu', HTMLDivElement);
 const directionMenuItem = requireElement('direction-menu-item', HTMLButtonElement);
+const settingsMenuItem = requireElement('settings-menu-item', HTMLButtonElement);
 const container = requireElement('viewer-container', HTMLDivElement);
 const viewerElement = requireElement('viewer', HTMLDivElement);
 
@@ -202,6 +204,7 @@ const directionEditor = createDirectionEditor({
   pages: rubyPages,
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
 });
+const pageMenu = createPageMenu({ menu: pageMenuElement });
 // 設定の画面やほかの Chrome で変えた設定を、開き直さずに反映する
 watchSettings((settings) => {
   showRubyAmount(settings.level);
@@ -239,6 +242,7 @@ directionNoticeText.textContent = message('viewer_notice_directionHint');
 directionNoticeStart.textContent = message('viewer_notice_directionStart');
 directionNoticeClose.setAttribute('aria-label', message('viewer_notice_directionClose'));
 directionMenuItem.textContent = message('viewer_menu_directionFix');
+settingsMenuItem.textContent = message('viewer_menu_openSettings');
 directionAllVertical.textContent = message('viewer_direction_allVertical');
 directionAllHorizontal.textContent = message('viewer_direction_allHorizontal');
 directionDone.textContent = message('viewer_direction_done');
@@ -476,11 +480,12 @@ rotate.addEventListener('click', () => {
   // 描き直しのあとの pagerendered で、ルビの層も新しい向きに置き直される
   viewer.pagesRotation = nextRotation(viewer.pagesRotation);
 });
-rubyAmount.addEventListener('click', () => {
+function openOptions(): void {
   browser.runtime.openOptionsPage().catch((error: unknown) => {
     log.error('設定の画面を開くのに失敗しました', error);
   });
-});
+}
+rubyAmount.addEventListener('click', openOptions);
 openFile.addEventListener('click', () => {
   fileInput.click();
 });
@@ -522,28 +527,44 @@ for (const [button, direction] of [
     });
   });
 }
-// 紙面を右クリックしたら、向きを直すメニューを出す。文字を選んでいるときは、標準のメニュー（コピーなど）に任せる
+const canOpenMenu = (): boolean =>
+  !isDirectionEditing && document.getSelection()?.isCollapsed !== false;
+// 紙面を右クリックしたら、紙面のメニューを出す。文字を選んでいるときは、標準のメニュー（コピーなど）に任せる
 container.addEventListener('contextmenu', (event) => {
-  if (isDirectionEditing || document.getSelection()?.isCollapsed === false) return;
+  if (!canOpenMenu()) return;
   event.preventDefault();
-  directionMenu.style.left = `${String(event.clientX)}px`;
-  directionMenu.style.top = `${String(event.clientY)}px`;
-  directionMenu.hidden = false;
-  directionMenuItem.focus();
+  pageMenu.open({ x: event.clientX, y: event.clientY });
+});
+// メニューのキーは、離したときにも（焦点のあるメニューの項目に）contextmenu が来るので、標準のメニューを出さない
+pageMenuElement.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
+// メニューのキー・Shift+F10 では、見えている所の真ん中にメニューを出す
+container.addEventListener('keydown', (event) => {
+  if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
+  if (!canOpenMenu()) return;
+  event.preventDefault();
+  const area = container.getBoundingClientRect();
+  pageMenu.open({ x: area.left + area.width / 2, y: area.top + area.height / 2 });
 });
 directionMenuItem.addEventListener('click', () => {
-  directionMenu.hidden = true;
+  pageMenu.close();
   enterDirectionEditing();
 });
+settingsMenuItem.addEventListener('click', () => {
+  pageMenu.close();
+  container.focus();
+  openOptions();
+});
 document.addEventListener('pointerdown', (event) => {
-  if (event.target instanceof Node && !directionMenu.contains(event.target)) {
-    directionMenu.hidden = true;
+  if (event.target instanceof Node && !pageMenuElement.contains(event.target)) {
+    pageMenu.close();
   }
 });
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
-  if (!directionMenu.hidden) {
-    directionMenu.hidden = true;
+  if (!pageMenuElement.hidden) {
+    pageMenu.close();
     container.focus();
   } else {
     exitDirectionEditing();

@@ -149,6 +149,10 @@
     "message": "文字の向きを直す…",
     "description": "紙面を右クリックしたときのメニューの項目。文字の向きを直すモードに入る"
   },
+  "viewer_menu_openSettings": {
+    "message": "ルビの設定を開く",
+    "description": "紙面を右クリックしたときのメニューの項目。設定の画面を開く"
+  },
   "viewer_fix_surfaceInvalid": {
     "message": "この言葉は、直した読みに入れられません（漢字を含む $COUNT$ 字までの言葉だけ入れられます）。",
     "description": "ルビのもとになった語が、直した読みの決まりに合わないときに出す",
