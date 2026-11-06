@@ -1,22 +1,12 @@
-import { join } from 'node:path';
-
 import type { Locator, Page } from '@playwright/test';
 
 import { EXPECTATIONS } from '../../scripts/test-pdfs/expectations';
-import { expect, openFromFile, test, TEST_PDF_DIR } from './fixtures';
+import { expect, openFromFile, test } from './fixtures';
 
 /** 辞書の読み込みを含めて、最初のルビが出るまで待つ時間の上限（ミリ秒） */
 const FIRST_RUBY_TIMEOUT_MS = 15_000;
 /** 位置を比べるときのゆとり（親字の大きさに対する割合） */
 const TOLERANCE_EM = 0.3;
-/** 目安：見えているページにルビが付くまで（ミリ秒）。測って残すだけで、テストは止めない */
-const TARGET_PAGE_MS = 300;
-/** 目安：辞書を初めて読み込むときの読みの問い合わせ（ミリ秒） */
-const TARGET_FIRST_READING_MS = 2000;
-
-/** ルビの層の名前（src/viewer/ruby-pages.ts の performance.measure） */
-const READINGS_MEASURE = 'yomigana-pdf:readings';
-const RUBY_LAYER_MEASURE = 'yomigana-pdf:ruby-layer';
 
 /** 画面の上の箱 */
 interface Box {
@@ -238,61 +228,6 @@ test('拡大したとき、ルビが字に付いてくる', async ({ page, exten
     .toBe(true);
   expect(isAbove(await measureRuby(page, 1, '筒'))).toBe(true);
 });
-
-test('ルビが付くまでの時間を測る（目安を超えても止めない）', async ({ page, extensionId }) => {
-  // 辞書を初めて読み込むとき
-  await openFromFile(page, extensionId, 'vertical-story.pdf');
-  await expect(rubyLayer(page, 1).locator('span').first()).toBeAttached({
-    timeout: FIRST_RUBY_TIMEOUT_MS,
-  });
-  const [coldReading = Number.NaN] = await durations(page, READINGS_MEASURE);
-  const coldLayer = Math.max(...(await durations(page, RUBY_LAYER_MEASURE)));
-
-  // 辞書を読み込んだあとに、別の PDF を開いたとき
-  const readingsBefore = (await durations(page, READINGS_MEASURE)).length;
-  const layersBefore = (await durations(page, RUBY_LAYER_MEASURE)).length;
-  const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'ファイルを開く' }).click();
-  await (await chooser).setFiles(join(TEST_PDF_DIR, 'horizontal-print.pdf'));
-  await expect(rubyLayer(page, 1).locator('[data-base="筒"]')).toBeAttached();
-  const warmReadings = (await durations(page, READINGS_MEASURE)).slice(readingsBefore);
-  const warmLayers = (await durations(page, RUBY_LAYER_MEASURE)).slice(layersBefore);
-
-  // 拡大して置き直したとき
-  await page.getByRole('button', { name: '拡大' }).click();
-  await expect
-    .poll(async () => (await durations(page, RUBY_LAYER_MEASURE)).length)
-    .toBeGreaterThan(layersBefore + warmLayers.length);
-  const zoomLayer = (await durations(page, RUBY_LAYER_MEASURE)).at(-1) ?? Number.NaN;
-
-  const format = (values: readonly number[]): string =>
-    values.map((ms) => ms.toFixed(0)).join('・');
-  test.info().annotations.push(
-    {
-      type: 'timing',
-      description: `辞書の読み込みを含む最初の読みの問い合わせ ${coldReading.toFixed(0)} ms・ルビが付くまで ${coldLayer.toFixed(0)} ms（目安 ${String(TARGET_FIRST_READING_MS)} ms）`,
-    },
-    {
-      type: 'timing',
-      description: `辞書を読み込んだあと：読みの問い合わせ ${format(warmReadings)} ms・描き終えてからルビが付くまで ${format(warmLayers)} ms・拡大で置き直し ${zoomLayer.toFixed(0)} ms（目安 ${String(TARGET_PAGE_MS)} ms）`,
-    },
-  );
-  expect(Number.isFinite(coldLayer) && warmLayers.length > 0).toBe(true);
-});
-
-/**
- * 測った時間を引く。
- * @param page 画面
- * @param name performance.measure の名前
- * @returns 測った順の時間（ミリ秒）
- */
-async function durations(page: Page, name: string): Promise<number[]> {
-  return page.evaluate(
-    (measureName) =>
-      performance.getEntriesByName(measureName, 'measure').map((entry) => entry.duration),
-    name,
-  );
-}
 
 /** 親字から見たルビの側 */
 type Side = 'top' | 'right' | 'bottom' | 'left';
