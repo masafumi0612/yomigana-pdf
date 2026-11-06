@@ -55,6 +55,8 @@ const FIRST_RUBY_TIMEOUT_MS = 15_000;
 const TEST_TIMEOUT_MS = 90_000;
 /** 1 MB のバイト数 */
 const BYTES_PER_MB = 1024 * 1024;
+/** これより小さい値は、表に小数1桁まで出す */
+const SMALL_VALUE = 10;
 
 /** 結果を書く JSON のファイル名（Playwright の出力の置き場所の中） */
 const RESULT_FILE = 'perf-budget.json';
@@ -191,6 +193,16 @@ function totalMb(usages: readonly HeapUsage[]): number {
 }
 
 /**
+ * 測った値を表に書く形にする。拡大での置き直しのように 1 ms に満たないものもあるので、
+ * 小さい値だけ小数1桁まで出す。
+ * @param value 測った値
+ * @returns 表に書く文字
+ */
+function formatValue(value: number): string {
+  return value.toFixed(value < SMALL_VALUE ? 1 : 0);
+}
+
+/**
  * 警告の線を超えたか。
  * @param row 結果の1行
  * @returns 超えたら true
@@ -208,7 +220,7 @@ function toTable(rows: readonly PerfRow[]): string {
   const lines = rows.map((row) => {
     const line = row.line === undefined ? '—' : `${String(row.line)} ${row.unit}`;
     const mark = row.line === undefined ? '—' : isOverLine(row) ? '超えた' : 'OK';
-    return `| ${row.name} | ${row.value.toFixed(0)} ${row.unit} | ${line} | ${mark} |`;
+    return `| ${row.name} | ${formatValue(row.value)} ${row.unit} | ${line} | ${mark} |`;
   });
   return ['| 項目 | 測った値 | 警告の線 | 判定 |', '| --- | --- | --- | --- |', ...lines].join(
     '\n',
@@ -236,7 +248,7 @@ async function report(rows: readonly PerfRow[], memory: Record<string, HeapUsage
     await appendFile(summary, `\n### 性能の測定（警告の線は合否に使わない）\n\n${table}\n`);
   }
   for (const row of rows.filter(isOverLine)) {
-    const message = `${row.name}が警告の線を超えた：${row.value.toFixed(0)} ${row.unit}（線 ${String(row.line)} ${row.unit}）`;
+    const message = `${row.name}が警告の線を超えた：${formatValue(row.value)} ${row.unit}（線 ${String(row.line)} ${row.unit}）`;
     test.info().annotations.push({ type: 'warning', description: message });
     if (process.env.GITHUB_ACTIONS === 'true') {
       process.stdout.write(`::warning title=性能の警告の線::${message}\n`);
