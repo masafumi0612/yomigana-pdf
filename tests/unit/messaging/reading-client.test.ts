@@ -8,7 +8,17 @@ import { type ReadingClientApi, requestReadings } from '@/messaging/reading-clie
 const TIMEOUT_MS = 100;
 const RESULT: ReadingResult = {
   ok: true,
-  value: [[{ start: 0, end: 1, ruby: 'がっ', isAlways: false }]],
+  value: [
+    [
+      {
+        start: 0,
+        end: 1,
+        ruby: 'がっ',
+        isAlways: false,
+        word: { surface: '学校', reading: 'がっこう', isUserFixed: false },
+      },
+    ],
+  ],
 };
 
 /**

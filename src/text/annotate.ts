@@ -5,7 +5,17 @@ import { judge } from './judge';
 import { toHiragana } from './kana';
 import { normalizeForAnalysis } from './normalize';
 import { splitReading } from './split';
-import type { Level, Token, UserDictionary } from './types';
+import type { Level, Token, UserDictionary, Word } from './types';
+
+/** ルビのもとになった語。直した読みは語ごとに保存するので、読みを直すときは語ごと直す */
+export interface RubyWord {
+  /** 語の書き方（正規化した文のもの。直した読みの言葉と同じ形。例：図鑑） */
+  readonly surface: string;
+  /** 語全体の読み（平仮名。例：ずかん）。分からない語は空の文字列 */
+  readonly reading: string;
+  /** 利用者が直した読みなら true */
+  readonly isUserFixed: boolean;
+}
 
 /** 文の中の、ルビを付ける1か所 */
 export interface RubySpan {
@@ -17,6 +27,8 @@ export interface RubySpan {
   readonly ruby: string;
   /** 段階に関係なくいつも付けるルビ（表外字・表外音訓・付表の語など）なら true */
   readonly isAlways: boolean;
+  /** ルビのもとになった語（字ごとに付けたルビでも、どの語の一部かが分かる） */
+  readonly word: RubyWord;
 }
 
 /** ルビの付け方 */
@@ -36,6 +48,7 @@ interface Unit {
   /** 段階に合わせて、ルビを付けるなら true */
   readonly hasRuby: boolean;
   readonly isAlways: boolean;
+  readonly word: RubyWord;
 }
 
 /** もとの文の同じ字にかかる、1つ分の集まり */
@@ -43,6 +56,8 @@ interface Group {
   readonly start: number;
   end: number;
   readonly units: Unit[];
+  /** 頭の1つ分の語。まとめた1つは、1字が広がった1つの語から来る */
+  readonly word: RubyWord;
 }
 
 /**
@@ -62,6 +77,7 @@ export function annotate(
   let position = 0;
   for (const word of applyFixups(tokenize(normalized), options.userDictionary)) {
     const result = splitReading(word);
+    const rubyWord = toRubyWord(word);
     // 1字が何字にも広がった所（㍿ → 株式会社）では、習った字も含めて語全体の読みが要る
     const everyReading = judge(result, 'all');
     for (const [index, piece] of judge(result, options.level).entries()) {
@@ -72,6 +88,7 @@ export function annotate(
         reading: everyReading[index]?.ruby ?? toHiragana(piece.base),
         hasRuby: piece.ruby !== undefined,
         isAlways: piece.isAlways,
+        word: rubyWord,
       });
       position = end;
     }
@@ -104,7 +121,7 @@ function groupUnits(units: readonly Unit[]): Group[] {
       group.end = unit.end;
       group.units.push(unit);
     } else {
-      groups.push({ start: unit.start, end: unit.end, units: [unit] });
+      groups.push({ start: unit.start, end: unit.end, units: [unit], word: unit.word });
     }
   }
   return groups;
@@ -125,6 +142,16 @@ function toSpan(group: Group): RubySpan[] {
       end: group.end,
       ruby: group.units.map((unit) => unit.reading).join(''),
       isAlways: group.units.some((unit) => unit.isAlways),
+      word: group.word,
     },
   ];
+}
+
+/**
+ * 読みを直したあとの語を、ルビのもとになった語の形にする。
+ * @param word 読みを直したあとの語
+ * @returns ルビのもとになった語
+ */
+function toRubyWord(word: Word): RubyWord {
+  return { surface: word.surface, reading: word.reading, isUserFixed: word.source === 'user' };
 }

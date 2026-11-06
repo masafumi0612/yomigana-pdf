@@ -42,6 +42,9 @@ function loaderOf(tokenizer: WordTokenizer) {
   );
 }
 
+/** 学校 の語 */
+const SCHOOL = { surface: '学校', reading: 'がっこう', isUserFixed: false };
+
 describe('createReadingService', () => {
   it('文を渡したとき、文ごとにルビを付ける所を返す', async () => {
     const service = createReadingService(loaderOf(fakeTokenizer().tokenizer));
@@ -49,12 +52,12 @@ describe('createReadingService', () => {
       ok: true,
       value: [
         [
-          { start: 0, end: 1, ruby: 'がっ', isAlways: false },
-          { start: 1, end: 2, ruby: 'こう', isAlways: false },
+          { start: 0, end: 1, ruby: 'がっ', isAlways: false, word: SCHOOL },
+          { start: 1, end: 2, ruby: 'こう', isAlways: false, word: SCHOOL },
         ],
         [
-          { start: 0, end: 1, ruby: 'がっ', isAlways: false },
-          { start: 1, end: 2, ruby: 'こう', isAlways: false },
+          { start: 0, end: 1, ruby: 'がっ', isAlways: false, word: SCHOOL },
+          { start: 1, end: 2, ruby: 'こう', isAlways: false, word: SCHOOL },
         ],
       ],
     });

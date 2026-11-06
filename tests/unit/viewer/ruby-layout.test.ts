@@ -23,6 +23,9 @@ const OPTIONS: RubyLayoutOptions = {
   isSerif: () => false,
 };
 
+/** ルビのもとになった語（置き場所には使わない） */
+const WORD = { surface: '今日', reading: 'きょう', isUserFixed: false };
+
 /**
  * ルビを付ける所を作る。
  * @param start 頭の位置
@@ -31,7 +34,7 @@ const OPTIONS: RubyLayoutOptions = {
  * @returns ルビを付ける所
  */
 function span(start: number, end: number, ruby: string): RubySpan {
-  return { start, end, ruby, isAlways: false };
+  return { start, end, ruby, isAlways: false, word: WORD };
 }
 
 describe('layoutRubies', () => {
@@ -49,6 +52,22 @@ describe('layoutRubies', () => {
     const [box] = layoutRubies([block], [[span(1, 2, 'ねん')]], FRAME, OPTIONS);
 
     expect(box).toMatchObject({ isVertical: false, left: 60, top: 842 - 715, height: 5 });
+  });
+
+  it('ルビを置いたとき、ルビと親字を合わせて囲む箱を PDF の座標で持つ', () => {
+    const block = blockOf(rowGlyphs('学年', 50, 700), 'horizontal');
+
+    const [box] = layoutRubies([block], [[span(1, 2, 'ねん')]], FRAME, OPTIONS);
+
+    expect(box?.area).toEqual({ x1: 60, y1: 700, x2: 70, y2: 715 });
+  });
+
+  it('ルビを置いたとき、ルビのもとになった語を持つ', () => {
+    const block = blockOf(rowGlyphs('学年', 50, 700), 'horizontal');
+
+    const [box] = layoutRubies([block], [[span(1, 2, 'ねん')]], FRAME, OPTIONS);
+
+    expect(box?.word).toBe(WORD);
   });
 
   it('ルビが親字より長いとき、親字の中心から両側にはみ出す', () => {
