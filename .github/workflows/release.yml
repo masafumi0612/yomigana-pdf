@@ -1,0 +1,61 @@
+# `v1.2.3` の形のタグを push したとき、拡張の zip を作って、下書きのリリースに付ける。
+# ストアへの提出は自動にしない（zip を取り出して、人が手でアップロードする）。
+name: リリース
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # 下書きのリリースを作って zip を付けるときだけ、書き込みの権限が要る
+      contents: write
+    env:
+      # CI では Git フックを入れない
+      SKIP_INSTALL_SIMPLE_GIT_HOOKS: '1'
+    steps:
+      # Action は版の番号ではなくコミットで固定する（Dependabot が更新する）
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: 依存を入れる
+        run: npm ci
+      # E2E は流さない。main に入る前に CI の check で E2E まで通っていて、ここでは同じコミットを使うだけのため。
+      # 整形・Lint・型・単体テスト・ビルドは、念のためもう一度確かめる
+      - name: 確認（整形・Lint・型・単体テスト・ビルド）
+        run: npm run check
+      - name: タグと package.json の版が合っているか確認
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::タグ（$TAG）と package.json の版（v$VERSION）が合っていません。package.json の版を直す PR を先にマージして、合ったタグを付け直してください"
+            exit 1
+          fi
+      - name: zip を作る
+        run: npm run zip
+      - name: zip の中身と大きさを表示
+        run: |
+          shopt -s nullglob
+          ZIPS=(.output/*.zip)
+          if [ "${#ZIPS[@]}" -ne 1 ]; then
+            echo "::error::zip が1つだけできるはずが、${#ZIPS[@]} 個あります"
+            exit 1
+          fi
+          unzip -l "${ZIPS[0]}"
+          ls -l "${ZIPS[0]}"
+      - name: 下書きのリリースを作って zip を付ける
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" .output/*.zip --draft --generate-notes --verify-tag --title "$TAG"
