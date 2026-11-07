@@ -64,7 +64,6 @@ const pageInput = requireElement('page-input', HTMLInputElement);
 const pageTotal = requireElement('page-total', HTMLSpanElement);
 const directionEntry = requireElement('direction-entry', HTMLButtonElement);
 const directionEntryLabel = requireElement('direction-entry-label', HTMLSpanElement);
-const directionEntryMark = requireElement('direction-entry-mark', HTMLSpanElement);
 const zoomGroup = requireElement('zoom-group', HTMLDivElement);
 const zoomOut = requireElement('zoom-out', HTMLButtonElement);
 const zoomLevel = requireElement('zoom-level', HTMLOutputElement);
@@ -193,17 +192,7 @@ const rubyPages = createRubyPages({
   onPageShown: (pageNumber) => {
     directionEditor.refreshPage(pageNumber);
   },
-  onUncertainChange: () => {
-    updateDirectionMark();
-  },
 });
-
-// 見ているページに向きの自信がないかたまりがあるときだけ、向きを直すボタンに小さな印を付けて、直せることをそっと知らせる。
-// ページ番号や1〜2字のかたまりでも自信は低くなりやすいので、紙面に重なる案内は出さない
-function updateDirectionMark(): void {
-  directionEntryMark.hidden = !rubyPages.hasUncertainDirection(viewer.currentPageNumber);
-}
-
 const directionEditor = createDirectionEditor({
   pages: rubyPages,
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
@@ -261,7 +250,6 @@ noTextText.textContent = message('viewer_notice_noText');
 noTextClose.textContent = message('viewer_notice_close');
 directionEntryLabel.textContent = message('viewer_bar_directionFix');
 directionEntry.title = message('viewer_bar_directionFixTitle');
-directionEntryMark.setAttribute('aria-label', message('viewer_bar_directionUncertain'));
 fixMenuItem.textContent = message('viewer_menu_fixReading');
 directionMenuItem.textContent = message('viewer_menu_directionFix');
 settingsMenuItem.textContent = message('viewer_menu_openSettings');
@@ -459,7 +447,6 @@ eventBus.on('pagesinit', () => {
 });
 eventBus.on('pagechanging', ({ pageNumber }: { pageNumber: number }) => {
   pageInput.value = String(pageNumber);
-  updateDirectionMark();
 });
 eventBus.on('scalechanging', ({ scale }: { scale: number }) => {
   updateZoom(scale);

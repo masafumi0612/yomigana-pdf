@@ -47,10 +47,6 @@
   --direction-focus: #1f2933;
   --direction-border-width: 2px;
   --direction-toggle-font-size: 12px;
-  --direction-mark-size: 8px;
-  --direction-mark-offset: -3px;
-  --direction-mark-color: var(--alert-text);
-  --direction-mark-ring: 2px;
   --menu-background: #323639;
   --menu-padding: 4px;
   --font-size: 14px;
@@ -169,26 +165,9 @@ body {
   flex: none;
 }
 
-/* 向きを直すボタンの印。見ているページに向きの自信がないかたまりがあるときだけ、右上の角に小さな点を出す。
-   点はバーの色の縁で囲み、ボタンの枠と見分けられるようにする */
+/* 向きを直すボタンは、ページ番号の隣で文字が折り返さないようにする */
 .bar-direction {
-  position: relative;
   white-space: nowrap;
-}
-
-.bar-direction-mark {
-  position: absolute;
-  top: var(--direction-mark-offset);
-  right: var(--direction-mark-offset);
-  width: var(--direction-mark-size);
-  height: var(--direction-mark-size);
-  border-radius: 50%;
-  background: var(--direction-mark-color);
-  box-shadow: 0 0 0 var(--direction-mark-ring) var(--bar-background);
-}
-
-.bar-direction-mark[hidden] {
-  display: none;
 }
 
 .bar-button:hover:not(:disabled) {

@@ -37,10 +37,6 @@
     "message": "文字の向き（縦書き・横書き）を直す",
     "description": "リーダーのバーの、向きを直すボタンにマウスを乗せたときの説明"
   },
-  "viewer_bar_directionUncertain": {
-    "message": "向きがはっきりしない所があります",
-    "description": "向きを直すボタンに付ける印の名前（読み上げ用）。見ているページに、向きの自信がない文字のかたまりがあるときに付ける"
-  },
   "viewer_bar_zoomOut": {
     "message": "縮小",
     "description": "リーダーのバーの、紙面を小さくするボタンの名前（読み上げ用）"

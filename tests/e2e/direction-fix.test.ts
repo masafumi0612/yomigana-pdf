@@ -55,15 +55,6 @@ function directionButton(page: Page): Locator {
 }
 
 /**
- * 向きを直すボタンに付く、向きの自信がないかたまりがあることを知らせる印を引く。
- * @param page 画面
- * @returns 印
- */
-function directionMark(page: Page): Locator {
-  return directionButton(page).locator('.bar-direction-mark');
-}
-
-/**
  * 向きを直すモードに入る。
  * @param page 画面
  */
@@ -102,48 +93,30 @@ async function saveSettings(context: BrowserContext, values: Partial<Settings>):
   }, values);
 }
 
-test('向きの自信がないかたまりがあるページを見ているとき、向きを直すボタンに印が付く', async ({
+for (const file of [UNMARKED_VERTICAL, MIXED_LAYOUT, MIXED]) {
+  test(`向きの自信がないかたまりがあってもなくても、向きを直すボタンはいつも同じ見た目で出る（${file}）`, async ({
+    page,
+    extensionId,
+  }) => {
+    await openFromFile(page, extensionId, file);
+    await waitForRuby(page);
+
+    await expect(directionButton(page)).toBeVisible();
+    // 絵と文字のほかに、点などの印を付けない
+    await expect(
+      directionButton(page).locator(':scope > :not(svg, #direction-entry-label)'),
+    ).toHaveCount(0);
+  });
+}
+
+test('向きを直すボタンの名前は文字だけで、何をするかの説明がある', async ({
   page,
   extensionId,
 }) => {
   await openFromFile(page, extensionId, UNMARKED_VERTICAL);
   await waitForRuby(page);
 
-  await expect(directionMark(page)).toBeVisible();
-  await expect(directionMark(page)).toHaveAccessibleName('向きがはっきりしない所があります');
-});
-
-test('1字だけで向きの分からないかたまりがある紙面のとき、向きを直すボタンに印が付く', async ({
-  page,
-  extensionId,
-}) => {
-  await openFromFile(page, extensionId, MIXED_LAYOUT);
-  await waitForRuby(page);
-
-  await expect(directionMark(page)).toBeVisible();
-});
-
-test('向きがすべて確かなページを見ているとき、向きを直すボタンは出るが印は付かない', async ({
-  page,
-  extensionId,
-}) => {
-  await openFromFile(page, extensionId, MIXED);
-  await waitForRuby(page);
-
-  await expect(directionButton(page)).toBeVisible();
-  await expect(directionMark(page)).toBeHidden();
-});
-
-test('向きを直すボタンに印が付いているとき、ボタンの名前で印の文も読み上げられる', async ({
-  page,
-  extensionId,
-}) => {
-  await openFromFile(page, extensionId, UNMARKED_VERTICAL);
-  await waitForRuby(page);
-
-  await expect(directionButton(page)).toHaveAccessibleName(
-    '向きを直す 向きがはっきりしない所があります',
-  );
+  await expect(directionButton(page)).toHaveAccessibleName('向きを直す');
   await expect(directionButton(page)).toHaveAttribute('title', /文字の向き/);
 });
 
@@ -219,51 +192,35 @@ test('終わるを押したとき、向きを直すボタンがまた出る', as
   await expect(directionButton(page)).toBeVisible();
 });
 
-test('自信がなかったかたまりの向きをすべて決めたとき、向きを直すボタンの印が消える', async ({
+test('向きの自信がないかたまりがあるとき、バーの下に向きを直せる案内は出さない', async ({
   page,
   extensionId,
 }) => {
   await openFromFile(page, extensionId, UNMARKED_VERTICAL);
   await waitForRuby(page);
-  await expect(directionMark(page)).toBeVisible();
-  await enterMode(page);
 
-  await page.getByRole('button', { name: 'すべて縦書き' }).click();
-  await expect(page.locator('.direction-block[data-uncertain="true"]')).toHaveCount(0);
-  await page.getByRole('button', { name: '終わる' }).click();
-
-  await expect(directionMark(page)).toBeHidden();
-});
-
-test('バーの下に、向きを直せる案内は出さない', async ({ page, extensionId }) => {
-  await openFromFile(page, extensionId, UNMARKED_VERTICAL);
-  await waitForRuby(page);
-
-  await expect(directionMark(page)).toBeVisible();
+  await expect(directionButton(page)).toBeVisible();
   await expect(page.locator('.notice').filter({ visible: true })).toHaveCount(0);
 });
 
 for (const width of [NARROW_WIDTH_PX, WIDE_WIDTH_PX]) {
-  test(`幅が ${String(width)}px の窓のとき、向きを直すボタンと印がバーの中で画面に収まる`, async ({
+  test(`幅が ${String(width)}px の窓のとき、向きを直すボタンがバーの中で画面に収まる`, async ({
     page,
     extensionId,
   }) => {
     await page.setViewportSize({ width, height: VIEWPORT_HEIGHT_PX });
     await openFromFile(page, extensionId, UNMARKED_VERTICAL);
     await waitForRuby(page);
-    await expect(directionMark(page)).toBeVisible();
 
     const bar = await page.locator('#bar').boundingBox();
-    const barBottom = (bar?.y ?? 0) + (bar?.height ?? 0);
-    for (const box of [
-      await directionButton(page).boundingBox(),
-      await directionMark(page).boundingBox(),
-    ]) {
-      expect(box?.x).toBeGreaterThanOrEqual(-TOLERANCE_PX);
-      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width + TOLERANCE_PX);
-      expect(box?.y).toBeGreaterThanOrEqual((bar?.y ?? 0) - TOLERANCE_PX);
-      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(barBottom + TOLERANCE_PX);
-    }
+    const box = await directionButton(page).boundingBox();
+
+    expect(box?.x).toBeGreaterThanOrEqual(-TOLERANCE_PX);
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width + TOLERANCE_PX);
+    expect(box?.y).toBeGreaterThanOrEqual((bar?.y ?? 0) - TOLERANCE_PX);
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(
+      (bar?.y ?? 0) + (bar?.height ?? 0) + TOLERANCE_PX,
+    );
     const hasHorizontalScroll = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
