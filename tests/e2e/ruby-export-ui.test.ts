@@ -1,4 +1,5 @@
-// バーの「印刷・保存」から、進み具合・止める・できたときの窓（開く・保存）・作れないときの案内までを確かめる。
+// バーの「印刷・保存」と Ctrl+P から、進み具合・止める・できたときの窓（印刷・保存・開く）・作れないときの案内までを確かめる。
+// ヘッドレスでは印刷の画面が出ないので、印刷は「iframe に作った PDF が読み込まれ、その中の print が呼ばれる」までを確かめる。
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -6,7 +7,7 @@ import type { Page } from '@playwright/test';
 import { PDFDocument } from 'pdf-lib';
 
 import { buildEncryptedPdf } from './encrypted-pdf';
-import { expect, openFromFile, test, TEST_PDF_DIR } from './fixtures';
+import { expect, openFromFile, printedUrls, stubPrint, test, TEST_PDF_DIR } from './fixtures';
 
 /** 見本の PDF */
 const SAMPLE = 'mixed-layout.pdf';
@@ -22,6 +23,8 @@ const OPEN_TIMEOUT_MS = 15_000;
 const EXPORT_TIMEOUT_MS = 60_000;
 /** 1つのテストの時間の上限（ミリ秒） */
 const TEST_TIMEOUT_MS = 120_000;
+/** 作った PDF の URL */
+const BLOB_URL = /^blob:chrome-extension:\/\//u;
 /** 小数の丸めで起きる、はみ出しとみなさない差（px） */
 const TOLERANCE_PX = 1;
 
@@ -107,7 +110,7 @@ test('「印刷・保存」を押したとき、進み具合を出して読み�
   await expect(exportButton(page)).toBeDisabled();
   await expect(doneDialog(page)).toBeVisible({ timeout: EXPORT_TIMEOUT_MS });
   await expect(doneDialog(page)).toContainText('long（ルビ付き）.pdf');
-  await expect(doneDialog(page).getByRole('button', { name: '開く' })).toBeFocused();
+  await expect(doneDialog(page).getByRole('button', { name: '印刷', exact: true })).toBeFocused();
   await expect(page.locator('#export-notice')).toBeHidden();
 });
 
@@ -125,7 +128,7 @@ test('できたときの窓で［開く］を押したとき、作った PDF を
   await doneDialog(page).getByRole('button', { name: '開く' }).click();
 
   const tab = await opened;
-  await expect.poll(() => tab.url()).toMatch(/^blob:chrome-extension:\/\//u);
+  await expect.poll(() => tab.url()).toMatch(BLOB_URL);
   await expect(doneDialog(page)).toBeVisible();
   await expect(doneDialog(page).getByRole('alert')).toBeHidden();
 });
@@ -233,9 +236,11 @@ test('キーボードだけで、作る・窓のボタンを移る・Esc で閉�
 
   await page.keyboard.press('Enter');
   await expect(doneDialog(page)).toBeVisible({ timeout: EXPORT_TIMEOUT_MS });
-  await expect(doneDialog(page).getByRole('button', { name: '開く' })).toBeFocused();
+  await expect(doneDialog(page).getByRole('button', { name: '印刷', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(doneDialog(page).getByRole('button', { name: '保存' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(doneDialog(page).getByRole('button', { name: '開く' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(doneDialog(page).getByRole('button', { name: '閉じる' })).toBeFocused();
   await page.keyboard.press('Escape');
@@ -244,20 +249,98 @@ test('キーボードだけで、作る・窓のボタンを移る・Esc で閉�
   await expect(exportButton(page)).toBeFocused();
 });
 
-test('Ctrl+P の案内の窓から、ルビ付きの PDF を作り始められる', async ({ page, extensionId }) => {
+test('できたときの窓で［印刷］を押したとき、作った PDF を見えない iframe に読み込んで印刷を呼ぶ', async ({
+  page,
+  extensionId,
+}) => {
   test.setTimeout(TEST_TIMEOUT_MS);
+  await stubPrint(page);
+  await openSample(page, extensionId);
+  await exportButton(page).click();
+  await expect(doneDialog(page)).toBeVisible({ timeout: EXPORT_TIMEOUT_MS });
+
+  await doneDialog(page).getByRole('button', { name: '印刷', exact: true }).click();
+
+  await expect.poll(() => printedUrls(page)).toEqual([expect.stringMatching(BLOB_URL)]);
+  const frame = page.locator('iframe.print-frame');
+  await expect(frame).toHaveAttribute('src', (await printedUrls(page))[0] ?? '');
+  await expect(frame).toHaveAttribute('aria-hidden', 'true');
+  await expect(doneDialog(page).getByRole('alert')).toBeHidden();
+});
+
+test('印刷を呼べなかったとき、窓で［開く］から新しいタブで印刷するよう案内する', async ({
+  page,
+  extensionId,
+}) => {
+  test.setTimeout(TEST_TIMEOUT_MS);
+  await stubPrint(page, true);
+  await openSample(page, extensionId);
+  await exportButton(page).click();
+  await expect(doneDialog(page)).toBeVisible({ timeout: EXPORT_TIMEOUT_MS });
+
+  await doneDialog(page).getByRole('button', { name: '印刷', exact: true }).click();
+
+  await expect(doneDialog(page).getByRole('alert')).toHaveText(
+    '印刷の画面を出せませんでした。［開く］で新しいタブに開いてから印刷してください。',
+  );
+  await expect(doneDialog(page).getByRole('button', { name: '開く' })).toBeFocused();
+  await expect(page.locator('iframe.print-frame')).toHaveCount(0);
+});
+
+test('Ctrl+P を押したとき、進み具合を出してルビ付きの PDF を作り、窓を出さずに印刷を呼ぶ', async ({
+  page,
+  extensionId,
+}) => {
+  test.setTimeout(TEST_TIMEOUT_MS);
+  await stubPrint(page);
+  await openBuffer(page, extensionId, 'long.pdf', await buildLongPdf());
+  await expect(exportButton(page)).toBeVisible({ timeout: OPEN_TIMEOUT_MS });
+
+  await page.keyboard.press('Control+P');
+
+  await expect(page.locator('#export-text')).toHaveText(/^ルビ付きの PDF を作っています/u);
+  await expect(
+    page.locator('#export-notice').getByRole('button', { name: '止める' }),
+  ).toBeVisible();
+  await expect
+    .poll(() => printedUrls(page), { timeout: EXPORT_TIMEOUT_MS })
+    .toEqual([expect.stringMatching(BLOB_URL)]);
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  await expect(page.locator('#export-notice')).toBeHidden();
+});
+
+test('Ctrl+P で印刷を呼べなかったとき、できたときの窓を出して［開く］へ案内する', async ({
+  page,
+  extensionId,
+}) => {
+  test.setTimeout(TEST_TIMEOUT_MS);
+  await stubPrint(page, true);
   await openSample(page, extensionId);
 
   await page.keyboard.press('Control+P');
+
+  await expect(doneDialog(page)).toBeVisible({ timeout: EXPORT_TIMEOUT_MS });
+  await expect(doneDialog(page).getByRole('alert')).toContainText('印刷の画面を出せませんでした');
+  await expect(doneDialog(page).getByRole('button', { name: '開く' })).toBeFocused();
+});
+
+test('暗号化した PDF で Ctrl+P を押したとき、印刷の案内の窓に理由と［標準の表示で開く］を出す', async ({
+  page,
+  extensionId,
+}) => {
+  await stubPrint(page);
+  await openBuffer(page, extensionId, 'locked.pdf', buildEncryptedPdf(''));
+  await expect(exportButton(page)).toBeVisible({ timeout: OPEN_TIMEOUT_MS });
+
+  await page.keyboard.press('Control+P');
+
   const notice = page.getByRole('dialog', { name: '印刷について' });
   await expect(notice).toContainText(
-    'ルビ付きで印刷するには、［印刷・保存］でルビ付きの PDF を作ってから印刷します。',
+    'パスワードや編集の制限がある PDF には、ルビを書き込めません。リーダーで見ることはできます。',
   );
-  await expect(notice.getByRole('button', { name: '印刷・保存' })).toBeFocused();
-  await notice.getByRole('button', { name: '印刷・保存' }).click();
-
-  await expect(notice).toBeHidden();
-  await expect(doneDialog(page)).toBeVisible({ timeout: EXPORT_TIMEOUT_MS });
+  await expect(notice.getByRole('button', { name: '標準の表示で開く' })).toBeFocused();
+  await expect(page.locator('#export-notice')).toBeHidden();
+  expect(await printedUrls(page)).toEqual([]);
 });
 
 for (const width of [400, 1280]) {

@@ -734,7 +734,7 @@ main {
   color: var(--alert-text);
 }
 
-.export-blocked {
+.export-alert {
   color: var(--notice-error);
 }
 
@@ -744,6 +744,18 @@ main {
   border-color: var(--focus-ring);
   background: var(--focus-ring);
   color: var(--fix-on-primary);
+}
+
+/* 印刷するために PDF を読み込む iframe。Chrome の PDF の表示が動くよう描く場所は残し、見えなく・押せなくする */
+.print-frame {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* 見えないが、読み上げには伝える所 */

@@ -177,23 +177,27 @@
   },
   "viewer_print_title": {
     "message": "印刷について",
-    "description": "印刷しようとしたときに出す案内の窓の見出し"
+    "description": "Ctrl+P でルビ付きの印刷ができないときに出す案内の窓の見出し"
   },
   "viewer_print_notice": {
-    "message": "ルビ付きで印刷するには、［印刷・保存］でルビ付きの PDF を作ってから印刷します。",
-    "description": "印刷しようとしたときに出す案内の文。印刷の画面で紙面の代わりに出す文にも使う"
+    "message": "ルビ付きで印刷するには、リーダーで Ctrl+P（Mac は ⌘P）を押すか、［印刷・保存］から印刷してください。",
+    "description": "Chrome のメニューから印刷したときに、紙面の代わりに1枚だけ出す文"
   },
   "viewer_print_openNative": {
     "message": "標準の表示で開く",
-    "description": "印刷の案内の窓のボタン。同じ PDF を Chrome のもとからある表示で開き直す"
+    "description": "印刷の案内の窓のボタン。同じ PDF を Chrome のもとからある表示で開き直す（ルビなしで印刷できる）"
   },
   "viewer_print_close": {
     "message": "閉じる",
     "description": "印刷の案内の窓を閉じるボタン"
   },
-  "viewer_print_export": {
-    "message": "印刷・保存",
-    "description": "印刷の案内の窓のボタン。バーの「印刷・保存」と同じように、ルビを書き込んだ PDF を作り始める"
+  "viewer_print_nativeHint": {
+    "message": "Chrome の標準の表示で開くと、ルビなしで印刷できます。",
+    "description": "印刷の案内の窓で、理由のあとに出す文"
+  },
+  "viewer_print_noDocument": {
+    "message": "PDF を開くと、ルビ付きで印刷できます。",
+    "description": "PDF を開く前に Ctrl+P を押したときの印刷の案内"
   },
   "viewer_export_progress": {
     "message": "ルビ付きの PDF を作っています $DONE$ / $TOTAL$ ページ",
@@ -252,7 +256,7 @@
     "description": "ルビ付き PDF ができたときの窓の見出し"
   },
   "viewer_export_doneText": {
-    "message": "［開く］で新しいタブに開くと、そこから印刷できます。［保存］でダウンロードのフォルダに入れます。",
+    "message": "［印刷］で印刷の画面を出します。［保存］でダウンロードのフォルダに入れ、［開く］で新しいタブに開きます。",
     "description": "ルビ付き PDF ができたときの窓の説明"
   },
   "viewer_export_failedPages": {
@@ -279,6 +283,14 @@
       }
     }
   },
+  "viewer_export_print": {
+    "message": "印刷",
+    "description": "ルビ付きの PDF の印刷の画面を出すボタン"
+  },
+  "viewer_export_printTitle": {
+    "message": "印刷の画面を出す",
+    "description": "［印刷］にマウスを乗せたときの説明"
+  },
   "viewer_export_open": {
     "message": "開く",
     "description": "ルビ付き PDF を、新しいタブ（Chrome の標準の表示）で開くボタン"
@@ -302,6 +314,10 @@
   "viewer_export_popupBlocked": {
     "message": "新しいタブを開けませんでした。もう一度［開く］を押してください。",
     "description": "［開く］で新しいタブを開けなかったとき（ポップアップを止められたときなど）の案内"
+  },
+  "viewer_export_printFailed": {
+    "message": "印刷の画面を出せませんでした。［開く］で新しいタブに開いてから印刷してください。",
+    "description": "ルビ付きの PDF の印刷の画面を出せなかったときの案内"
   },
   "viewer_export_nameWith": {
     "message": "$NAME$（ルビ付き）",

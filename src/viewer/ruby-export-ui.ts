@@ -1,21 +1,24 @@
-// ルビ付き PDF を作る画面の流れ。バーのボタン（と印刷の案内）から始め、バーの下に進み具合と［止める］を出し、
-// できたら窓で［開く］（新しいタブの Chrome の標準の表示）と［保存］（ダウンロードのフォルダ）を選んでもらう。
+// ルビ付きの PDF を作る画面の流れ。バーの「印刷・保存」と Ctrl+P（Cmd+P）から始め、バーの下に進み具合と［止める］を出す。
+// 「印刷・保存」は、できたら窓（ruby-export-dialog.ts）で［印刷］［保存］［開く］を選んでもらう。
+// Ctrl+P は、できたらそのまま印刷の画面を出す（呼べなければ窓を出して［開く］へ案内する）。作れないときは印刷の案内の窓に回す。
 // 作っている間に向き・読み・設定が変わったら、途中のものを捨てて初めから作り直す（ページごとに設定が混ざらないように）。
-// 作った PDF の blob の URL は、開いたタブが読んでいる間に消さないよう、窓を閉じても持っておき、
+// 作った PDF の blob の URL は、開いたタブ・印刷が読んでいる間に消さないよう、窓を閉じても持っておき、
 // 次の PDF ができたときと別の PDF を開いたときに捨てる（リーダーのタブを閉じたときは Chrome が捨てる）。
 import { browser } from 'wxt/browser';
 
 import { createLogger } from '@/log';
 import type { Result } from '@/result';
 
+import { createPdfPrinter } from './pdf-print';
 import { exportRubyPdf, type RubyExport, type RubyExportOptions } from './ruby-export';
-import { pageListText, type RubyPdfName, rubyPdfName } from './ruby-export-name';
+import { createRubyExportDialog, failedPagesMessage, type MessageText } from './ruby-export-dialog';
+import { type RubyPdfName, rubyPdfName } from './ruby-export-name';
 
 /** 文言のキー */
 type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
 
-/** 作れなかった理由のうち、案内を出すもの。failed は思いがけない失敗 */
-type ShownError = 'encrypted' | 'unreadable' | 'failed';
+/** 作れなかった理由のうち、案内を出すもの。failed は思いがけない失敗、imageOnly は文字が画像の PDF */
+type ShownError = 'encrypted' | 'unreadable' | 'failed' | 'imageOnly';
 
 /** 進み具合を読み上げる回数（全体を何回に分けて知らせるか）。毎ページ読み上げるとうるさいため */
 const ANNOUNCE_STEPS = 10;
@@ -24,6 +27,7 @@ const ERROR_MESSAGES: Record<ShownError, MessageName> = {
   encrypted: 'viewer_export_encrypted',
   unreadable: 'viewer_export_unreadable',
   failed: 'viewer_export_failed',
+  imageOnly: 'viewer_export_imageOnly',
 };
 
 const log = createLogger('viewer');
@@ -59,43 +63,42 @@ export interface RubyExportUiOptions {
    * @returns ルビを付けられないなら true
    */
   readonly isImageOnly: () => boolean;
+  /**
+   * Ctrl+P から始めて、ルビ付きで印刷できないときに、印刷の案内の窓を出す
+   * @param message 印刷できない理由
+   */
+  readonly showPrintNotice: (message: string) => void;
 }
 
-/** ルビ付き PDF を作る画面の流れ */
+/** ルビ付きの PDF を作る画面の流れ */
 export interface RubyExportUi {
-  /** 作り始める。作っている間・PDF を開いていないときは何もしない */
+  /** 「印刷・保存」から作り始める。作っている間・PDF を開いていないときは何もしない */
   start(): void;
+  /**
+   * Ctrl+P から作り始め、できたら印刷の画面を出す。窓が開いていれば、窓の［印刷］と同じことをする。
+   * 作っている途中なら、できたときに印刷する
+   */
+  print(): void;
   /** 置き場所が変わるかもしれないときに呼ぶ。作っている途中なら、初めから作り直す */
   handleLayoutChange(): void;
   /** 別の PDF を開くときに呼ぶ。作っている途中なら止め、案内・窓を閉じ、作った PDF を捨てる */
   reset(): void;
 }
 
-/** できたときの窓 */
-interface DoneDialog {
-  /**
-   * 窓を開く。
-   * @param url 作った PDF の blob の URL
-   * @param name ルビ付き PDF の名前
-   * @param failedPages ルビを付けずに作ったページ
-   */
-  open(url: string, name: RubyPdfName, failedPages: readonly number[]): void;
-  /** 開いていれば閉じる */
-  close(): void;
-}
-
 /**
- * ルビ付き PDF を作る画面の流れを作る。
+ * ルビ付きの PDF を作る画面の流れを作る。
  * @param options 作り方
  * @returns 画面の流れ
  */
 export function createRubyExportUi(options: RubyExportUiOptions): RubyExportUi {
   const { button, notice, noticeText, live, stop, close } = options;
-  const text = (name: MessageName, substitutions?: string | string[]): string =>
-    browser.i18n.getMessage(name, substitutions);
-  const dialog = createDoneDialog(text, button);
+  const text: MessageText = (name, substitutions) => browser.i18n.getMessage(name, substitutions);
+  const printer = createPdfPrinter();
+  const dialog = createRubyExportDialog(text, printer, button);
   /** 作っている途中のもの。止める・作り直すときは、これを入れかえて、古い結果を捨てる */
   let running: AbortController | undefined;
+  /** できたら、窓を出さずに印刷の画面を出すなら true（Ctrl+P から始めたとき） */
+  let isPrintWanted = false;
   let madeUrl: string | undefined;
 
   const showNotice = (message: string, isRunning: boolean): void => {
@@ -119,6 +122,14 @@ export function createRubyExportUi(options: RubyExportUiOptions): RubyExportUi {
     showNotice(message, false);
     live.textContent = message;
   };
+  const showError = (error: ShownError): void => {
+    if (isPrintWanted) {
+      hideNotice();
+      options.showPrintNotice(text(ERROR_MESSAGES[error]));
+    } else {
+      showMessage(text(ERROR_MESSAGES[error]));
+    }
+  };
   const finish = (): void => {
     running = undefined;
     button.disabled = false;
@@ -126,6 +137,17 @@ export function createRubyExportUi(options: RubyExportUiOptions): RubyExportUi {
   const revoke = (): void => {
     if (madeUrl !== undefined) URL.revokeObjectURL(madeUrl);
     madeUrl = undefined;
+  };
+
+  const printMade = async (url: string, made: RubyExport, name: RubyPdfName): Promise<void> => {
+    const isPrinted = await printer.print(url);
+    if (madeUrl !== url) return;
+    if (!isPrinted) {
+      // 印刷を呼べなかったときは、窓を出して、新しいタブに開いて印刷してもらう
+      dialog.open(url, name, made.failedPages, 'viewer_export_printFailed');
+    } else if (made.failedPages.length > 0) {
+      showMessage(failedPagesMessage(text, made.failedPages));
+    }
   };
 
   const run = async (isRestart: boolean): Promise<void> => {
@@ -166,33 +188,48 @@ export function createRubyExportUi(options: RubyExportUiOptions): RubyExportUi {
         onProgress: progress,
       });
     } catch (error) {
-      log.error('ルビ付き PDF を作る途中で予想外の失敗がありました', error);
+      log.error('ルビ付きの PDF を作る途中で予想外の失敗がありました', error);
       result = { ok: false, error: 'failed' };
     }
     // 止めた・作り直した・別の PDF に移ったときは、古い結果を出さない
     if (running !== controller) return;
     finish();
+    const isPrinting = isPrintWanted;
     if (!result.ok) {
       if (result.error === 'aborted') hideNotice();
-      else showMessage(text(ERROR_MESSAGES[result.error]));
+      else showError(result.error);
+      isPrintWanted = false;
       return;
     }
+    isPrintWanted = false;
     hideNotice();
     live.textContent = '';
     revoke();
+    printer.dispose();
     // pdf-lib の結果は ArrayBuffer の上にあるが、型は SharedArrayBuffer も含むので写して渡す
     const blob = new Blob([result.value.bytes.slice()], { type: 'application/pdf' });
-    madeUrl = URL.createObjectURL(blob);
-    dialog.open(madeUrl, name, result.value.failedPages);
+    const url = URL.createObjectURL(blob);
+    madeUrl = url;
+    if (isPrinting) await printMade(url, result.value, name);
+    else dialog.open(url, name, result.value.failedPages);
   };
   const begin = (isRestart: boolean): void => {
     run(isRestart).catch((error: unknown) => {
-      log.error('ルビ付き PDF を作る画面の途中で予想外の失敗がありました', error);
+      log.error('ルビ付きの PDF を作る画面の途中で予想外の失敗がありました', error);
     });
+  };
+  const startOrRefuse = (): void => {
+    if (options.isImageOnly()) {
+      showError('imageOnly');
+      isPrintWanted = false;
+      return;
+    }
+    begin(false);
   };
 
   stop.addEventListener('click', () => {
     running?.abort();
+    isPrintWanted = false;
     finish();
     hideNotice();
     live.textContent = '';
@@ -202,11 +239,22 @@ export function createRubyExportUi(options: RubyExportUiOptions): RubyExportUi {
   return {
     start() {
       if (running !== undefined || options.getDocument() === undefined) return;
-      if (options.isImageOnly()) {
-        showMessage(text('viewer_export_imageOnly'));
+      isPrintWanted = false;
+      startOrRefuse();
+    },
+    print() {
+      if (dialog.isOpen) {
+        dialog.print();
         return;
       }
-      begin(false);
+      isPrintWanted = true;
+      if (running !== undefined) return;
+      if (options.getDocument() === undefined) {
+        isPrintWanted = false;
+        options.showPrintNotice(text('viewer_print_noDocument'));
+        return;
+      }
+      startOrRefuse();
     },
     handleLayoutChange() {
       if (running === undefined) return;
@@ -215,109 +263,13 @@ export function createRubyExportUi(options: RubyExportUiOptions): RubyExportUi {
     },
     reset() {
       running?.abort();
+      isPrintWanted = false;
       finish();
       hideNotice();
       live.textContent = '';
       dialog.close();
+      printer.dispose();
       revoke();
-    },
-  };
-}
-
-/**
- * できたときの窓を作り、画面に入れる。窓は showModal で開き、Esc で閉じ、閉じたら「印刷・保存」のボタンへ焦点を戻す。
- * @param text 文言を引く関数
- * @param returnFocus 閉じたときに焦点を戻す所
- * @returns 窓
- */
-function createDoneDialog(
-  text: (name: MessageName, substitutions?: string | string[]) => string,
-  returnFocus: HTMLElement,
-): DoneDialog {
-  const element = <K extends keyof HTMLElementTagNameMap>(
-    tag: K,
-    className: string,
-    content = '',
-  ): HTMLElementTagNameMap[K] => {
-    const created = document.createElement(tag);
-    created.className = className;
-    created.textContent = content;
-    return created;
-  };
-  const dialog = element('dialog', 'export-dialog');
-  dialog.setAttribute('aria-labelledby', 'export-dialog-title');
-  dialog.setAttribute('aria-describedby', 'export-dialog-text');
-  const form = element('div', 'print-form');
-  const title = element('h2', 'print-title', text('viewer_export_doneTitle'));
-  title.id = 'export-dialog-title';
-  const fileName = element('p', 'print-text export-name');
-  const body = element('p', 'print-text', text('viewer_export_doneText'));
-  body.id = 'export-dialog-text';
-  const failed = element('p', 'print-text export-failed');
-  const blocked = element('p', 'print-text export-blocked', text('viewer_export_popupBlocked'));
-  blocked.setAttribute('role', 'alert');
-  // ボタンの形は、印刷の案内と同じものを使う
-  const button = (name: MessageName, className = ''): HTMLButtonElement => {
-    const created = element('button', `bar-button notice-button ${className}`.trim(), text(name));
-    created.type = 'button';
-    return created;
-  };
-  const open = button('viewer_export_open', 'export-primary');
-  open.title = text('viewer_export_openTitle');
-  const save = button('viewer_export_save');
-  save.title = text('viewer_export_saveTitle');
-  const closeButton = button('viewer_export_dialogClose');
-  const actions = element('div', 'print-actions');
-  actions.append(open, save, closeButton);
-  form.append(title, fileName, body, failed, blocked, actions);
-  dialog.append(form);
-  document.body.append(dialog);
-
-  let current: { url: string; name: RubyPdfName } | undefined;
-
-  open.addEventListener('click', () => {
-    if (current === undefined) return;
-    // 開いた先は自分で作った PDF を Chrome の標準の表示で出すだけなので、noopener は付けない
-    //（付けると、ポップアップを止められたかが分からない）。止められたときは、押し直してもらう
-    blocked.hidden = window.open(current.url, '_blank') !== null;
-  });
-  save.addEventListener('click', () => {
-    if (current === undefined) return;
-    const link = document.createElement('a');
-    link.href = current.url;
-    link.download = current.name.fileName;
-    link.click();
-  });
-  closeButton.addEventListener('click', () => {
-    dialog.close();
-  });
-  // Esc は窓を閉じるだけにして、後ろの向きを直すモードなどまで閉じないよう、外へ伝えない
-  dialog.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') event.stopPropagation();
-  });
-  dialog.addEventListener('close', () => {
-    current = undefined;
-    if (returnFocus.isConnected) returnFocus.focus();
-  });
-
-  return {
-    open(url, name, failedPages) {
-      current = { url, name };
-      fileName.textContent = name.fileName;
-      const pages = pageListText(failedPages);
-      failed.textContent =
-        failedPages.length === 0
-          ? ''
-          : pages.isTruncated
-            ? text('viewer_export_failedPagesMany', [pages.list, String(failedPages.length)])
-            : text('viewer_export_failedPages', pages.list);
-      failed.hidden = failedPages.length === 0;
-      blocked.hidden = true;
-      if (!dialog.open) dialog.showModal();
-      open.focus();
-    },
-    close() {
-      if (dialog.open) dialog.close();
     },
   };
 }

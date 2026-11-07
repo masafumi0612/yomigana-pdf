@@ -1,5 +1,5 @@
-// 印刷しようとしたときに出す案内の窓。リーダーの印刷は紙面の見えている範囲しか出せないので、
-// ブラウザーの印刷は止めて、ルビ付き PDF を作って開けば印刷できることを知らせ、窓からも作り始められるようにする。
+// Ctrl+P（Cmd+P）でルビ付きの印刷ができないとき（PDF を開いていない・暗号化・文字が画像など）に出す案内の窓。
+// 理由を知らせ、標準の表示で開けばルビなしで印刷できることを知らせる。
 // 窓は showModal で開き、焦点を窓の中に閉じこめる。Esc で閉じ、閉じたら開く前の場所へ焦点を戻す。
 import { browser } from 'wxt/browser';
 
@@ -8,8 +8,11 @@ type MessageName = Parameters<typeof browser.i18n.getMessage>[0];
 
 /** 印刷の案内の窓 */
 export interface PrintNotice {
-  /** 案内の窓を開く。すでに開いているときは何もしない */
-  open(): void;
+  /**
+   * 案内の窓を開く。すでに開いているときは、文だけ入れかえる。
+   * @param message ルビ付きで印刷できない理由
+   */
+  open(message: string): void;
 }
 
 /** 印刷の操作かどうかを調べるのに使う、キーの押下の情報 */
@@ -32,15 +35,13 @@ export function isPrintShortcut(event: PrintShortcutEvent): boolean {
 /**
  * 印刷の案内の窓を作り、画面に入れる。
  * @param options 窓の設定
- * @param options.onExport 「印刷・保存」を押したときの動き
- * @param options.canExport 「印刷・保存」を出すか（PDF を開いていないときは出さない）
  * @param options.onOpenNative 「標準の表示で開く」を押したときの動き
+ * @param options.canOpenNative 「標準の表示で開く」を出すか（開く PDF がないときは出さない）
  * @returns 印刷の案内の窓
  */
 export function createPrintNotice(options: {
-  readonly onExport: () => void;
-  readonly canExport: () => boolean;
   readonly onOpenNative: () => void;
+  readonly canOpenNative: () => boolean;
 }): PrintNotice {
   const text = (name: MessageName): string => browser.i18n.getMessage(name);
 
@@ -57,7 +58,9 @@ export function createPrintNotice(options: {
   const body = document.createElement('p');
   body.id = 'print-dialog-text';
   body.className = 'print-text';
-  body.textContent = text('viewer_print_notice');
+  const hint = document.createElement('p');
+  hint.className = 'print-text';
+  hint.textContent = text('viewer_print_nativeHint');
   // ボタンの形は、バーの下の案内と同じものを使う
   const button = (name: MessageName): HTMLButtonElement => {
     const created = document.createElement('button');
@@ -66,23 +69,17 @@ export function createPrintNotice(options: {
     created.textContent = text(name);
     return created;
   };
-  const exportButton = button('viewer_print_export');
-  exportButton.classList.add('export-primary');
   const openNative = button('viewer_print_openNative');
   const close = button('viewer_print_close');
   const actions = document.createElement('div');
   actions.className = 'print-actions';
-  actions.append(exportButton, openNative, close);
-  form.append(title, body, actions);
+  actions.append(openNative, close);
+  form.append(title, body, hint, actions);
   dialog.append(form);
   document.body.append(dialog);
 
   let opener: Element | undefined;
 
-  exportButton.addEventListener('click', () => {
-    dialog.close();
-    options.onExport();
-  });
   openNative.addEventListener('click', () => {
     dialog.close();
     options.onOpenNative();
@@ -100,12 +97,15 @@ export function createPrintNotice(options: {
   });
 
   return {
-    open() {
+    open(message) {
+      body.textContent = message;
+      const isNativeShown = options.canOpenNative();
+      openNative.hidden = !isNativeShown;
+      hint.hidden = !isNativeShown;
       if (dialog.open) return;
       opener = document.activeElement ?? undefined;
-      exportButton.hidden = !options.canExport();
       dialog.showModal();
-      (exportButton.hidden ? openNative : exportButton).focus();
+      (isNativeShown ? openNative : close).focus();
     },
   };
 }

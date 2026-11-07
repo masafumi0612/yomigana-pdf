@@ -237,17 +237,18 @@ const rubyExport = createRubyExportUi({
   live: exportLive,
   stop: exportStop,
   close: exportClose,
-  getDocument: () => viewer.pdfDocument ?? undefined,
+  // 開けなかった PDF のときは、前の PDF を使わない
+  getDocument: () => (exportPdf.hidden ? undefined : (viewer.pdfDocument ?? undefined)),
   layouts: pageLayouts,
   sourceName: () => sourceName,
   isImageOnly: () => isImageOnlyDocument(hasTextByPage),
+  showPrintNotice: (reason) => {
+    printNotice.open(reason);
+  },
 });
 const printNotice = createPrintNotice({
-  onExport: () => {
-    rubyExport.start();
-  },
-  canExport: () => !exportPdf.hidden,
   onOpenNative: goNative,
+  canOpenNative: () => nativeUrl !== undefined,
 });
 const pageMenu = createPageMenu({
   menu: pageMenuElement,
@@ -625,15 +626,15 @@ document.addEventListener('pointerdown', (event) => {
     pageMenu.close();
   }
 });
-// ブラウザーの印刷は紙面の見えている範囲しか出せないので、止めて案内を出す。
-// Chrome のメニューからの印刷は止められないので、印刷用の CSS で同じ案内を出す
+// ブラウザーの印刷は紙面の見えている範囲しか出せないので、止めて、ルビ付きの PDF を作って印刷する。
+// Chrome のメニューからの印刷は止められないので、印刷用の CSS で、ルビ付きで印刷する方法の案内を出す
 document.addEventListener(
   'keydown',
   (event) => {
     if (!isPrintShortcut(event)) return;
     event.preventDefault();
     pageMenu.close();
-    printNotice.open();
+    rubyExport.print();
   },
   { capture: true },
 );
