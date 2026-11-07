@@ -116,8 +116,8 @@ test('向きを直すボタンの名前は文字だけで、何をするかの�
   await openFromFile(page, extensionId, UNMARKED_VERTICAL);
   await waitForRuby(page);
 
-  await expect(directionButton(page)).toHaveAccessibleName('向きを直す');
-  await expect(directionButton(page)).toHaveAttribute('title', /文字の向き/);
+  await expect(directionButton(page)).toHaveAccessibleName('ルビの向きを直す');
+  await expect(directionButton(page)).toHaveAttribute('title', /ルビの向き/);
 });
 
 test('向きを直すボタンは、バーでページ番号のすぐ隣にある', async ({ page, extensionId }) => {
@@ -357,7 +357,7 @@ test('紙面を右クリックしたとき、メニューから向きを直す�
   await waitForRuby(page);
 
   await page.locator('.page[data-page-number="1"]').click({ button: 'right' });
-  await page.getByRole('menuitem', { name: '文字の向きを直す…' }).click();
+  await page.getByRole('menuitem', { name: 'ルビの向きを直す…' }).click();
 
   await expect(page.locator('.bar--editing')).toBeVisible();
   await expect(page.locator('.direction-toggle').first()).toBeVisible();
@@ -459,7 +459,7 @@ for (const file of [UNMARKED_VERTICAL, MIXED, MIXED_LAYOUT]) {
     await openFromFile(page, extensionId, file);
     await waitForRuby(page);
     await page.locator('.page[data-page-number="1"]').click({ button: 'right' });
-    await page.getByRole('menuitem', { name: '文字の向きを直す…' }).click();
+    await page.getByRole('menuitem', { name: 'ルビの向きを直す…' }).click();
     await expect(visibleToggles(page)).toHaveCount(1);
     const paper = await page.locator('.page[data-page-number="1"]').boundingBox();
     const count = await frames(page).count();
