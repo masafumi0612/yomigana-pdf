@@ -11,6 +11,9 @@ const PDF_FILE = 'horizontal-print.pdf';
 /** ページを指して開くテストに使う、2ページの PDF */
 const TWO_PAGES_FILE = 'vertical-story.pdf';
 
+/** 印刷の案内を出すテストに使う、文字が画像の PDF（ルビ付きの PDF を作れないので、Ctrl+P で案内が出る） */
+const SCANNED_FILE = 'scanned-like.pdf';
+
 /** PDF の返し方（パスと、応答のヘッダ） */
 const PDF_ROUTES: Record<string, Record<string, string>> = {
   '/a.pdf': { 'content-type': 'application/pdf' },
@@ -27,6 +30,7 @@ const PDF_ROUTES: Record<string, Record<string, string>> = {
   },
   '/login.pdf': { 'content-type': 'application/pdf' },
   '/two-pages.pdf': { 'content-type': 'application/pdf' },
+  '/scanned.pdf': { 'content-type': 'application/pdf' },
 };
 
 const PAGE_HTML = `<!doctype html><meta charset="utf-8"><title>page</title>
@@ -38,6 +42,7 @@ let server: Server;
 let origin: string;
 let pdfData: Buffer;
 let twoPagesData: Buffer;
+let scannedData: Buffer;
 
 /**
  * ログインの印（Cookie）があるか調べる。
@@ -51,6 +56,7 @@ function hasSession(headers: IncomingHttpHeaders): boolean {
 test.beforeAll(async () => {
   pdfData = await readFile(join(TEST_PDF_DIR, PDF_FILE));
   twoPagesData = await readFile(join(TEST_PDF_DIR, TWO_PAGES_FILE));
+  scannedData = await readFile(join(TEST_PDF_DIR, SCANNED_FILE));
   server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://localhost');
     if (url.pathname === '/page.html') {
@@ -67,7 +73,11 @@ test.beforeAll(async () => {
       return;
     }
     response.writeHead(200, headers);
-    response.end(url.pathname === '/two-pages.pdf' ? twoPagesData : pdfData);
+    const bodies: Record<string, Buffer> = {
+      '/two-pages.pdf': twoPagesData,
+      '/scanned.pdf': scannedData,
+    };
+    response.end(bodies[url.pathname] ?? pdfData);
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   origin = `http://127.0.0.1:${String((server.address() as AddressInfo).port)}`;
@@ -216,17 +226,17 @@ test('印刷の案内の［標準の表示で開く］を押したとき、リ�
   page,
   extensionId,
 }) => {
-  await page.goto(`${origin}/a.pdf`);
+  await page.goto(`${origin}/scanned.pdf`);
   await expect(page).toHaveURL(viewerUrlPattern(extensionId));
 
-  await expect(page.locator('#page-total')).toHaveText('/ 1');
+  await expect(page.getByText('この PDF は文字が画像になっている')).toBeVisible();
   await page.locator('#viewer-container').focus();
 
   await page.keyboard.press('Control+P');
   await expect(page.locator('dialog[open]')).toHaveCount(1);
   await page.locator('.print-dialog').getByRole('button', { name: '標準の表示で開く' }).click();
 
-  await expect(page).toHaveURL(`${origin}/a.pdf`);
+  await expect(page).toHaveURL(`${origin}/scanned.pdf`);
   await page.waitForTimeout(1000);
-  expect(page.url()).toBe(`${origin}/a.pdf`);
+  expect(page.url()).toBe(`${origin}/scanned.pdf`);
 });
