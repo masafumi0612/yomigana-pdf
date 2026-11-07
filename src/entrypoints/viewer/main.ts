@@ -27,6 +27,7 @@ import { createPageMenu } from '@/viewer/page-menu';
 import { createPrintNotice, isPrintShortcut } from '@/viewer/print-notice';
 import { createReadingFixDialog } from '@/viewer/reading-fix-dialog';
 import { rubyAmountLabel } from '@/viewer/ruby-amount';
+import { exportRubyPdf } from '@/viewer/ruby-export';
 import { findRuby, type RubyFinderOptions } from '@/viewer/ruby-hit';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
 import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
@@ -221,6 +222,16 @@ const pageMenu = createPageMenu({
     readingFixDialog.open(ruby);
   },
 });
+// ルビを書き込んだ PDF を作る。画面の入口（ボタン）ができるまでは、E2E がリーダーの中から呼ぶためだけに置く
+Object.assign(globalThis, {
+  yomiganaRubyExport: (signal?: AbortSignal) => {
+    const { pdfDocument } = viewer;
+    return pdfDocument === null || pdfDocument === undefined
+      ? Promise.resolve(undefined)
+      : exportRubyPdf({ document: pdfDocument, layouts: pageLayouts, signal });
+  },
+});
+
 // 設定の画面やほかの Chrome で変えた設定を、開き直さずに反映する
 watchSettings((settings) => {
   showRubyAmount(settings.level);
