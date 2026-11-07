@@ -22,6 +22,7 @@ import {
   nextZoomStep,
   parsePageNumber,
 } from '@/viewer/navigation';
+import { createPageLayouts } from '@/viewer/page-layout';
 import { createPageMenu } from '@/viewer/page-menu';
 import { createPrintNotice, isPrintShortcut } from '@/viewer/print-notice';
 import { createReadingFixDialog } from '@/viewer/reading-fix-dialog';
@@ -174,14 +175,11 @@ function updateNoTextNotice(): void {
 }
 
 const initialSettings = await loadingSettings;
-const rubyPages = createRubyPages({
-  // pdf.js の型ではページの表示が any なので、使うところだけの形として受け取る
-  getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
+const pageLayouts = createPageLayouts({
+  getPage: async (pageNumber) => viewer.pdfDocument?.getPage(pageNumber),
   recorder: drawRecorder,
-  root: container,
   // 最初の読みの問い合わせより前に、保存した設定を読み終えておく
   settings: initialSettings,
-  currentPageNumber: () => viewer.currentPageNumber,
   onPageText: (pageNumber, hasText) => {
     hasTextByPage.set(pageNumber, hasText);
     updateNoTextNotice();
@@ -189,11 +187,20 @@ const rubyPages = createRubyPages({
   onReadingFailureChange: (hasFailed) => {
     rubyFailed.hidden = !hasFailed;
   },
+});
+const rubyPages = createRubyPages({
+  layouts: pageLayouts,
+  // pdf.js の型ではページの表示が any なので、使うところだけの形として受け取る
+  getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
+  recorder: drawRecorder,
+  root: container,
+  currentPageNumber: () => viewer.currentPageNumber,
   onPageShown: (pageNumber) => {
     directionEditor.refreshPage(pageNumber);
   },
 });
 const directionEditor = createDirectionEditor({
+  layouts: pageLayouts,
   pages: rubyPages,
   getPageView: (pageNumber) => viewer.getPageView(pageNumber - 1) as RubyPageView | undefined,
 });

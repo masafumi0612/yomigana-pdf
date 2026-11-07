@@ -9,6 +9,7 @@ import { createLogger } from '@/log';
 import { isDirectionUncertain } from '@/pdf/direction';
 import type { Direction, TextBlock } from '@/pdf/types';
 
+import type { PageLayouts } from './page-layout';
 import type { RubyPages, RubyPageView } from './ruby-pages';
 import { toMatrix, transformBox } from './transform';
 
@@ -40,8 +41,10 @@ export interface DirectionEditor {
 
 /** 向きを直す部品の作り方 */
 export interface DirectionEditorOptions {
-  /** ルビの層の部品（かたまりを引き、向きを決め直す） */
-  readonly pages: Pick<RubyPages, 'blocksOf' | 'shownPages' | 'setBlockDirection'>;
+  /** ルビの置き場所を出す部品（かたまりを引く） */
+  readonly layouts: Pick<PageLayouts, 'blocksOf'>;
+  /** ルビの層の部品（層を出しているページを引き、向きを決め直す） */
+  readonly pages: Pick<RubyPages, 'shownPages' | 'setBlockDirection'>;
   /**
    * ページの表示を引く
    * @param pageNumber ページ番号（1 から）
@@ -247,7 +250,7 @@ export function createDirectionEditor(options: DirectionEditorOptions): Directio
     const focusedIndex = focused?.closest<HTMLElement>(`.${BLOCK_CLASS}`)?.dataset.index;
     const isToggleFocused = focused?.classList.contains(TOGGLE_CLASS) === true;
     old?.remove();
-    const blocks = options.pages.blocksOf(pageNumber);
+    const blocks = options.layouts.blocksOf(pageNumber);
     if (blocks.length === 0) return;
     const layer = document.createElement('div');
     layer.className = DIRECTION_LAYER_CLASS;

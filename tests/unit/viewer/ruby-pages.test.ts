@@ -5,6 +5,7 @@ import type { ReadingResult } from '@/messaging/messages';
 import { DEFAULT_SETTINGS, type Settings } from '@/settings/model';
 import type { Level } from '@/text/types';
 import type { DrawRecorder } from '@/viewer/draw-recorder';
+import { createPageLayouts, type PageLayouts } from '@/viewer/page-layout';
 import { createRubyPages, type RubyPages, type RubyPageView } from '@/viewer/ruby-pages';
 
 import { contentOf, unmarkedColumn } from '../pdf/make-items';
@@ -38,18 +39,20 @@ const view: RubyPageView = {
 
 /**
  * 読みの問い合わせを、テストが答えるまで待たせる部品を作る。
- * @returns 待たせている読みと、ルビの層の部品
+ * @returns 待たせている読みと、置き場所を出す部品と、ルビの層の部品
  */
-function setUp(): { pending: PendingRead[]; pages: RubyPages; settings: Settings } {
+function setUp(): {
+  pending: PendingRead[];
+  layouts: PageLayouts;
+  pages: RubyPages;
+  settings: Settings;
+} {
   const pending: PendingRead[] = [];
   const settings: Settings = { ...DEFAULT_SETTINGS, level: 'all' };
-  const pages = createRubyPages({
-    getPageView: () => view,
-    recorder: { watch: () => undefined, take: () => [] } satisfies DrawRecorder,
-    root: {
-      style: { setProperty: () => undefined },
-      classList: { toggle: () => false },
-    } as unknown as HTMLElement,
+  const recorder: DrawRecorder = { watch: () => undefined, take: () => [] };
+  const layouts = createPageLayouts({
+    getPage: () => Promise.resolve(undefined),
+    recorder,
     settings,
     readTexts: (texts, level) =>
       new Promise<ReadingResult>((resolve) => {
@@ -62,7 +65,16 @@ function setUp(): { pending: PendingRead[]; pages: RubyPages; settings: Settings
         });
       }),
   });
-  return { pending, pages, settings };
+  const pages = createRubyPages({
+    layouts,
+    getPageView: () => view,
+    recorder,
+    root: {
+      style: { setProperty: () => undefined },
+      classList: { toggle: () => false },
+    } as unknown as HTMLElement,
+  });
+  return { pending, layouts, pages, settings };
 }
 
 /**
@@ -106,9 +118,9 @@ async function showFirstPage(pending: PendingRead[], pages: RubyPages): Promise<
 
 describe('createRubyPages', () => {
   it('向きを決め直す読みの途中で段階が変わり、向きの読みが先に返ったとき、決めた向きが残る', async () => {
-    const { pending, pages, settings } = setUp();
+    const { pending, layouts, pages, settings } = setUp();
     await showFirstPage(pending, pages);
-    expect(pages.blocksOf(1)[0]?.direction).toBe('vertical');
+    expect(layouts.blocksOf(1)[0]?.direction).toBe('vertical');
 
     const choosing = pages.setBlockDirection(1, 0, 'horizontal');
     await waitForReads(pending, 1);
@@ -116,11 +128,11 @@ describe('createRubyPages', () => {
     await waitForReads(pending, 2);
     await answerUntilDone(pending, Promise.all([choosing, changing]));
 
-    expect(pages.blocksOf(1)[0]?.direction).toBe('horizontal');
+    expect(layouts.blocksOf(1)[0]?.direction).toBe('horizontal');
   });
 
   it('向きを決め直す読みの途中で段階が変わり、段階の読みが先に返ったとき、決めた向きが残る', async () => {
-    const { pending, pages, settings } = setUp();
+    const { pending, layouts, pages, settings } = setUp();
     await showFirstPage(pending, pages);
 
     const choosing = pages.setBlockDirection(1, 0, 'horizontal');
@@ -130,11 +142,11 @@ describe('createRubyPages', () => {
     pending.reverse();
     await answerUntilDone(pending, Promise.all([choosing, changing]));
 
-    expect(pages.blocksOf(1)[0]?.direction).toBe('horizontal');
+    expect(layouts.blocksOf(1)[0]?.direction).toBe('horizontal');
   });
 
   it('向きを決め直したあとに段階が変わったとき、決めた向きのまま新しい段階で読み直す', async () => {
-    const { pending, pages, settings } = setUp();
+    const { pending, layouts, pages, settings } = setUp();
     await showFirstPage(pending, pages);
     await answerUntilDone(pending, pages.setBlockDirection(1, 0, 'horizontal'));
 
@@ -143,6 +155,6 @@ describe('createRubyPages', () => {
     const [read] = pending;
     await answerUntilDone(pending, changing);
 
-    expect([read?.level, pages.blocksOf(1)[0]?.direction]).toEqual(['g3', 'horizontal']);
+    expect([read?.level, layouts.blocksOf(1)[0]?.direction]).toEqual(['g3', 'horizontal']);
   });
 });
