@@ -56,6 +56,7 @@ const WOFF2_TAGS: Readonly<Record<string, number>> = {
   loca: 11,
   vhea: 23,
   vmtx: 24,
+  GSUB: 28,
 };
 const WOFF2_NULL_TRANSFORM = 3;
 // 縦書きの送りの表（vhea・vmtx）。この表がないと、Chrome は縦書きの1字の送りを
@@ -72,6 +73,12 @@ const GLYF_Y_MIN = 4;
 const GLYF_Y_MAX = 8;
 const WOFF2_TRANSFORM_SHIFT = 6;
 const BASE128_BITS = 7;
+// 試作：縦書きの字形（小さい仮名・長音など）を足し、GSUB の vert で置き換えられるようにする。
+// 画面（Chrome の writing-mode: vertical-rl）も PDF（pdf-lib の features: { vert: true }）も、この表で縦書きの字形になる
+const GSUB_SCRIPTS = ['DFLT', 'hani', 'kana'] as const;
+const GSUB_FEATURES = ['vert', 'vrt2'] as const;
+/** 縦書きの字形を入れる、字の外枠の真ん中のずれの下限（字） */
+const VERTICAL_SHIFT_EM = 0.06;
 
 /** 表の名前と中身 */
 type Tables = Map<string, Uint8Array>;
@@ -328,6 +335,99 @@ function readTables(sfnt: Uint8Array): Tables {
 }
 
 /**
+ * 横書きの字形を縦書きの字形に置き換える GSUB の表（vert・vrt2、1つの単純な置き換え）を作る。
+ * @param pairs 横書きの字形の番号と、縦書きの字形の番号の組
+ * @returns GSUB の表
+ */
+function buildGsub(pairs: readonly (readonly [number, number])[]): Uint8Array {
+  const sorted = pairs.toSorted((p, q) => p[0] - q[0]);
+  const count = sorted.length;
+  const scriptListBytes = 2 + GSUB_SCRIPTS.length * 6;
+  // どの文字の種類も、同じ Script の表（既定の LangSys だけ）を指す
+  const scriptTableBytes = 4 + 6 + GSUB_FEATURES.length * 2;
+  const featureListBytes = 2 + GSUB_FEATURES.length * 6;
+  const featureTableBytes = 6;
+  const lookupListBytes = 4;
+  const lookupBytes = 8;
+  const singleBytes = 6 + count * 2;
+  const coverageBytes = 4 + count * 2;
+  const scriptListAt = 10;
+  const featureListAt = scriptListAt + scriptListBytes + scriptTableBytes;
+  const lookupListAt = featureListAt + featureListBytes + featureTableBytes;
+  const total = lookupListAt + lookupListBytes + lookupBytes + singleBytes + coverageBytes;
+  return bytes(total, (v) => {
+    v.setUint16(0, 1);
+    v.setUint16(2, 0);
+    v.setUint16(4, scriptListAt);
+    v.setUint16(6, featureListAt);
+    v.setUint16(8, lookupListAt);
+    v.setUint16(scriptListAt, GSUB_SCRIPTS.length);
+    for (const [index, tag] of GSUB_SCRIPTS.entries()) {
+      const at = scriptListAt + 2 + index * 6;
+      for (let i = 0; i < 4; i++) v.setUint8(at + i, tag.charCodeAt(i));
+      v.setUint16(at + 4, scriptListBytes);
+    }
+    const script = scriptListAt + scriptListBytes;
+    v.setUint16(script, 4);
+    v.setUint16(script + 2, 0);
+    v.setUint16(script + 4, 0);
+    v.setUint16(script + 6, 0xffff);
+    v.setUint16(script + 8, GSUB_FEATURES.length);
+    for (const [index] of GSUB_FEATURES.entries()) v.setUint16(script + 10 + index * 2, index);
+    v.setUint16(featureListAt, GSUB_FEATURES.length);
+    for (const [index, tag] of GSUB_FEATURES.entries()) {
+      const at = featureListAt + 2 + index * 6;
+      for (let i = 0; i < 4; i++) v.setUint8(at + i, tag.charCodeAt(i));
+      v.setUint16(at + 4, featureListBytes);
+    }
+    const feature = featureListAt + featureListBytes;
+    v.setUint16(feature, 0);
+    v.setUint16(feature + 2, 1);
+    v.setUint16(feature + 4, 0);
+    v.setUint16(lookupListAt, 1);
+    v.setUint16(lookupListAt + 2, lookupListBytes);
+    const lookup = lookupListAt + lookupListBytes;
+    v.setUint16(lookup, 1);
+    v.setUint16(lookup + 2, 0);
+    v.setUint16(lookup + 4, 1);
+    v.setUint16(lookup + 6, lookupBytes);
+    const single = lookup + lookupBytes;
+    v.setUint16(single, 2);
+    v.setUint16(single + 2, singleBytes);
+    v.setUint16(single + 4, count);
+    for (const [index, [, vertical]] of sorted.entries())
+      v.setUint16(single + 6 + index * 2, vertical);
+    const coverage = single + singleBytes;
+    v.setUint16(coverage, 1);
+    v.setUint16(coverage + 2, count);
+    for (const [index, [horizontal]] of sorted.entries()) {
+      v.setUint16(coverage + 4 + index * 2, horizontal);
+    }
+  });
+}
+
+/**
+ * 縦書きの字形が、横書きの字形と位置か向きで大きく違うか。字の外枠の真ん中のずれか、縦横の比で見る。
+ * @param font フォント
+ * @param code 文字の番号
+ * @returns 大きく違えば true
+ */
+function isVerticalDifferent(font: SubsetFont, code: number): boolean {
+  const horizontal = font.font.glyphForCodePoint(code);
+  const vertical = font.font.layout(String.fromCodePoint(code), ['vert']).glyphs[0];
+  if (vertical === undefined || vertical.id === horizontal.id) return false;
+  const a = horizontal.bbox;
+  const b = vertical.bbox;
+  const limit = font.unitsPerEm * VERTICAL_SHIFT_EM;
+  const shift = Math.hypot(
+    (a.minX + a.maxX) / 2 - (b.minX + b.maxX) / 2,
+    (a.minY + a.maxY) / 2 - (b.minY + b.maxY) / 2,
+  );
+  const isTurned = a.maxX - a.minX > a.maxY - a.minY !== b.maxX - b.minX > b.maxY - b.minY;
+  return shift > limit || isTurned;
+}
+
+/**
  * 仮名だけのフォントを作る。
  * @param fontDir 元のフォントのフォルダ
  * @param output 作るフォント
@@ -336,14 +436,23 @@ function readTables(sfnt: Uint8Array): Tables {
 function buildFont(fontDir: string, output: (typeof OUTPUTS)[number]): Uint8Array {
   const font = new SubsetFont(fontDir, output.source, FONT_WEIGHT);
   const glyphOf: [number, number][] = [];
+  const verticalOf: [number, number][] = [];
   for (const [first, last] of KANA_RANGES) {
     for (let code = first; code <= last; code++) {
       if (font.font.hasGlyphForCodePoint(code)) {
-        glyphOf.push([code, font.glyphId(String.fromCodePoint(code), false)]);
+        const ch = String.fromCodePoint(code);
+        const horizontal = font.glyphId(ch, false);
+        glyphOf.push([code, horizontal]);
+        // Noto はすべての仮名に縦書きの字形を持つが、形がほぼ同じものは入れない（ファイルが倍になる）。
+        // 位置や向きが大きく変わる字（小さい仮名・長音など）だけ入れる
+        if (isVerticalDifferent(font, code)) {
+          verticalOf.push([horizontal, font.glyphId(ch, true)]);
+        }
       }
     }
   }
   const tables = readTables(font.encode());
+  if (verticalOf.length > 0) tables.set('GSUB', buildGsub(verticalOf));
   const { vhea, vmtx } = buildVerticalMetrics(tables, font.unitsPerEm);
   tables.set('vhea', vhea);
   tables.set('vmtx', vmtx);
@@ -375,7 +484,8 @@ function buildFont(fontDir: string, output: (typeof OUTPUTS)[number]): Uint8Arra
 }
 
 const fontDir = process.env.RUBY_FONT_SRC_DIR ?? 'C:/Windows/Fonts';
-const outDir = fileURLToPath(new URL('../src/assets/fonts/', import.meta.url));
+const outDir =
+  process.env.RUBY_FONT_OUT_DIR ?? fileURLToPath(new URL('../src/assets/fonts/', import.meta.url));
 mkdirSync(outDir, { recursive: true });
 for (const output of OUTPUTS) {
   const woff2 = buildFont(fontDir, output);
