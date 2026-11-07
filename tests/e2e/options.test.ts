@@ -318,6 +318,10 @@ test.describe('ライセンスと出典の画面', () => {
     { name: 'IPADIC', copyright: 'Nara Institute of Science' },
     { name: 'Noto Serif JP', copyright: 'Noto Serif JP: Copyright 2017-2023 Adobe' },
     { name: 'Preact', copyright: 'Copyright (c) 2015-present Jason Miller' },
+    // 「pdf-lib」だけでは、見出しに @pdf-lib/fontkit を含む fontkit の場所にも当たるので、見出しの全体で指す
+    { name: 'pdf-lib（pdf-lib）', copyright: 'Copyright (c) 2019 Andrew Dillon' },
+    { name: 'fontkit', copyright: 'Copyright (c) 2014-present Devon Govett' },
+    { name: 'pako', copyright: 'Copyright (C) 2014-2017 by Vitaly Puzrin and Andrei Tuputcyn' },
   ]) {
     test(`${name} の場所に、著作権表示が出る`, async ({ page }) => {
       await expect(page.getByRole('region', { name })).toContainText(copyright);

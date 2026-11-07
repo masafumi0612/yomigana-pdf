@@ -179,3 +179,214 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## pdf-lib（pdf-lib）
+
+ルビを書き込んだ PDF を作るのに使っています。
+
+- 使っている版：`pdf-lib` 1.17.1
+- 入手先：https://github.com/Hopding/pdf-lib
+- ライセンス：MIT License
+
+```text
+MIT License
+
+Copyright (c) 2019 Andrew Dillon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+pdf-lib が使う、次の部品も一緒に入っています。MIT License の部品の許諾の文は、上の pdf-lib の文と同じです。
+
+| 部品                                              | 著作権表示                           | ライセンス |
+| ------------------------------------------------- | ------------------------------------ | ---------- |
+| `@pdf-lib/standard-fonts` 1.0.0                   | Copyright (c) 2018 Andrew Dillon     | MIT        |
+| `@pdf-lib/upng` 1.0.1（UPNG.js をもとにしたもの） | Copyright (c) 2017 Photopea          | MIT        |
+| `tslib` 1.14.1                                    | Copyright (c) Microsoft Corporation. | 0BSD       |
+
+`@pdf-lib/standard-fonts` には、PDF の標準の 14 書体の字の幅の表（Adobe の AFM ファイルから作ったもの）が入っています。表に書かれている著作権表示は次のとおりです。
+
+```text
+Copyright (c) 1985, 1987, 1989, 1990, 1997 Adobe Systems Incorporated.  All Rights Reserved.
+```
+
+`tslib` のライセンス（0BSD）の文：
+
+```text
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+```
+
+## fontkit（@pdf-lib/fontkit）
+
+ルビのフォントを読み、PDF に入れるのに使っています。`@pdf-lib/fontkit` は、pdf-lib のために fontkit を作り直したもの（fork）です。
+
+- 使っている版：`@pdf-lib/fontkit` 1.1.1
+- 入手先：https://github.com/Hopding/fontkit 、もとの fontkit は https://github.com/foliojs/fontkit
+- ライセンス：MIT License（`@pdf-lib/fontkit` のパッケージにはライセンスの文が入っていないので、もとの fontkit の文を載せます）
+
+```text
+MIT License
+
+Copyright (c) 2014-present Devon Govett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+`@pdf-lib/fontkit` のファイルには、次の部品が一緒に入っています。MIT License の部品の許諾の文は、上の fontkit の文と同じです。
+
+| 部品                                                                                                             | 著作権表示                                                                                                      | ライセンス      |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------- |
+| restructure（`@pdf-lib/restructure`）                                                                            | Copyright (c) 2015-present Devon Govett                                                                         | MIT             |
+| unicode-properties（`@pdf-lib/unicode-properties`）・unicode-trie                                                | Copyright 2018（作った人：Devon Govett）                                                                        | MIT             |
+| tiny-inflate                                                                                                     | Copyright (c) 2015-present Devon Govett                                                                         | MIT             |
+| dfa                                                                                                              | 作った人：Devon Govett                                                                                          | MIT             |
+| brotli.js（`@pdf-lib/brotli`）                                                                                   | 作った人：Devon Govett。中の復号の部分は Copyright 2013 Google Inc. All Rights Reserved.                        | MIT・Apache-2.0 |
+| clone                                                                                                            | Copyright © 2011-2015 Paul Vorbach                                                                              | MIT             |
+| deep-equal                                                                                                       | Copyright (c) 2012, 2013, 2014 James Halliday, 2009 Thomas Robinson                                             | MIT             |
+| object-keys                                                                                                      | Copyright (C) 2013 Jordan Harband                                                                               | MIT             |
+| is-arguments・object-is・is-regex                                                                                | Copyright (c) 2014 Jordan Harband                                                                               | MIT             |
+| regexp.prototype.flags                                                                                           | Copyright (C) 2014 Jordan Harband                                                                               | MIT             |
+| define-properties                                                                                                | Copyright (C) 2015 Jordan Harband                                                                               | MIT             |
+| is-date-object                                                                                                   | Copyright (c) 2015 Jordan Harband                                                                               | MIT             |
+| has-symbols                                                                                                      | Copyright (c) 2016 Jordan Harband                                                                               | MIT             |
+| get-intrinsic・call-bind                                                                                         | Copyright (c) 2020 Jordan Harband                                                                               | MIT             |
+| function-bind                                                                                                    | Copyright (c) 2013 Raynos.                                                                                      | MIT             |
+| has                                                                                                              | Copyright (c) 2013 Thiago de Arruda                                                                             | MIT             |
+| base64-arraybuffer                                                                                               | Copyright (c) 2012 Niklas von Hertzen                                                                           | MIT             |
+| buffer                                                                                                           | Copyright (c) Feross Aboukhadijeh, and other contributors. Copyright Node.js contributors. All rights reserved. | MIT             |
+| base64-js                                                                                                        | Copyright (c) 2014 Jameson Little                                                                               | MIT             |
+| ieee754                                                                                                          | Copyright 2008 Fair Oaks Labs, Inc.                                                                             | BSD-3-Clause    |
+| iconv-lite                                                                                                       | Copyright (c) 2011 Alexander Shtuchkin                                                                          | MIT             |
+| safer-buffer                                                                                                     | Copyright (c) 2018 Nikita Skovoroda                                                                             | MIT             |
+| Node.js の events・util・stream・string_decoder・process をブラウザ用に写したもの（rollup-plugin-node-builtins） | Copyright Joyent, Inc. and other Node contributors.                                                             | MIT             |
+
+brotli.js の中の Google の部分のライセンス（Apache License, Version 2.0）の全文は、拡張機能の中の `licenses/Apache-2.0.txt` にあります。
+
+ieee754 のライセンス（BSD-3-Clause）の文：
+
+```text
+Copyright 2008 Fair Oaks Labs, Inc.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+## pako（pako）
+
+pdf-lib と fontkit が、PDF とフォントのデータを縮める・戻すのに使っています。
+
+- 使っている版：`pako` 1.0.11
+- 入手先：https://github.com/nodeca/pako
+- ライセンス：MIT License と zlib License（pako は zlib を JavaScript に移したもの）
+
+```text
+(The MIT License)
+
+Copyright (C) 2014-2017 by Vitaly Puzrin and Andrei Tuputcyn
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+zlib の部分（`lib/zlib/` の中）の文：
+
+```text
+(C) 1995-2013 Jean-loup Gailly and Mark Adler
+(C) 2014-2017 Vitaly Puzrin and Andrey Tupitsin
+
+This software is provided 'as-is', without any express or implied
+warranty. In no event will the authors be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not
+  claim that you wrote the original software. If you use this software
+  in a product, an acknowledgment in the product documentation would be
+  appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be
+  misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+```
