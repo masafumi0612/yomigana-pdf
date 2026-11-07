@@ -47,6 +47,11 @@ export interface TextRun {
 
 /** 捨てる字：空白・制御文字・書式の文字 */
 const SKIPPED_CHAR = /^[\s\p{Cc}\p{Cf}]$/u;
+/**
+ * pdf.js が字と字の間の空きに入れる半角の空白。本当の字ではないので、縦書きの片では
+ * 1字ぶんの場所を取らせず、残りの長さを分けあう空きとして扱う（全角の空白は1字ぶん）
+ */
+const GAP_CHAR = /^ $/u;
 /** pdf.js が縦書きのフォントの片に付ける向き */
 const TOP_TO_BOTTOM = 'ttb';
 /** 回っているかを見る、変換の行列の傾きの下限（回した横書きの字は扱わない） */
@@ -106,18 +111,19 @@ function placeGlyphs(piece: Piece, isVertical: boolean, evidence: Evidence): Pla
   const scaleY = Math.hypot(c, d);
   const size = Math.max(scaleX, scaleY);
   const count = piece.chars.length;
+  const slots = isVertical ? verticalSlots(piece.chars, piece.item.height, size) : [];
   const glyphs: PlacedGlyph[] = [];
   for (const [index, ch] of piece.chars.entries()) {
     if (SKIPPED_CHAR.test(ch)) continue;
     let rect: Rect;
     if (isVertical) {
       // 縦書きの片の x は列の中心、y は上の端
-      const pitch = piece.item.height / count;
+      const [start = 0, end = 0] = slots[index] ?? [];
       rect = {
         x1: x - scaleX / 2,
         x2: x + scaleX / 2,
-        y1: y - (index + 1) * pitch,
-        y2: y - index * pitch,
+        y1: y - end,
+        y2: y - start,
       };
     } else {
       const pitch = piece.item.width / count;
@@ -138,6 +144,37 @@ function placeGlyphs(piece: Piece, isVertical: boolean, evidence: Evidence): Pla
     });
   }
   return glyphs;
+}
+
+/**
+ * 縦書きの片の中で、それぞれの字が上の端からどこまでを占めるかを決める。
+ * 字は1字ぶん（大きさ）ずつ取り、pdf.js が入れた半角の空白は、片の長さの残りを等しく分けあう。
+ * 字詰めや字間の空き方が不ぞろいでも、空白を1字と数えて等分するより、本当の字の位置に近くなる。
+ * 残りがない（字が大きさより詰まっている）か空白がないときは、字（空白を除く）で等分する。
+ * @param chars 片のすべての字（空白を含む）
+ * @param length 片の長さ（縦の長さ）
+ * @param size 字の大きさ
+ * @returns 字ごとの [上の端からの始まり, 終わり]
+ */
+export function verticalSlots(
+  chars: readonly string[],
+  length: number,
+  size: number,
+): (readonly [number, number])[] {
+  const gaps = chars.filter((ch) => GAP_CHAR.test(ch)).length;
+  const solids = chars.length - gaps;
+  const rest = length - solids * size;
+  const hasGapRoom = gaps > 0 && solids > 0 && rest >= 0;
+  const solidLength = hasGapRoom ? size : length / Math.max(solids, 1);
+  const gapLength = hasGapRoom ? rest / gaps : 0;
+  const slots: (readonly [number, number])[] = [];
+  let at = 0;
+  for (const ch of chars) {
+    const step = GAP_CHAR.test(ch) ? gapLength : solidLength;
+    slots.push([at, at + step]);
+    at += step;
+  }
+  return slots;
 }
 
 /**
