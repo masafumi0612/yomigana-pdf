@@ -44,7 +44,7 @@ const WARNING_LINES = {
 
 /** ページを描き終えてからルビの層を出すまでの名前（src/viewer/ruby-pages.ts） */
 const RUBY_LAYER_MEASURE = 'yomigana-pdf:ruby-layer';
-/** 読みの問い合わせの名前（src/viewer/ruby-pages.ts） */
+/** 読みの問い合わせの名前（src/viewer/page-layout.ts） */
 const READINGS_MEASURE = 'yomigana-pdf:readings';
 /** 辞書を読み込み終えるまでの名前（src/entrypoints/offscreen/reading.worker.ts） */
 const DICTIONARY_MEASURE = 'yomigana-pdf:dictionary';
