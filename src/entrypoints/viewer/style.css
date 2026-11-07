@@ -47,8 +47,6 @@
   --direction-focus: #1f2933;
   --direction-border-width: 2px;
   --direction-toggle-font-size: 12px;
-  --notice-close-size: 44px;
-  --notice-close-font-size: 1.5em;
   --menu-background: #323639;
   --menu-padding: 4px;
   --font-size: 14px;
@@ -154,15 +152,22 @@ body {
 }
 
 /* 枠を付けて、文字だけのボタンとも見分けやすくする（枠は背景と 3:1 以上） */
-.bar-rotate {
+.bar-rotate,
+.bar-direction {
   display: inline-flex;
   gap: 6px;
   align-items: center;
   border-color: var(--button-border);
 }
 
-.bar-rotate-icon {
+.bar-rotate-icon,
+.bar-direction-icon {
   flex: none;
+}
+
+/* 向きを直すボタンは、ページ番号の隣で文字が折り返さないようにする */
+.bar-direction {
+  white-space: nowrap;
 }
 
 .bar-button:hover:not(:disabled) {
@@ -281,15 +286,6 @@ body {
 
 .notice-button {
   border-color: var(--bar-text-sub);
-}
-
-/* 閉じるボタンは、押しやすいよう 44px 四方にする */
-.notice-close {
-  width: var(--notice-close-size);
-  height: var(--notice-close-size);
-  padding: 0;
-  font-size: var(--notice-close-font-size);
-  line-height: 1;
 }
 
 .notice-error {

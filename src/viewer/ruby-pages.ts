@@ -109,11 +109,6 @@ export interface RubyPagesOptions {
    * @param pageNumber ページ番号（1 から）
    */
   readonly onPageShown?: (pageNumber: number) => void;
-  /**
-   * 向きの自信がないかたまりのあるページがあるか（なしからあり、ありからなし）が変わったときに呼ぶ
-   * @param hasUncertain 自信がないかたまりが1つでもあれば true
-   */
-  readonly onUncertainChange?: (hasUncertain: boolean) => void;
 }
 
 /** ページごとにルビの層を重ねる部品 */
@@ -235,16 +230,6 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
   let entries = new Map<number, PageEntry>();
   /** 利用者がすべてのかたまりに決めた向き。あとから開くページにも使う */
   let forced: Direction | undefined;
-  /** 向きの自信がないかたまりのあるページ */
-  const uncertainPages = new Set<number>();
-  const markUncertain = (pageNumber: number, page: PageText): void => {
-    const before = uncertainPages.size;
-    if (page.blocks.some(isDirectionUncertain)) uncertainPages.add(pageNumber);
-    else uncertainPages.delete(pageNumber);
-    if ((before === 0) !== (uncertainPages.size === 0)) {
-      options.onUncertainChange?.(uncertainPages.size > 0);
-    }
-  };
   const failed = createFailedPages<RubyPageView>();
   const markFailure = (pageNumber: number, view: RubyPageView | undefined): void => {
     const before = failed.size;
@@ -413,7 +398,6 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
       for (const { index, block } of changes) blocks[index] = block;
       const result = await reread(pageNumber, entry, data, blocks);
       if (result.ok) {
-        markUncertain(pageNumber, result.value.page);
         showLayer(view, entry, result.value);
         options.onPageShown?.(pageNumber);
         return;
@@ -468,10 +452,7 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
         entry.exact = snapGlyphs(data.page.blocks, entry.drawn);
         entry.boxes = undefined;
       }
-      if (entry.resolved === undefined) {
-        entry.resolved = data;
-        markUncertain(event.pageNumber, data.page);
-      }
+      entry.resolved ??= data;
       // 前の段階・直した読みで読んだページは、文と字の位置はそのままに、読みだけ問い合わせ直す
       const { resolved } = entry;
       if (isOutdated(resolved)) {
@@ -551,8 +532,6 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
     reset() {
       entries = new Map();
       forced = undefined;
-      uncertainPages.clear();
-      options.onUncertainChange?.(false);
       failed.clear();
       options.onReadingFailureChange?.(false);
     },
