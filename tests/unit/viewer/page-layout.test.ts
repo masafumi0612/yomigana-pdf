@@ -65,14 +65,23 @@ function shiftedDraws(): DrawnGlyph[] {
   });
 }
 
+/** 読みを出せなかったときの答え */
+const FAILED: ReadingResult = { ok: false, error: 'no-response' };
+
 /**
  * 画面に出していないページを読む部品を作る。
  * @param draws ページを描いたときに書き留める字
- * @returns 部品と、ページを描いた回数を数えるもの
+ * @param reading 読みの問い合わせの答え
+ * @returns 部品と、ページを描いた回数・読みを出せなかったページの知らせを数えるもの
  */
-function setUp(draws: readonly DrawnGlyph[]): {
+function setUp(
+  draws: readonly DrawnGlyph[],
+  reading: ReadingResult = READING,
+): {
   layouts: ReturnType<typeof createPageLayouts>;
   render: ReturnType<typeof vi.fn>;
+  onReadingFailureChange: ReturnType<typeof vi.fn>;
+  page: DrawablePdfPage;
 } {
   const render = vi.fn(() => ({ promise: Promise.resolve() }));
   // 使うところだけを持つ、ページのにせもの
@@ -88,14 +97,16 @@ function setUp(draws: readonly DrawnGlyph[]): {
     render,
   } as unknown as DrawablePdfPage;
   const recorder: DrawRecorder = { watch: () => undefined, take: () => [...draws] };
+  const onReadingFailureChange = vi.fn();
   const layouts = createPageLayouts({
     getPage: () => Promise.resolve(page),
     recorder,
     settings: { ...DEFAULT_SETTINGS, level: 'all' },
-    readTexts: () => Promise.resolve(READING),
+    readTexts: () => Promise.resolve(reading),
     userDictionary: NO_DICTIONARY,
+    onReadingFailureChange,
   });
-  return { layouts, render };
+  return { layouts, render, onReadingFailureChange, page };
 }
 
 describe('createPageLayouts の layoutPage', () => {
@@ -121,5 +132,25 @@ describe('createPageLayouts の layoutPage', () => {
     const second = await layouts.layoutPage(1);
 
     expect([render.mock.calls.length, second]).toEqual([1, first]);
+  });
+
+  it('画面に出していないページで読みを出せなかったとき、置き場所は undefined になる', async () => {
+    expect(await setUp([], FAILED).layouts.layoutPage(1)).toBeUndefined();
+  });
+
+  it('画面に出していないページで読みを出せなかったとき、画面の「もう一度」に入れない', async () => {
+    const { layouts, onReadingFailureChange } = setUp([], FAILED);
+
+    await layouts.layoutPage(1);
+
+    expect([layouts.failedPages(), onReadingFailureChange.mock.calls]).toEqual([[], []]);
+  });
+
+  it('画面に重ねる側が用意を頼んだページで読みを出せなかったとき、画面の「もう一度」に入れる', async () => {
+    const { layouts, onReadingFailureChange, page } = setUp([], FAILED);
+
+    await layouts.prepare(1, page);
+
+    expect([layouts.failedPages(), onReadingFailureChange.mock.calls]).toEqual([[1], [[true]]]);
   });
 });

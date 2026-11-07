@@ -100,7 +100,8 @@ export interface PageLayouts {
   /** 今の設定 */
   readonly settings: Settings;
   /**
-   * ページの文と読みの用意を始める。取ってあれば、それを返す。
+   * ページの文と読みの用意を始める。取ってあれば、それを返す。画面に重ねる側が呼ぶ。
+   * 読みを出せなかったときは、そのページを読みを出せなかったページ（画面の「もう一度」）に入れる。
    * @param pageNumber ページ番号（1 から）
    * @param pdfPage ページ
    * @returns 文と読み。読みを出せなかったときは undefined（次に呼んだときに問い合わせ直す）
@@ -135,7 +136,8 @@ export interface PageLayouts {
   ): readonly RubyBox[] | undefined;
   /**
    * 画面に出していないページも含めて、ページのルビの置き場所を出す。描いた字の位置を取ってあればそれを使い、
-   * なければ小さな Canvas に描いて字の位置を取る。
+   * なければ小さな Canvas に描いて字の位置を取る。画面に出していないページで読みを出せなかったときは、
+   * 画面の「もう一度」に入れない（画面の「もう一度」は、画面に出したページだけを読み直すため）。
    * @param pageNumber ページ番号（1 から）
    * @returns 置き場所。読みを出せなかったとき・待つ間に別の PDF に移ったときは undefined
    */
@@ -241,8 +243,11 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
   let forced: Direction | undefined;
   // 問い合わせ直すときは、画面に重ねる側がページ番号から表示を引くので、ページ番号だけ覚える
   const failed = createFailedPages<true>();
+  /** 画面に重ねる側が用意を頼んだページ。読みを出せなかったことを画面に知らせるのは、このページだけ */
+  let shownPages = new Set<number>();
   const markFailure = (pageNumber: number, hasFailed: boolean): void => {
     const before = failed.size;
+    if (hasFailed && !shownPages.has(pageNumber)) return;
     if (hasFailed) failed.add(pageNumber, true);
     else failed.remove(pageNumber);
     if ((before === 0) !== (failed.size === 0)) options.onReadingFailureChange?.(failed.size > 0);
@@ -402,7 +407,10 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
       return settings;
     },
 
-    prepare,
+    prepare(pageNumber, pdfPage) {
+      shownPages.add(pageNumber);
+      return prepare(pageNumber, pdfPage);
+    },
 
     async resolve(pageNumber, data, drawn, isWanted) {
       const current = entries;
@@ -511,6 +519,7 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
     reset() {
       entries = new Map();
       forced = undefined;
+      shownPages = new Set();
       failed.clear();
       options.onReadingFailureChange?.(false);
     },
