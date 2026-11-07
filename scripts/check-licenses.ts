@@ -16,6 +16,8 @@ const ALLOWED_LICENSES = new Set([
   'MIT',
   'OFL-1.1',
   'Unlicense',
+  // pako（pdf-lib・fontkit が使う）が「MIT AND Zlib」。zlib License は MIT と同じくゆるいライセンス
+  'Zlib',
 ]);
 
 /** `npm query` が返す1つの部品のうち、使うところだけ */
