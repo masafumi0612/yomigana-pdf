@@ -1,6 +1,6 @@
 // 設定の画面で、保存した設定や Chrome の許可の状態を見張る
 import type { RefObject } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { browser } from 'wxt/browser';
 
 import { createLogger } from '@/log';
@@ -13,6 +13,7 @@ import {
 } from '@/settings/user-dictionary';
 
 import { ALL_SITES } from './auto-redirect';
+import { type JumpTarget, takeJump, watchJump } from './jump';
 
 const log = createLogger('options');
 
@@ -119,4 +120,32 @@ export function useElement<T extends HTMLElement>(): [
     element.current = value ?? undefined;
   });
   return [element, setElement.current];
+}
+
+/**
+ * 開いた側が残した「上に出す場所」を読み、もう開いている画面に移ってきたときも読み直す。
+ * @returns 上に出す場所（なければ undefined）と、出し終えたことを伝える関数
+ */
+export function useJumpTarget(): [JumpTarget | undefined, () => void] {
+  const [target, setTarget] = useState<JumpTarget | undefined>(undefined);
+  useEffect(() => {
+    const take = (): void => {
+      takeJump()
+        .then((next) => {
+          if (next !== undefined) {
+            setTarget(next);
+          }
+        })
+        .catch((error: unknown) => {
+          log.error('上に出す場所を読むのに失敗しました', error);
+        });
+    };
+    const stop = watchJump(take);
+    take();
+    return stop;
+  }, []);
+  const finish = useCallback(() => {
+    setTarget(undefined);
+  }, []);
+  return [target, finish];
 }
