@@ -27,10 +27,16 @@ import { createPageMenu } from '@/viewer/page-menu';
 import { createPrintNotice, isPrintShortcut } from '@/viewer/print-notice';
 import { createReadingFixDialog } from '@/viewer/reading-fix-dialog';
 import { rubyAmountLabel } from '@/viewer/ruby-amount';
-import { exportRubyPdf } from '@/viewer/ruby-export';
+import { createRubyExportUi } from '@/viewer/ruby-export-ui';
 import { findRuby, type RubyFinderOptions } from '@/viewer/ruby-hit';
 import { createRubyPages, type PageRenderEvent, type RubyPageView } from '@/viewer/ruby-pages';
-import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
+import {
+  fileNameFromUrl,
+  isPdfFile,
+  pdfNameFromUrl,
+  readInitialHash,
+  readViewerParams,
+} from '@/viewer/source';
 import { isImageOnlyDocument } from '@/viewer/special-cases';
 
 /** 文言のキー */
@@ -74,6 +80,13 @@ const rotate = requireElement('rotate', HTMLButtonElement);
 const rotateLabel = requireElement('rotate-label', HTMLSpanElement);
 const rubyAmount = requireElement('ruby-amount', HTMLButtonElement);
 const rubyAmountText = requireElement('ruby-amount-text', HTMLSpanElement);
+const exportPdf = requireElement('export-pdf', HTMLButtonElement);
+const exportPdfLabel = requireElement('export-pdf-label', HTMLSpanElement);
+const exportNotice = requireElement('export-notice', HTMLDivElement);
+const exportText = requireElement('export-text', HTMLParagraphElement);
+const exportStop = requireElement('export-stop', HTMLButtonElement);
+const exportClose = requireElement('export-close', HTMLButtonElement);
+const exportLive = requireElement('export-live', HTMLParagraphElement);
 const openFile = requireElement('open-file', HTMLButtonElement);
 const openNative = requireElement('open-native', HTMLButtonElement);
 const printNoticeText = requireElement('print-notice', HTMLParagraphElement);
@@ -170,6 +183,8 @@ let isNoTextDismissed = false;
 let initialHash = '';
 // 向きを直すモードの間か
 let isDirectionEditing = false;
+// 開いている PDF のもとの名前（ルビ付き PDF の名前に使う）。分からなければ undefined
+let sourceName: string | undefined;
 
 function updateNoTextNotice(): void {
   noTextNotice.hidden = isNoTextDismissed || !isImageOnlyDocument(hasTextByPage);
@@ -187,6 +202,9 @@ const pageLayouts = createPageLayouts({
   },
   onReadingFailureChange: (hasFailed) => {
     rubyFailed.hidden = !hasFailed;
+  },
+  onLayoutChange: () => {
+    rubyExport.handleLayoutChange();
   },
 });
 const rubyPages = createRubyPages({
@@ -212,7 +230,25 @@ const rubyFinder: RubyFinderOptions = {
 const readingFixDialog = createReadingFixDialog(() => {
   container.focus();
 });
-const printNotice = createPrintNotice({ onOpenNative: goNative });
+const rubyExport = createRubyExportUi({
+  button: exportPdf,
+  notice: exportNotice,
+  noticeText: exportText,
+  live: exportLive,
+  stop: exportStop,
+  close: exportClose,
+  getDocument: () => viewer.pdfDocument ?? undefined,
+  layouts: pageLayouts,
+  sourceName: () => sourceName,
+  isImageOnly: () => isImageOnlyDocument(hasTextByPage),
+});
+const printNotice = createPrintNotice({
+  onExport: () => {
+    rubyExport.start();
+  },
+  canExport: () => !exportPdf.hidden,
+  onOpenNative: goNative,
+});
 const pageMenu = createPageMenu({
   menu: pageMenuElement,
   rubyGroup: rubyMenuGroup,
@@ -220,15 +256,6 @@ const pageMenu = createPageMenu({
   fixItem: fixMenuItem,
   onFix: (ruby) => {
     readingFixDialog.open(ruby);
-  },
-});
-// ルビを書き込んだ PDF を作る。画面の入口（ボタン）ができるまでは、E2E がリーダーの中から呼ぶためだけに置く
-Object.assign(globalThis, {
-  yomiganaRubyExport: (signal?: AbortSignal) => {
-    const { pdfDocument } = viewer;
-    return pdfDocument === null || pdfDocument === undefined
-      ? Promise.resolve(undefined)
-      : exportRubyPdf({ document: pdfDocument, layouts: pageLayouts, signal });
   },
 });
 
@@ -252,6 +279,10 @@ rotate.title = message('viewer_bar_rotateTitle');
 showRubyAmount(initialSettings.level);
 rubyAmount.title = message('viewer_bar_rubyAmountTitle');
 rubyAmount.hidden = false;
+exportPdfLabel.textContent = message('viewer_bar_exportPdf');
+exportPdf.title = message('viewer_bar_exportPdfTitle');
+exportStop.textContent = message('viewer_export_stop');
+exportClose.textContent = message('viewer_export_close');
 openFile.textContent = message('viewer_bar_openFile');
 openFile.hidden = false;
 openNative.textContent = message('viewer_bar_openNative');
@@ -315,6 +346,7 @@ function exitDirectionEditing(): void {
 /** 別の PDF を開くときに、前の PDF の案内を片づける */
 function resetNotices(): void {
   exitDirectionEditing();
+  rubyExport.reset();
   hidePasswordForm();
   hasTextByPage.clear();
   isNoTextDismissed = false;
@@ -325,6 +357,7 @@ function setDocumentShown(isShown: boolean): void {
   container.hidden = !isShown;
   pageGroup.hidden = !isShown;
   zoomGroup.hidden = !isShown;
+  exportPdf.hidden = !isShown;
 }
 
 function setNativeUrl(source: PdfSource): void {
@@ -346,6 +379,7 @@ async function readFile(file: File): Promise<{ data: Uint8Array } | undefined> {
 
 async function openSource(source: PdfSource): Promise<void> {
   const name = source.kind === 'url' ? fileNameFromUrl(source.url) : source.file.name;
+  sourceName = source.kind === 'url' ? pdfNameFromUrl(source.url) : source.file.name;
   fileName.textContent = name;
   document.title = name;
   setNativeUrl(source);
@@ -393,6 +427,8 @@ async function openSource(source: PdfSource): Promise<void> {
     // 読み込みの間に別の PDF が開かれたら、こちらは出さない
     if (currentTask === task) {
       setDocumentShown(true);
+      // 読み込みの間に古い PDF で作り始めていても、新しい PDF に移る前に止める
+      rubyExport.reset();
       rubyPages.reset();
       viewer.setDocument(pdfDocument);
       linkService.setDocument(pdfDocument);
@@ -517,6 +553,9 @@ fileInput.addEventListener('change', () => {
   openFiles(fileInput.files ?? undefined);
   // 同じファイルを選び直しても change が来るようにする
   fileInput.value = '';
+});
+exportPdf.addEventListener('click', () => {
+  rubyExport.start();
 });
 openNative.addEventListener('click', goNative);
 failureNative.addEventListener('click', goNative);

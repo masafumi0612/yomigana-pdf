@@ -154,3 +154,69 @@ describe('createPageLayouts の layoutPage', () => {
     expect([layouts.failedPages(), onReadingFailureChange.mock.calls]).toEqual([[1], [[true]]]);
   });
 });
+
+describe('createPageLayouts の onLayoutChange', () => {
+  /**
+   * 置き場所が変わったことを数える部品を作る。
+   * @returns 部品と、知らせを数えるもの
+   */
+  function watched(): {
+    layouts: ReturnType<typeof createPageLayouts>;
+    onLayoutChange: ReturnType<typeof vi.fn>;
+  } {
+    const onLayoutChange = vi.fn();
+    const layouts = createPageLayouts({
+      getPage: () => Promise.resolve(undefined),
+      recorder: { watch: () => undefined, take: () => [] },
+      settings: DEFAULT_SETTINGS,
+      readTexts: () => Promise.resolve(READING),
+      userDictionary: NO_DICTIONARY,
+      onLayoutChange,
+    });
+    return { layouts, onLayoutChange };
+  }
+
+  it('段階を変えたとき、知らせる', () => {
+    const { layouts, onLayoutChange } = watched();
+
+    layouts.applySettings({ ...DEFAULT_SETTINGS, level: 'g3' });
+
+    expect(onLayoutChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('ルビの帯を変えたとき、知らせる', () => {
+    const { layouts, onLayoutChange } = watched();
+    const rubyStyle = {
+      ...DEFAULT_SETTINGS.rubyStyle,
+      hasBand: !DEFAULT_SETTINGS.rubyStyle.hasBand,
+    };
+
+    layouts.applySettings({ ...DEFAULT_SETTINGS, rubyStyle });
+
+    expect(onLayoutChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('ルビに関わらない設定だけを変えたとき、知らせない', () => {
+    const { layouts, onLayoutChange } = watched();
+
+    layouts.applySettings({ ...DEFAULT_SETTINGS, autoRedirect: !DEFAULT_SETTINGS.autoRedirect });
+
+    expect(onLayoutChange).not.toHaveBeenCalled();
+  });
+
+  it('直した読みを変えたとき、知らせる', () => {
+    const { layouts, onLayoutChange } = watched();
+
+    layouts.applyUserDictionary(new Map());
+
+    expect(onLayoutChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('すべてのかたまりの向きを決めたとき、読み直しのあとで知らせる', async () => {
+    const { layouts, onLayoutChange } = watched();
+
+    await layouts.setAllDirection('vertical', () => undefined);
+
+    expect(onLayoutChange).toHaveBeenCalledTimes(1);
+  });
+});

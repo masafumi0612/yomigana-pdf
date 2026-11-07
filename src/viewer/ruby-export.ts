@@ -1,4 +1,4 @@
-// 開いている PDF の全部のページにルビを書き込んだ、新しい PDF を作る（画面の入口は持たない）。
+// 開いている PDF の全部のページにルビを書き込んだ、新しい PDF を作る（画面の入口は ruby-export-ui.ts）。
 // ページごとの置き場所は page-layout.ts の layoutPage で出すので、画面に出していないページも
 // 画面と同じ設定・同じ直した読み・同じ向きで置く。書き込み（pdf-lib・fontkit）は、使うときだけ読む。
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
@@ -39,6 +39,8 @@ export interface RubyExportOptions {
   readonly onProgress?: (done: number, total: number) => void;
   /** 止めるときに知らせるもの */
   readonly signal?: AbortSignal;
+  /** 新しい PDF の題名（/Title）。渡さなければ、もとの PDF の題名のまま */
+  readonly title?: string;
   /**
    * ルビのフォントを読む（テストで差しかえるため）。既定は拡張に入れたフォント
    * @returns フォント
@@ -86,7 +88,7 @@ export async function exportRubyPdf(
     options.onProgress?.(pageNumber, total);
   }
   if (isAborted()) return { ok: false, error: 'aborted' };
-  return { ok: true, value: { bytes: await writer.save(), failedPages } };
+  return { ok: true, value: { bytes: await writer.save(options.title), failedPages } };
 }
 
 /**

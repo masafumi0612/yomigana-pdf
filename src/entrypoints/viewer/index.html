@@ -100,6 +100,30 @@
             <path d="M9 6l6 6-6 6" />
           </svg>
         </button>
+        <button id="export-pdf" class="bar-button bar-export" type="button" hidden>
+          <svg
+            class="bar-export-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M13 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V9z"
+            />
+            <path d="M13 3v6h6" />
+            <path d="M9 11h3" stroke-width="1.5" />
+            <path d="M9 14h6" />
+            <path d="M9 18h6" />
+          </svg>
+          <span id="export-pdf-label"></span>
+        </button>
         <button id="open-file" class="bar-button" type="button" hidden></button>
         <button id="open-native" class="bar-button" type="button" hidden></button>
       </div>
@@ -118,6 +142,11 @@
         <button id="password-submit" class="bar-button notice-button" type="submit"></button>
         <p id="password-error" class="notice-error" role="alert" hidden></p>
       </form>
+      <div id="export-notice" class="notice" hidden>
+        <p id="export-text" class="notice-text"></p>
+        <button id="export-stop" class="bar-button notice-button" type="button"></button>
+        <button id="export-close" class="bar-button notice-button" type="button"></button>
+      </div>
       <div id="no-text-notice" class="notice" hidden>
         <p id="no-text-text" class="notice-text" role="status"></p>
         <button id="no-text-close" class="bar-button notice-button" type="button"></button>
@@ -133,6 +162,7 @@
       <button id="settings-menu-item" class="menu-item" role="menuitem" type="button"></button>
     </div>
     <p id="print-notice" class="print-notice"></p>
+    <p id="export-live" class="visually-hidden" role="status" aria-live="polite"></p>
     <main>
       <p id="status" class="status" role="status" hidden></p>
       <div id="failure-actions" class="status-actions" hidden>

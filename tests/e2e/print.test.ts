@@ -8,8 +8,7 @@ const SCANNED = 'scanned-like.pdf';
 const RUBY_TIMEOUT_MS = 15_000;
 
 /** 印刷の案内の文 */
-const PRINT_NOTICE =
-  'ルビ付きの印刷は次の版で対応します。今は Chrome の標準の表示で開くと印刷できます。';
+const PRINT_NOTICE = 'ルビ付きで印刷するには、「ルビ付き PDF」で作って開いてから印刷します。';
 
 test('印刷の見た目のとき、バーと案内と紙面が見えず、印刷の案内の文だけが見える', async ({
   page,
@@ -46,7 +45,8 @@ test('Ctrl+P を押したとき、印刷の案内が出て、［閉じる］で�
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(PRINT_NOTICE);
-  await expect(dialog.getByRole('button', { name: '標準の表示で開く' })).toBeFocused();
+  await expect(dialog.getByRole('button', { name: 'ルビ付き PDF を作る' })).toBeFocused();
+  await expect(dialog.getByRole('button', { name: '標準の表示で開く' })).toBeVisible();
 
   await dialog.getByRole('button', { name: '閉じる' }).click();
 

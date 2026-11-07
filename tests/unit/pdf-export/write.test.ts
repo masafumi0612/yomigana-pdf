@@ -213,6 +213,26 @@ describe('openRubyPdf', () => {
     expect((await dump(await opened.value.save()))[0]?.text).toBe(source[0]?.text);
   });
 
+  it('題名を渡して保存したとき、PDF の題名（/Title）になり、標準の表示のタブにも題名を出す', async () => {
+    const opened = await openRubyPdf(SOURCE, STYLE, FONTS);
+    if (!opened.ok) throw new Error(opened.error);
+    const saved = await PDFDocument.load(await opened.value.save('物語（ルビ付き）'));
+    const preferences = saved.catalog.lookup(PDFName.of('ViewerPreferences'));
+
+    expect([saved.getTitle(), preferences?.toString().includes('/DisplayDocTitle true')]).toEqual([
+      '物語（ルビ付き）',
+      true,
+    ]);
+  });
+
+  it('題名を渡さずに保存したとき、PDF の題名はもとのまま', async () => {
+    const opened = await openRubyPdf(SOURCE, STYLE, FONTS);
+    if (!opened.ok) throw new Error(opened.error);
+    const saved = await PDFDocument.load(await opened.value.save());
+
+    expect(saved.getTitle()).toBe((await PDFDocument.load(SOURCE)).getTitle());
+  });
+
   it('ページの数を返す', async () => {
     const opened = await openRubyPdf(SOURCE, STYLE, FONTS);
 

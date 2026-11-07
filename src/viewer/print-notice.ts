@@ -1,5 +1,5 @@
-// 印刷しようとしたときに出す案内の窓。ルビ付きの印刷にはまだ対応していないので、
-// ブラウザーの印刷は止めて、標準の表示で開けば印刷できることを知らせる。
+// 印刷しようとしたときに出す案内の窓。リーダーの印刷は紙面の見えている範囲しか出せないので、
+// ブラウザーの印刷は止めて、ルビ付き PDF を作って開けば印刷できることを知らせ、窓からも作り始められるようにする。
 // 窓は showModal で開き、焦点を窓の中に閉じこめる。Esc で閉じ、閉じたら開く前の場所へ焦点を戻す。
 import { browser } from 'wxt/browser';
 
@@ -32,10 +32,16 @@ export function isPrintShortcut(event: PrintShortcutEvent): boolean {
 /**
  * 印刷の案内の窓を作り、画面に入れる。
  * @param options 窓の設定
+ * @param options.onExport 「ルビ付き PDF を作る」を押したときの動き
+ * @param options.canExport 「ルビ付き PDF を作る」を出すか（PDF を開いていないときは出さない）
  * @param options.onOpenNative 「標準の表示で開く」を押したときの動き
  * @returns 印刷の案内の窓
  */
-export function createPrintNotice(options: { readonly onOpenNative: () => void }): PrintNotice {
+export function createPrintNotice(options: {
+  readonly onExport: () => void;
+  readonly canExport: () => boolean;
+  readonly onOpenNative: () => void;
+}): PrintNotice {
   const text = (name: MessageName): string => browser.i18n.getMessage(name);
 
   const dialog = document.createElement('dialog');
@@ -60,17 +66,23 @@ export function createPrintNotice(options: { readonly onOpenNative: () => void }
     created.textContent = text(name);
     return created;
   };
+  const exportButton = button('viewer_print_export');
+  exportButton.classList.add('export-primary');
   const openNative = button('viewer_print_openNative');
   const close = button('viewer_print_close');
   const actions = document.createElement('div');
   actions.className = 'print-actions';
-  actions.append(openNative, close);
+  actions.append(exportButton, openNative, close);
   form.append(title, body, actions);
   dialog.append(form);
   document.body.append(dialog);
 
   let opener: Element | undefined;
 
+  exportButton.addEventListener('click', () => {
+    dialog.close();
+    options.onExport();
+  });
   openNative.addEventListener('click', () => {
     dialog.close();
     options.onOpenNative();
@@ -91,8 +103,9 @@ export function createPrintNotice(options: { readonly onOpenNative: () => void }
     open() {
       if (dialog.open) return;
       opener = document.activeElement ?? undefined;
+      exportButton.hidden = !options.canExport();
       dialog.showModal();
-      openNative.focus();
+      (exportButton.hidden ? openNative : exportButton).focus();
     },
   };
 }
