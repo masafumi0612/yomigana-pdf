@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeGlyph, toRuns } from '@/pdf/glyphs';
+import { normalizeGlyph, toRuns, verticalSlots } from '@/pdf/glyphs';
 
 import { contentOf, horizontalItem, SIZE, unmarkedColumn, verticalItem } from './make-items';
 
@@ -104,6 +104,58 @@ describe('toRuns', () => {
     expect(toRuns(contentOf(items)).map((run) => run.direction)).toEqual([
       'horizontal',
       'horizontal',
+    ]);
+  });
+});
+
+describe('verticalSlots', () => {
+  it('空白のない片のとき、字で等分する', () => {
+    expect(verticalSlots(['今', '日'], 24, 10)).toEqual([
+      [0, 12],
+      [12, 24],
+    ]);
+  });
+
+  it('pdf.js が入れた半角の空白があるとき、字は1字ぶんずつ取り、空白が残りを分けあう', () => {
+    // 字 4 つで 40、残りの 6 を空白 3 つで 2 ずつ分けあう
+    expect(verticalSlots(['あ', ' ', 'い', 'う', ' ', 'え', ' '], 46, 10)).toEqual([
+      [0, 10],
+      [10, 12],
+      [12, 22],
+      [22, 32],
+      [32, 34],
+      [34, 44],
+      [44, 46],
+    ]);
+  });
+
+  it('全角の空白は、1字ぶんの場所を取る', () => {
+    expect(verticalSlots(['あ', '　', 'い', ' '], 32, 10)).toEqual([
+      [0, 10],
+      [10, 20],
+      [20, 30],
+      [30, 32],
+    ]);
+  });
+
+  it('字が大きさより詰まっていて残りがないとき、空白は場所を取らず、字で等分する', () => {
+    expect(verticalSlots(['あ', ' ', 'い'], 16, 10)).toEqual([
+      [0, 8],
+      [8, 8],
+      [8, 16],
+    ]);
+  });
+});
+
+describe('toRuns の縦書きの片の字間', () => {
+  it('字間の空き方が不ぞろいで空白が入った片のとき、空白の後ろの字も本当の位置に置く', () => {
+    // 字は 10 ずつ。「あい」の間だけ 6 空き、pdf.js が空白を1つ入れた片（長さは 36）
+    const item = { ...verticalItem('あ いう', 100, 500), height: 36 };
+    const [run] = toRuns(contentOf([item]));
+    expect(run?.glyphs.map((glyph) => [glyph.ch, glyph.rect.y2, glyph.rect.y1])).toEqual([
+      ['あ', 500, 490],
+      ['い', 484, 474],
+      ['う', 474, 464],
     ]);
   });
 });
