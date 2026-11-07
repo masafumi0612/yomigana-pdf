@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="16" height="16">
+  <!-- よみがなPDF のアイコン（16px 用）。字は潰れるので、ルビをオレンジの横線、本文を黒い四角にする -->
+  <rect x="6" y="6" width="116" height="116" rx="26" fill="#1A5FB4"/>
+  <g transform="rotate(-6 64 64)">
+    <path d="M38 22h40l18 18v62a6 6 0 0 1-6 6H38a6 6 0 0 1-6-6V28a6 6 0 0 1 6-6z" fill="#FFFFFF"/>
+    <path d="M78 22v14a4 4 0 0 0 4 4h14z" fill="#D6E4F5"/>
+    <rect x="44" y="46" width="40" height="10" rx="5" fill="#E8710A"/>
+    <rect x="44" y="66" width="40" height="22" rx="6" fill="#1B2430"/>
+  </g>
+</svg>
