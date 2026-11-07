@@ -7,7 +7,7 @@ import { expect, openFromFile, test } from './fixtures';
 /** service worker の中で動かす関数から使う、拡張の API（型だけ） */
 declare const chrome: typeof browser;
 
-/** 縦書きの印がなく、向きの自信がないかたまりがある Word の PDF（向きを直す案内が出る） */
+/** 縦書きの印がなく、向きの自信がないかたまりがある Word の PDF */
 const UNMARKED_VERTICAL = 'word/word-vertical.pdf';
 /** ルビが出るまで待つ時間の上限（ミリ秒）。辞書の読み込みを含む */
 const RUBY_TIMEOUT_MS = 15_000;
@@ -115,7 +115,7 @@ test('向きを直すモードの間、バーのルビの量のボタンは隠�
     timeout: RUBY_TIMEOUT_MS,
   });
 
-  await page.getByRole('button', { name: '直す', exact: true }).click();
+  await page.getByRole('button', { name: '向きを直す' }).click();
 
   await expect(page.locator('.bar--editing')).toBeVisible();
   await expect(amountButton(page)).toBeHidden();
