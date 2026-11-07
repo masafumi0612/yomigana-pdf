@@ -41,10 +41,10 @@ test('ルビのない所を右クリックしたとき、向きを直す項目�
   await rightClickMargin(page);
 
   await expect(page.getByRole('menu').getByRole('menuitem')).toHaveText([
-    '文字の向きを直す…',
+    'ルビの向きを直す…',
     'ルビの設定を開く',
   ]);
-  await expect(page.getByRole('menuitem', { name: '文字の向きを直す…' })).toBeFocused();
+  await expect(page.getByRole('menuitem', { name: 'ルビの向きを直す…' })).toBeFocused();
 });
 
 test('メニューで下の矢印を押したとき、次の項目に移る', async ({ page, extensionId }) => {

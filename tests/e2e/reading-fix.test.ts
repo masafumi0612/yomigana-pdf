@@ -107,7 +107,7 @@ test('ルビを右クリックしたとき、メニューの頭にルビの見�
   await expect(menu.getByText(`「${BASE}（${ORIGINAL_RUBY}）」のルビ`)).toBeVisible();
   await expect(menu.getByRole('menuitem')).toHaveText([
     '読みを直す…',
-    '文字の向きを直す…',
+    'ルビの向きを直す…',
     'ルビの設定を開く',
   ]);
   await expect(menu.getByRole('menuitem', { name: '読みを直す…' })).toBeFocused();

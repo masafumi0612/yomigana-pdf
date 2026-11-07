@@ -40,7 +40,7 @@ test('せまい幅のとき、バーのボタンがすべて画面の中に収�
   await openFromFile(page, extensionId, VERTICAL_STORY);
   await expect(page.locator('.page[data-page-number="1"]')).toBeVisible();
   await expect(page.getByRole('button', { name: /^ルビ：/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Chrome の標準の表示で開く/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Chrome で開く（ルビなし）' })).toBeVisible();
 
   const buttons = await visibleBarButtons(page);
   expect(buttons.length).toBeGreaterThanOrEqual(5);
