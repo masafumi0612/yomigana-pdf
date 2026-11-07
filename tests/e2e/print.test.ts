@@ -137,7 +137,7 @@ test('印刷の見た目のとき、右クリックのメニューが見えな�
     timeout: RUBY_TIMEOUT_MS,
   });
   await page.locator('.page[data-page-number="1"]').click({ button: 'right' });
-  await expect(page.getByRole('menuitem', { name: '文字の向きを直す…' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'ルビの向きを直す…' })).toBeVisible();
 
   await page.emulateMedia({ media: 'print' });
 

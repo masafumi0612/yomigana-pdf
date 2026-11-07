@@ -214,7 +214,7 @@ test('Chrome の標準の表示で開くを押したとき、リーダーに戻�
   await page.goto(`${origin}/a.pdf`);
   await expect(page).toHaveURL(viewerUrlPattern(extensionId));
 
-  await page.getByRole('button', { name: /Chrome の標準の表示で開く/u }).click();
+  await page.getByRole('button', { name: 'Chrome で開く（ルビなし）' }).click();
 
   await expect(page).toHaveURL(`${origin}/a.pdf`);
   // 移し直しが遅れて来ないことを確かめるため、少し待ってからもう一度見る

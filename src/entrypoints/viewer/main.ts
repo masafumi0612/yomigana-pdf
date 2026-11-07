@@ -287,6 +287,7 @@ exportClose.textContent = message('viewer_export_close');
 openFile.textContent = message('viewer_bar_openFile');
 openFile.hidden = false;
 openNative.textContent = message('viewer_bar_openNative');
+openNative.title = message('viewer_bar_openNativeTitle');
 printNoticeText.textContent = message('viewer_print_notice');
 container.setAttribute('aria-label', message('viewer_main_document'));
 failureChoose.textContent = message('viewer_main_chooseFile');

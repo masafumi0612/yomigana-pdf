@@ -30,11 +30,11 @@
     }
   },
   "viewer_bar_directionFix": {
-    "message": "向きを直す",
-    "description": "リーダーのバーの、ページ番号の隣のボタンの文字。文字の向きを直すモードに入る"
+    "message": "ルビの向きを直す",
+    "description": "リーダーのバーの、ページ番号の隣のボタンの文字。文字の向き（縦書き・横書き）を直すモードに入る。ルビのことだと分かるよう「ルビの」を付ける"
   },
   "viewer_bar_directionFixTitle": {
-    "message": "文字の向き（縦書き・横書き）を直す",
+    "message": "ルビの向き（縦書き・横書き）を直す",
     "description": "リーダーのバーの、向きを直すボタンにマウスを乗せたときの説明"
   },
   "viewer_bar_zoomOut": {
@@ -58,8 +58,12 @@
     "description": "リーダーのバーの、今の倍率の欄の名前（読み上げ用）"
   },
   "viewer_bar_openNative": {
-    "message": "Chrome の標準の表示で開く（ルビは付きません）",
-    "description": "リーダーのバーのボタン。同じ PDF を Chrome のもとからある表示で開き直す"
+    "message": "Chrome で開く（ルビなし）",
+    "description": "リーダーのバーのボタン。同じ PDF を Chrome のもとからある表示で開き直す。バーが詰まらないよう短くし、詳しくは説明に回す"
+  },
+  "viewer_bar_openNativeTitle": {
+    "message": "Chrome の標準の表示で開き直す（ルビは付きません）",
+    "description": "「Chrome で開く（ルビなし）」のボタンにマウスを乗せたときの説明"
   },
   "viewer_bar_exportPdf": {
     "message": "印刷・保存",
@@ -150,7 +154,7 @@
     "description": "案内を閉じるボタン"
   },
   "viewer_menu_directionFix": {
-    "message": "文字の向きを直す…",
+    "message": "ルビの向きを直す…",
     "description": "紙面を右クリックしたときのメニューの項目。文字の向きを直すモードに入る"
   },
   "viewer_menu_rubyTitle": {
