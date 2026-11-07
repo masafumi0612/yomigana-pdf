@@ -90,15 +90,18 @@ function LevelGroup(props: LevelGroupProps): JSX.Element {
 export interface RubyAmountSectionProps {
   /** 保存してある段階 */
   readonly level: Level;
+  /** 見出しを受け取る。リーダーから開いたとき、この場所を上に出して見出しに移るのに使う */
+  readonly titleRef?: (element: HTMLHeadingElement | null) => void;
 }
 
 /**
  * 「ルビの量：ルビを付けない漢字の範囲」の場所。段階を選ぶと、すぐ保存する。
- * @param props 保存してある段階
+ * @param props 保存してある段階と、見出しを受け取る関数
  * @param props.level 保存してある段階
+ * @param props.titleRef 見出しを受け取る関数
  * @returns ルビの量の場所
  */
-export function RubyAmountSection({ level }: RubyAmountSectionProps): JSX.Element {
+export function RubyAmountSection({ level, titleRef }: RubyAmountSectionProps): JSX.Element {
   const choose = (next: Level): void => {
     updateSettings({ level: next }).catch((error: unknown) => {
       log.error('ルビの量を保存するのに失敗しました', error);
@@ -108,7 +111,7 @@ export function RubyAmountSection({ level }: RubyAmountSectionProps): JSX.Elemen
   return (
     <section class="card" aria-labelledby="amount-title">
       <div class="heading">
-        <h2 id="amount-title" class="card-title">
+        <h2 ref={titleRef} id="amount-title" class="card-title" tabIndex={-1}>
           {message('options_amount_title')}
         </h2>
         <p class="note">

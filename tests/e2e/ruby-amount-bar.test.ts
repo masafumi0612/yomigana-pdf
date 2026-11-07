@@ -13,6 +13,10 @@ const UNMARKED_VERTICAL = 'word/word-vertical.pdf';
 const RUBY_TIMEOUT_MS = 15_000;
 /** 開き直していないかを見る印（リーダーの画面の中の変数名） */
 const NOT_RELOADED = '__notReloaded';
+/** 設定の画面で、ルビの量の場所の見出し */
+const AMOUNT_TITLE = 'ルビの量：ルビを付けない漢字の範囲';
+/** ルビの量の場所を上に出したとき、見出しが画面の上からどこまでにあればよいか（px） */
+const TOP_LIMIT_PX = 80;
 
 /**
  * 設定の画面と同じく、リーダーの外（service worker）から storage.sync に設定を書く。
@@ -43,6 +47,19 @@ function amountButton(page: Page): Locator {
 async function openReader(page: Page, extensionId: string): Promise<void> {
   await page.goto(`chrome-extension://${extensionId}/viewer.html`);
   await expect(page.getByRole('button', { name: 'ファイルを開く' })).toBeVisible();
+}
+
+/**
+ * 設定の画面で、ルビの量の場所が画面の上に出て、見出しに移っているのを確かめる。
+ * @param options 設定の画面
+ */
+async function expectAmountOnTop(options: Page): Promise<void> {
+  const heading = options.getByRole('heading', { name: AMOUNT_TITLE });
+  await expect(heading).toBeFocused();
+  await expect
+    .poll(async () => (await heading.boundingBox())?.y ?? Number.POSITIVE_INFINITY)
+    .toBeLessThan(TOP_LIMIT_PX);
+  expect(await options.evaluate(() => scrollY)).toBeGreaterThan(0);
 }
 
 test('段階を保存してからリーダーを開いたとき、バーにその段階が出る', async ({
@@ -104,6 +121,41 @@ test('バーのボタンを押したとき、設定の画面がタブで開く',
   const options = await opening;
   await expect(options).toHaveURL(optionsUrl);
   await expect(options.getByRole('heading', { level: 1 })).toHaveText('ルビの設定');
+  await expectAmountOnTop(options);
+});
+
+test('設定の画面がもう開いているとき、バーのボタンを押すと、その画面でルビの量の場所が上に出る', async ({
+  page,
+  context,
+  extensionId,
+}) => {
+  const optionsUrl = `chrome-extension://${extensionId}/options.html`;
+  for (const opened of context.pages().filter((other) => other.url() === optionsUrl)) {
+    await opened.close();
+  }
+  const options = await context.newPage();
+  await options.goto(optionsUrl);
+  await expect(options.getByRole('heading', { name: AMOUNT_TITLE })).toBeVisible();
+  expect(await options.evaluate(() => scrollY)).toBe(0);
+  await openReader(page, extensionId);
+
+  await amountButton(page).click();
+
+  await expectAmountOnTop(options);
+  expect(context.pages().filter((other) => other.url() === optionsUrl)).toHaveLength(1);
+});
+
+test('設定の画面をそのまま開いたとき、ルビの量の場所へは動かず、上から出る', async ({
+  context,
+  extensionId,
+}) => {
+  const options = await context.newPage();
+  await options.goto(`chrome-extension://${extensionId}/options.html`);
+
+  await expect(options.getByRole('heading', { name: AMOUNT_TITLE })).toBeVisible();
+  await options.waitForTimeout(500);
+  expect(await options.evaluate(() => scrollY)).toBe(0);
+  await expect(options.getByRole('heading', { name: AMOUNT_TITLE })).not.toBeFocused();
 });
 
 test('向きを直すモードの間、バーのルビの量のボタンは隠れ、終えると戻る', async ({

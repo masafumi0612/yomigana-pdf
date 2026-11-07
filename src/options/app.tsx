@@ -1,8 +1,9 @@
 import type { JSX } from 'preact';
+import { useEffect } from 'preact/hooks';
 
 import { AboutSection } from './about-section';
 import { AutoRedirectSection } from './auto-redirect-section';
-import { useElement, useHostAccess, useSettings } from './hooks';
+import { useElement, useHostAccess, useJumpTarget, useSettings } from './hooks';
 import { message } from './message';
 import { OpenPdfSection } from './open-pdf-section';
 import { ResetSettings } from './reset-settings';
@@ -20,6 +21,20 @@ export function App(): JSX.Element {
   const hasHostAccess = useHostAccess();
   const [isWelcomeShown, closeWelcome] = useWelcome();
   const [title, setTitle] = useElement<HTMLHeadingElement>();
+  const [jumpTarget, finishJump] = useJumpTarget();
+  const [amountTitle, setAmountTitle] = useElement<HTMLHeadingElement>();
+  const isAmountShown = settings !== undefined;
+
+  // リーダーのバーの［ルビ：…］から開いたときは、ルビの量の場所を画面の上に出し、見出しに移る
+  useEffect(() => {
+    const heading = amountTitle.current;
+    if (jumpTarget !== 'amount' || !isAmountShown || heading === undefined) {
+      return;
+    }
+    heading.closest('section')?.scrollIntoView({ block: 'start' });
+    heading.focus({ preventScroll: true });
+    finishJump();
+  }, [jumpTarget, isAmountShown, amountTitle, finishJump]);
 
   return (
     <div class="page">
@@ -64,7 +79,7 @@ export function App(): JSX.Element {
         <OpenPdfSection />
         {settings !== undefined && (
           <>
-            <RubyAmountSection level={settings.level} />
+            <RubyAmountSection level={settings.level} titleRef={setAmountTitle} />
             <RubyLookSection rubyStyle={settings.rubyStyle} />
           </>
         )}

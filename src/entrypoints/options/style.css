@@ -178,11 +178,18 @@ input {
 }
 
 .card {
+  /* リーダーから開いて、この場所を上に出すとき、画面の端に貼り付かないようにする */
+  scroll-margin-top: var(--gap);
   gap: var(--gap);
   border: 2px solid var(--card-background);
   border-radius: var(--radius-large);
   padding: var(--card-padding);
   background: var(--card-background);
+}
+
+/* リーダーから開いて見出しに移したとき、場所はもう上に出ているので、枠は付けない（押せる部品ではない） */
+.card-title[tabindex='-1']:focus-visible {
+  outline: none;
 }
 
 .card-on {

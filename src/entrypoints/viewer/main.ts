@@ -8,6 +8,7 @@ import { browser } from 'wxt/browser';
 
 import { createLogger } from '@/log';
 import { withTimeout } from '@/messaging/timeout';
+import { requestJump } from '@/options/jump';
 import { allowNativeView } from '@/redirect/skip';
 import { DEFAULT_SETTINGS, type Settings } from '@/settings/model';
 import { getSettings, watchSettings } from '@/settings/storage';
@@ -546,7 +547,15 @@ function openOptions(): void {
     log.error('設定の画面を開くのに失敗しました', error);
   });
 }
-rubyAmount.addEventListener('click', openOptions);
+rubyAmount.addEventListener('click', () => {
+  // ルビの量のボタンから開いたときは、設定の画面でルビの量の場所を上に出す。
+  // 印を残せなくても、設定の画面は開く
+  requestJump('amount')
+    .catch((error: unknown) => {
+      log.error('設定の画面で上に出す場所を残すのに失敗しました', error);
+    })
+    .finally(openOptions);
+});
 openFile.addEventListener('click', () => {
   fileInput.click();
 });
