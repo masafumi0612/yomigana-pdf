@@ -51,6 +51,8 @@ function setUp(): {
   const settings: Settings = { ...DEFAULT_SETTINGS, level: 'all' };
   const recorder: DrawRecorder = { watch: () => undefined, take: () => [] };
   const layouts = createPageLayouts({
+    getPage: () => Promise.resolve(undefined),
+    recorder,
     settings,
     readTexts: (texts, level) =>
       new Promise<ReadingResult>((resolve) => {

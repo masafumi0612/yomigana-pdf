@@ -176,6 +176,8 @@ function updateNoTextNotice(): void {
 
 const initialSettings = await loadingSettings;
 const pageLayouts = createPageLayouts({
+  getPage: async (pageNumber) => viewer.pdfDocument?.getPage(pageNumber),
+  recorder: drawRecorder,
   // 最初の読みの問い合わせより前に、保存した設定を読み終えておく
   settings: initialSettings,
   onPageText: (pageNumber, hasText) => {

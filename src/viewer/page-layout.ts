@@ -1,6 +1,6 @@
 // ページを読んで、ルビの置き場所を出す。画面は触らない（画面に重ねるのは ruby-pages.ts）。
 // ページの文・読み・字の位置・ルビの置き場所はページ番号ごとに取っておき、拡大・回転で描き直しても問い合わせ直さない。
-// 利用者が決めた向き・直した読み・段階・大きさもここで持つ。
+// 利用者が決めた向き・直した読み・段階・大きさもここで持ち、画面に出していないページの置き場所も同じ決まりで出す。
 import type { PDFPageProxy } from 'pdfjs-dist';
 
 import { createLogger } from '@/log';
@@ -16,18 +16,25 @@ import { DEFAULT_SETTINGS, RUBY_SIZE_RATIOS, type Settings } from '@/settings/mo
 import type { RubySpan } from '@/text/annotate';
 import type { Level, UserDictionary } from '@/text/types';
 
+import type { DrawRecorder } from './draw-recorder';
 import { type DrawnBox, type DrawnGlyph, snapGlyphs, toDrawnBoxes } from './glyph-snap';
 import { layoutRubies, type PageFrame, type RubyBox } from './ruby-layout';
 import { type SettingsChange, settingsChange } from './settings-change';
 import { createFailedPages } from './special-cases';
-import type { Matrix } from './transform';
+import { invertMatrix, type Matrix, toMatrix } from './transform';
 import { storedUserDictionary, type UserDictionaryFeed } from './user-dictionary-feed';
 
 /** 読みの問い合わせにかかった時間を測る名前（performance.measure） */
 export const READINGS_MEASURE = 'yomigana-pdf:readings';
 
+/** 画面に出していないページを、字の位置を取るために描く倍率。小さくしても字の位置は変わらない */
+const OFFSCREEN_SCALE = 0.5;
+
 /** ページのうち、文と字の位置を読むのに使うところ */
 export type LayoutPdfPage = Pick<PDFPageProxy, 'getTextContent' | 'commonObjs'>;
+
+/** ページのうち、画面に出していないページを自分で描いて置き場所を出すのに使うところ */
+export type DrawablePdfPage = LayoutPdfPage & Pick<PDFPageProxy, 'view' | 'getViewport' | 'render'>;
 
 /** ページの文と、文ごとのルビを付ける所 */
 export interface PageData {
@@ -51,6 +58,14 @@ export interface DrawnPage {
 
 /** 置き場所を出す部品の作り方 */
 export interface PageLayoutsOptions {
+  /**
+   * ページを引く（画面に出していないページを読むときに使う）
+   * @param pageNumber ページ番号（1 から）
+   * @returns ページ。PDF を開いていないときは undefined
+   */
+  readonly getPage: (pageNumber: number) => Promise<DrawablePdfPage | undefined>;
+  /** 描いた字の位置を書き留める道具 */
+  readonly recorder: DrawRecorder;
   /** 始めの設定。既定は DEFAULT_SETTINGS */
   readonly settings?: Settings;
   /**
@@ -118,6 +133,13 @@ export interface PageLayouts {
     frame: PageFrame,
     pdfPage: LayoutPdfPage,
   ): readonly RubyBox[] | undefined;
+  /**
+   * 画面に出していないページも含めて、ページのルビの置き場所を出す。描いた字の位置を取ってあればそれを使い、
+   * なければ小さな Canvas に描いて字の位置を取る。
+   * @param pageNumber ページ番号（1 から）
+   * @returns 置き場所。読みを出せなかったとき・待つ間に別の PDF に移ったときは undefined
+   */
+  layoutPage(pageNumber: number): Promise<readonly RubyBox[] | undefined>;
   /**
    * 描いた字の位置に合わせてあるかを調べる。
    * @param pageNumber ページ番号（1 から）
@@ -424,6 +446,20 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
       return entry.boxes;
     },
 
+    async layoutPage(pageNumber) {
+      const current = entries;
+      const pdfPage = await options.getPage(pageNumber);
+      if (pdfPage === undefined || current !== entries) return undefined;
+      const data = await prepare(pageNumber, pdfPage);
+      if (data === undefined || current !== entries) return undefined;
+      const isDrawNeeded = entryOf(pageNumber).exact === undefined && data.page.blocks.length > 0;
+      const drawn = isDrawNeeded ? await drawOffscreen(pdfPage, options.recorder) : undefined;
+      if (current !== entries) return undefined;
+      const resolved = await layouts.resolve(pageNumber, data, drawn, () => current === entries);
+      if (resolved === undefined) return undefined;
+      return layouts.placeRubies(pageNumber, frameOfPage(pdfPage), pdfPage);
+    },
+
     hasDrawn(pageNumber) {
       return entries.get(pageNumber)?.exact !== undefined;
     },
@@ -483,6 +519,35 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
 }
 
 /**
+ * 画面に出していないページを小さな Canvas に描き、描いた字の位置を取る。
+ * @param pdfPage ページ
+ * @param recorder 描いた字の位置を書き留める道具
+ * @returns 描いた字の位置。変換を作れないときは undefined
+ */
+async function drawOffscreen(
+  pdfPage: DrawablePdfPage,
+  recorder: DrawRecorder,
+): Promise<DrawnPage | undefined> {
+  const viewport = pdfPage.getViewport({ scale: OFFSCREEN_SCALE, rotation: 0 });
+  const canvasToPdf = invertMatrix(toMatrix(viewport.transform));
+  if (canvasToPdf === undefined) return undefined;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  let draws: readonly DrawnGlyph[];
+  recorder.watch(canvas);
+  try {
+    await pdfPage.render({ canvas, viewport }).promise;
+  } finally {
+    draws = recorder.take(canvas);
+    // 描いた絵はいらないので、すぐにメモリを返す
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+  return { draws, canvasToPdf };
+}
+
+/**
  * フォント自身の名前を引く。描き終えたあとなら、pdf.js が読み込んだフォントの名前が取れる。
  * @param pdfPage ページ
  * @param fontName getTextContent() の styles の鍵
@@ -492,6 +557,16 @@ function realFontName(pdfPage: LayoutPdfPage, fontName: string): string | undefi
   if (!pdfPage.commonObjs.has(fontName)) return undefined;
   const font = pdfPage.commonObjs.get(fontName) as { name?: unknown } | undefined;
   return typeof font?.name === 'string' ? font.name : undefined;
+}
+
+/**
+ * ページの箱（PDF の座標）を引く。
+ * @param pdfPage ページ
+ * @returns ページの箱（pdf.js の view）
+ */
+function frameOfPage(pdfPage: Pick<PDFPageProxy, 'view'>): PageFrame {
+  const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = pdfPage.view;
+  return { pageX: x1, pageY: y1, pageWidth: x2 - x1, pageHeight: y2 - y1 };
 }
 
 /**
