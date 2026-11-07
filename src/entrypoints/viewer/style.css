@@ -167,7 +167,7 @@ body {
   flex: none;
 }
 
-/* 向きを直すボタン・ルビ付き PDF のボタンは、せまい幅でも文字が折り返さないようにする */
+/* 向きを直すボタン・印刷・保存のボタンは、せまい幅でも文字が折り返さないようにする */
 .bar-direction,
 .bar-export {
   white-space: nowrap;

@@ -32,8 +32,8 @@ export function isPrintShortcut(event: PrintShortcutEvent): boolean {
 /**
  * 印刷の案内の窓を作り、画面に入れる。
  * @param options 窓の設定
- * @param options.onExport 「ルビ付き PDF を作る」を押したときの動き
- * @param options.canExport 「ルビ付き PDF を作る」を出すか（PDF を開いていないときは出さない）
+ * @param options.onExport 「印刷・保存」を押したときの動き
+ * @param options.canExport 「印刷・保存」を出すか（PDF を開いていないときは出さない）
  * @param options.onOpenNative 「標準の表示で開く」を押したときの動き
  * @returns 印刷の案内の窓
  */

@@ -62,12 +62,12 @@
     "description": "リーダーのバーのボタン。同じ PDF を Chrome のもとからある表示で開き直す"
   },
   "viewer_bar_exportPdf": {
-    "message": "ルビ付き PDF",
-    "description": "リーダーのバーのボタン。全部のページにルビを書き込んだ PDF を作る"
+    "message": "印刷・保存",
+    "description": "リーダーのバーのボタン。全部のページにルビを書き込んだ PDF を作り、開いて印刷する・保存するための窓を出す"
   },
   "viewer_bar_exportPdfTitle": {
-    "message": "全部のページにルビを書き込んだ PDF を作り、開く・保存する",
-    "description": "ルビ付き PDF のボタンにマウスを乗せたときの説明"
+    "message": "ルビを書き込んだ PDF を作り、印刷・保存できるようにする",
+    "description": "「印刷・保存」のボタンにマウスを乗せたときの説明"
   },
   "viewer_main_document": {
     "message": "PDF の紙面",
@@ -180,7 +180,7 @@
     "description": "印刷しようとしたときに出す案内の窓の見出し"
   },
   "viewer_print_notice": {
-    "message": "ルビ付きで印刷するには、「ルビ付き PDF」で作って開いてから印刷します。",
+    "message": "ルビ付きで印刷するには、［印刷・保存］でルビ付きの PDF を作ってから印刷します。",
     "description": "印刷しようとしたときに出す案内の文。印刷の画面で紙面の代わりに出す文にも使う"
   },
   "viewer_print_openNative": {
@@ -192,11 +192,11 @@
     "description": "印刷の案内の窓を閉じるボタン"
   },
   "viewer_print_export": {
-    "message": "ルビ付き PDF を作る",
-    "description": "印刷の案内の窓のボタン。バーの「ルビ付き PDF」と同じように、ルビを書き込んだ PDF を作り始める"
+    "message": "印刷・保存",
+    "description": "印刷の案内の窓のボタン。バーの「印刷・保存」と同じように、ルビを書き込んだ PDF を作り始める"
   },
   "viewer_export_progress": {
-    "message": "ルビ付き PDF を作っています $DONE$ / $TOTAL$ ページ",
+    "message": "ルビ付きの PDF を作っています $DONE$ / $TOTAL$ ページ",
     "description": "ルビ付き PDF を作っている間、バーの下に出す進み具合",
     "placeholders": {
       "done": {
@@ -240,15 +240,15 @@
     "description": "ルビを書き込むために PDF を読めなかったときの案内"
   },
   "viewer_export_failed": {
-    "message": "ルビ付き PDF を作れませんでした。もう一度試してください。",
+    "message": "ルビ付きの PDF を作れませんでした。もう一度試してください。",
     "description": "ルビ付き PDF を作る途中で、思いがけない失敗があったときの案内"
   },
   "viewer_export_imageOnly": {
     "message": "文字が画像の PDF なので、ルビを付けられません。",
-    "description": "文字が画像になっている PDF で「ルビ付き PDF」を押したときの案内"
+    "description": "文字が画像になっている PDF で「印刷・保存」を押したときの案内"
   },
   "viewer_export_doneTitle": {
-    "message": "ルビ付き PDF ができました",
+    "message": "ルビ付きの PDF ができました",
     "description": "ルビ付き PDF ができたときの窓の見出し"
   },
   "viewer_export_doneText": {

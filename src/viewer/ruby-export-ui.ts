@@ -30,7 +30,7 @@ const log = createLogger('viewer');
 
 /** 画面の流れの作り方 */
 export interface RubyExportUiOptions {
-  /** バーの「ルビ付き PDF」のボタン */
+  /** バーの「印刷・保存」のボタン */
   readonly button: HTMLButtonElement;
   /** バーの下の進み具合・案内 */
   readonly notice: HTMLElement;
@@ -225,7 +225,7 @@ export function createRubyExportUi(options: RubyExportUiOptions): RubyExportUi {
 }
 
 /**
- * できたときの窓を作り、画面に入れる。窓は showModal で開き、Esc で閉じ、閉じたら「ルビ付き PDF」のボタンへ焦点を戻す。
+ * できたときの窓を作り、画面に入れる。窓は showModal で開き、Esc で閉じ、閉じたら「印刷・保存」のボタンへ焦点を戻す。
  * @param text 文言を引く関数
  * @param returnFocus 閉じたときに焦点を戻す所
  * @returns 窓

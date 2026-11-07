@@ -1,5 +1,5 @@
 // ルビを書き込んだ PDF を作り、pdf.js で描いた絵のルビが、画面のルビと同じ所にあるかを確かめる。
-// PDF はバーの「ルビ付き PDF」で作り、できたときの窓の［保存］で受け取る。
+// PDF はバーの「印刷・保存」で作り、できたときの窓の［保存］で受け取る。
 // 1画素ずつの比べ方は、DOM の字と Canvas の字の描き方の違いで必ず差が出るので、ルビの箱ごとの字の濃さの重心で比べる。
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -73,7 +73,7 @@ interface ShiftStats {
 }
 
 /**
- * バーの「ルビ付き PDF」で PDF を作って［保存］で受け取り、画面の1ページめのルビの箱を取り出す。
+ * バーの「印刷・保存」で PDF を作って［保存］で受け取り、画面の1ページめのルビの箱を取り出す。
  * @param page リーダーの画面
  * @returns 作った PDF（base64）、ルビなしのページがあるか、画面のルビの箱（画素。窓の左上から）
  */
@@ -82,8 +82,8 @@ async function exportInViewer(page: Page): Promise<{
   hasFailedPages: boolean;
   regions: { x: number; y: number; w: number; h: number }[];
 }> {
-  await page.getByRole('button', { name: 'ルビ付き PDF', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'ルビ付き PDF ができました' });
+  await page.getByRole('button', { name: '印刷・保存', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'ルビ付きの PDF ができました' });
   await expect(dialog).toBeVisible({ timeout: TEST_TIMEOUT_MS });
   const download = page.waitForEvent('download');
   await dialog.getByRole('button', { name: '保存' }).click();

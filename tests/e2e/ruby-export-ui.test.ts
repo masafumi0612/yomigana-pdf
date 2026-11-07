@@ -1,4 +1,4 @@
-// バーの「ルビ付き PDF」から、進み具合・止める・できたときの窓（開く・保存）・作れないときの案内までを確かめる。
+// バーの「印刷・保存」から、進み具合・止める・できたときの窓（開く・保存）・作れないときの案内までを確かめる。
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -59,12 +59,12 @@ async function openBuffer(
 }
 
 /**
- * バーの「ルビ付き PDF」のボタン。
+ * バーの「印刷・保存」のボタン。
  * @param page 画面
  * @returns ボタン
  */
 function exportButton(page: Page): ReturnType<Page['getByRole']> {
-  return page.getByRole('button', { name: 'ルビ付き PDF', exact: true });
+  return page.getByRole('button', { name: '印刷・保存', exact: true });
 }
 
 /**
@@ -73,7 +73,7 @@ function exportButton(page: Page): ReturnType<Page['getByRole']> {
  * @returns 窓
  */
 function doneDialog(page: Page): ReturnType<Page['getByRole']> {
-  return page.getByRole('dialog', { name: 'ルビ付き PDF ができました' });
+  return page.getByRole('dialog', { name: 'ルビ付きの PDF ができました' });
 }
 
 /**
@@ -90,7 +90,7 @@ async function openSample(page: Page, extensionId: string, file = SAMPLE): Promi
   await expect(exportButton(page)).toBeVisible();
 }
 
-test('「ルビ付き PDF」を押したとき、進み具合を出して読み上げにも伝え、できたら窓が開く', async ({
+test('「印刷・保存」を押したとき、進み具合を出して読み上げにも伝え、できたら窓が開く', async ({
   page,
   extensionId,
 }) => {
@@ -100,7 +100,7 @@ test('「ルビ付き PDF」を押したとき、進み具合を出して読み�
 
   await exportButton(page).click();
 
-  const progress = /^ルビ付き PDF を作っています \d+ \/ 40 ページ$/u;
+  const progress = /^ルビ付きの PDF を作っています \d+ \/ 40 ページ$/u;
   await expect(page.locator('#export-text')).toHaveText(progress);
   await expect(page.locator('#export-live')).toHaveText(progress);
   await expect(page.locator('#export-live')).toHaveAttribute('aria-live', 'polite');
@@ -195,7 +195,7 @@ test('作っている途中で［止める］を押したとき、何も出さ�
   await openBuffer(page, extensionId, 'long.pdf', await buildLongPdf());
   await expect(exportButton(page)).toBeVisible({ timeout: OPEN_TIMEOUT_MS });
   await exportButton(page).click();
-  await expect(page.locator('#export-text')).toHaveText(/ルビ付き PDF を作っています/u);
+  await expect(page.locator('#export-text')).toHaveText(/ルビ付きの PDF を作っています/u);
 
   await page.locator('#export-notice').getByRole('button', { name: '止める' }).click();
 
@@ -212,7 +212,7 @@ test('作っている途中で向きを変えたとき、初めから作り直�
   await openBuffer(page, extensionId, 'long.pdf', await buildLongPdf());
   await expect(exportButton(page)).toBeVisible({ timeout: OPEN_TIMEOUT_MS });
   await exportButton(page).click();
-  await expect(page.locator('#export-text')).toHaveText(/ルビ付き PDF を作っています/u);
+  await expect(page.locator('#export-text')).toHaveText(/ルビ付きの PDF を作っています/u);
 
   await page.getByRole('button', { name: '向きを直す' }).click();
   await page.getByRole('button', { name: 'すべて縦書き' }).click();
@@ -244,24 +244,24 @@ test('キーボードだけで、作る・窓のボタンを移る・Esc で閉�
   await expect(exportButton(page)).toBeFocused();
 });
 
-test('Ctrl+P の案内の窓から、ルビ付き PDF を作り始められる', async ({ page, extensionId }) => {
+test('Ctrl+P の案内の窓から、ルビ付きの PDF を作り始められる', async ({ page, extensionId }) => {
   test.setTimeout(TEST_TIMEOUT_MS);
   await openSample(page, extensionId);
 
   await page.keyboard.press('Control+P');
   const notice = page.getByRole('dialog', { name: '印刷について' });
   await expect(notice).toContainText(
-    'ルビ付きで印刷するには、「ルビ付き PDF」で作って開いてから印刷します。',
+    'ルビ付きで印刷するには、［印刷・保存］でルビ付きの PDF を作ってから印刷します。',
   );
-  await expect(notice.getByRole('button', { name: 'ルビ付き PDF を作る' })).toBeFocused();
-  await notice.getByRole('button', { name: 'ルビ付き PDF を作る' }).click();
+  await expect(notice.getByRole('button', { name: '印刷・保存' })).toBeFocused();
+  await notice.getByRole('button', { name: '印刷・保存' }).click();
 
   await expect(notice).toBeHidden();
   await expect(doneDialog(page)).toBeVisible({ timeout: EXPORT_TIMEOUT_MS });
 });
 
 for (const width of [400, 1280]) {
-  test(`幅 ${String(width)}px のとき、「ルビ付き PDF」を含むバーのボタンが画面に収まり、折り返さない`, async ({
+  test(`幅 ${String(width)}px のとき、「印刷・保存」を含むバーのボタンが画面に収まり、折り返さない`, async ({
     page,
     extensionId,
   }) => {
@@ -281,8 +281,8 @@ for (const width of [400, 1280]) {
         };
       }),
     );
-    const exportBox = buttons.find((button) => button.name === 'ルビ付き PDF');
-    expect(exportBox, '「ルビ付き PDF」のボタン').toBeDefined();
+    const exportBox = buttons.find((button) => button.name === '印刷・保存');
+    expect(exportBox, '「印刷・保存」のボタン').toBeDefined();
     for (const button of buttons) {
       expect(button.left, `${button.name} の左`).toBeGreaterThanOrEqual(-TOLERANCE_PX);
       expect(button.right, `${button.name} の右`).toBeLessThanOrEqual(width + TOLERANCE_PX);
