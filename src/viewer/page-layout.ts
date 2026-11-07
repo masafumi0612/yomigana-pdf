@@ -93,6 +93,11 @@ export interface PageLayoutsOptions {
    * @param hasFailed 読みを出せなかったページが1つでもあれば true
    */
   readonly onReadingFailureChange?: (hasFailed: boolean) => void;
+  /**
+   * 利用者が向き・段階・ルビの見た目・直した読みを変えて、置き場所が変わるかもしれないときに呼ぶ
+   * （作っている途中のルビ付き PDF を作り直すのに使う）。向きは、読み直しが済んでから呼ぶ
+   */
+  readonly onLayoutChange?: () => void;
 }
 
 /** ページごとにルビの置き場所を出して取っておく部品 */
@@ -491,6 +496,7 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
         (block) => (block === target ? direction : undefined),
         onRedirected,
       );
+      options.onLayoutChange?.();
     },
 
     async setAllDirection(direction, onRedirected) {
@@ -500,11 +506,18 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
           redirect(pageNumber, (block) => forcedDirection(block, direction), onRedirected),
         ),
       );
+      options.onLayoutChange?.();
     },
 
     applySettings(next) {
       const change = settingsChange(settings, next);
+      const isLookChanged =
+        settings.rubyStyle.color !== next.rubyStyle.color ||
+        settings.rubyStyle.hasBand !== next.rubyStyle.hasBand;
       settings = next;
+      if (change.isLevelChanged || change.isSizeChanged || isLookChanged) {
+        options.onLayoutChange?.();
+      }
       if (change.isSizeChanged) {
         for (const entry of entries.values()) entry.boxes = undefined;
       }
@@ -514,6 +527,7 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
     applyUserDictionary(next) {
       isDictionaryChanged = true;
       dictionary = next;
+      options.onLayoutChange?.();
     },
 
     reset() {

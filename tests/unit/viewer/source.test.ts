@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { fileNameFromUrl, isPdfFile, readInitialHash, readViewerParams } from '@/viewer/source';
+import {
+  fileNameFromUrl,
+  isPdfFile,
+  pdfNameFromUrl,
+  readInitialHash,
+  readViewerParams,
+} from '@/viewer/source';
 
 const EXTENSION_ORIGIN = 'chrome-extension://abcdefghijklmnopabcdefghijklmnop';
 
@@ -176,5 +182,33 @@ describe('readInitialHash', () => {
 
   it('# から後ろがないとき、空の文字列になる', () => {
     expect(readInitialHash('https://example.com/a.pdf', true, '')).toBe('');
+  });
+});
+
+describe('pdfNameFromUrl', () => {
+  it('パスの最後が名前のとき、% の符号を戻した名前になる', () => {
+    expect(pdfNameFromUrl('https://example.com/a/%E5%9B%B3%E9%91%91.pdf?x=1#page=2')).toBe(
+      '図鑑.pdf',
+    );
+  });
+
+  it('パスが / で終わるとき、undefined になる', () => {
+    expect(pdfNameFromUrl('https://example.com/docs/')).toBeUndefined();
+  });
+
+  it('blob: の URL のとき、# の後ろの名前になる', () => {
+    expect(pdfNameFromUrl('blob:chrome-extension://abc/0f8c-41#%E5%9B%B3.pdf')).toBe('図.pdf');
+  });
+
+  it('blob: の URL に名前がないとき、undefined になる', () => {
+    expect(pdfNameFromUrl('blob:chrome-extension://abc/0f8c-41')).toBeUndefined();
+  });
+
+  it('URL として読めないとき、undefined になる', () => {
+    expect(pdfNameFromUrl('a.pdf')).toBeUndefined();
+  });
+
+  it('% の並びが壊れているとき、戻さずにそのままになる', () => {
+    expect(pdfNameFromUrl('file:///C:/docs/%E3%81.pdf')).toBe('%E3%81.pdf');
   });
 });

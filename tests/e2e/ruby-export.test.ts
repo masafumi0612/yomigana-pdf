@@ -1,5 +1,5 @@
 // ルビを書き込んだ PDF を作り、pdf.js で描いた絵のルビが、画面のルビと同じ所にあるかを確かめる。
-// 画面の入口（ボタン）はまだないので、リーダーが置いている yomiganaRubyExport を呼ぶ。
+// PDF はバーの「印刷・保存」で作り、できたときの窓の［保存］で受け取る。
 // 1画素ずつの比べ方は、DOM の字と Canvas の字の描き方の違いで必ず差が出るので、ルビの箱ごとの字の濃さの重心で比べる。
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -9,12 +9,7 @@ import type { Page } from '@playwright/test';
 import { degrees, PDFDocument } from 'pdf-lib';
 import type * as PdfJs from 'pdfjs-dist';
 
-import type { Result } from '../../src/result';
-import type { RubyExport, RubyExportError } from '../../src/viewer/ruby-export';
 import { expect, test, TEST_PDF_DIR } from './fixtures';
-
-/** リーダーが置いている、PDF を作る入口（main.ts） */
-type ExportEntry = () => Promise<Result<RubyExport, RubyExportError> | undefined>;
 
 /** 最初のルビが出るまで待つ時間（ミリ秒） */
 const FIRST_RUBY_TIMEOUT_MS = 30_000;
@@ -78,35 +73,35 @@ interface ShiftStats {
 }
 
 /**
- * リーダーの中で PDF を作り、画面の1ページめのルビの箱を取り出す。
+ * バーの「印刷・保存」で PDF を作って［保存］で受け取り、画面の1ページめのルビの箱を取り出す。
  * @param page リーダーの画面
- * @returns 作った PDF（base64）、作れなかったページ、画面のルビの箱（画素。窓の左上から）
+ * @returns 作った PDF（base64）、ルビなしのページがあるか、画面のルビの箱（画素。窓の左上から）
  */
 async function exportInViewer(page: Page): Promise<{
   base64: string;
-  failedPages: readonly number[];
+  hasFailedPages: boolean;
   regions: { x: number; y: number; w: number; h: number }[];
 }> {
-  return page.evaluate(async () => {
-    const entry = (globalThis as unknown as { yomiganaRubyExport: ExportEntry }).yomiganaRubyExport;
-    const result = await entry();
-    if (!result?.ok) throw new Error('PDF を作れなかった');
+  await page.getByRole('button', { name: '印刷・保存', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'ルビ付きの PDF ができました' });
+  await expect(dialog).toBeVisible({ timeout: TEST_TIMEOUT_MS });
+  const download = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: '保存' }).click();
+  const path = await (await download).path();
+  const base64 = (await readFile(path)).toString('base64');
+  const hasFailedPages = await dialog.locator('.export-failed').isVisible();
+  await dialog.getByRole('button', { name: '閉じる' }).click();
+  const regions = await page.evaluate(() => {
     const wrapper = document.querySelector<HTMLElement>(
       '.page[data-page-number="1"] .canvasWrapper',
     );
     if (wrapper === null) throw new Error('1ページめがない');
-    const regions = [...wrapper.querySelectorAll<HTMLElement>('.ruby-layer > span')].map((span) => {
+    return [...wrapper.querySelectorAll<HTMLElement>('.ruby-layer > span')].map((span) => {
       const rect = span.getBoundingClientRect();
       return { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
     });
-    const { bytes } = result.value;
-    let binary = '';
-    const chunk = 0x8000;
-    for (let at = 0; at < bytes.length; at += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(at, at + chunk));
-    }
-    return { base64: btoa(binary), failedPages: result.value.failedPages, regions };
   });
+  return { base64, hasFailedPages, regions };
 }
 
 /**
@@ -292,13 +287,13 @@ for (const testCase of CASES) {
       });
 
       expect({
-        failedPages: exported.failedPages,
+        hasFailedPages: exported.hasFailedPages,
         missing: stats.missing,
         isCompared: stats.count > 0,
         isMeanClose: stats.mean <= MAX_MEAN_SHIFT_PX,
         isP95Close: stats.p95 <= MAX_P95_SHIFT_PX,
       }).toEqual({
-        failedPages: [],
+        hasFailedPages: false,
         missing: 0,
         isCompared: true,
         isMeanClose: true,

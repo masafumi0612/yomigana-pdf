@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { PDFDocument } from 'pdf-lib';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -82,6 +83,13 @@ describe('exportRubyPdf', () => {
     if (!result.ok) throw new Error(result.error);
 
     expect(await pageCountOf(result.value.bytes)).toBe(await pageCountOf(SOURCE));
+  });
+
+  it('題名を渡したとき、作った PDF の題名（/Title）になる', async () => {
+    const result = await exportRubyPdf(optionsOf({ title: 'お知らせ（ルビ付き）' }));
+    if (!result.ok) throw new Error(result.error);
+
+    expect((await PDFDocument.load(result.value.bytes)).getTitle()).toBe('お知らせ（ルビ付き）');
   });
 
   it('1ページ済むごとに、済んだページの数を知らせる', async () => {

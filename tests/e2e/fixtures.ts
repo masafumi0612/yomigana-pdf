@@ -203,3 +203,30 @@ export async function openFromFile(page: Page, extensionId: string, file: string
 }
 
 export { expect };
+
+/**
+ * 画面とその中の iframe の print を差しかえ、呼ばれた画面の URL を一番上の画面に書き留める。
+ * ヘッドレスでは印刷の画面が出ないので、印刷を呼んだところまでを確かめるのに使う。
+ * @param page 画面
+ * @param isFailing print を呼ぶと失敗させるなら true
+ */
+export async function stubPrint(page: Page, isFailing = false): Promise<void> {
+  await page.addInitScript((isFailing) => {
+    window.print = () => {
+      if (isFailing) throw new Error('印刷できない（テスト）');
+      const top = window.top as unknown as { yomiganaPrinted?: string[] };
+      top.yomiganaPrinted = [...(top.yomiganaPrinted ?? []), location.href];
+    };
+  }, isFailing);
+}
+
+/**
+ * stubPrint で書き留めた、print を呼んだ画面の URL を引く。
+ * @param page 画面
+ * @returns URL（呼ばれた順）
+ */
+export async function printedUrls(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (window as unknown as { yomiganaPrinted?: string[] }).yomiganaPrinted ?? [],
+  );
+}

@@ -92,6 +92,26 @@ export function fileNameFromUrl(url: string): string {
 }
 
 /**
+ * PDF の URL から、もとのファイル名を取り出す（ルビ付き PDF の名前のもとにする）。
+ *
+ * @param url - PDF の URL
+ * @returns パスの最後の部分（`%` の符号は戻す）。blob: の URL は `#` の後ろ。
+ *   取り出せない（パスが `/` で終わる・名前のない blob: の URL・URL として読めない）ときは undefined
+ */
+export function pdfNameFromUrl(url: string): string | undefined {
+  if (!URL.canParse(url)) {
+    return undefined;
+  }
+  const { pathname, protocol, hash } = new URL(url);
+  if (protocol === BLOB_PROTOCOL) {
+    // 名前のない blob: の URL のパスは、意味のない番号
+    return hash.length > 1 ? decodeOrKeep(hash.slice(1)) : undefined;
+  }
+  const last = pathname.slice(pathname.lastIndexOf('/') + 1);
+  return last === '' ? undefined : decodeOrKeep(last);
+}
+
+/**
  * `%` の符号を戻す。
  *
  * @param text - 戻す文字

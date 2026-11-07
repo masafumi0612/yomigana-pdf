@@ -153,7 +153,8 @@ body {
 
 /* 枠を付けて、文字だけのボタンとも見分けやすくする（枠は背景と 3:1 以上） */
 .bar-rotate,
-.bar-direction {
+.bar-direction,
+.bar-export {
   display: inline-flex;
   gap: 6px;
   align-items: center;
@@ -161,12 +162,14 @@ body {
 }
 
 .bar-rotate-icon,
-.bar-direction-icon {
+.bar-direction-icon,
+.bar-export-icon {
   flex: none;
 }
 
-/* 向きを直すボタンは、ページ番号の隣で文字が折り返さないようにする */
-.bar-direction {
+/* 向きを直すボタン・印刷・保存のボタンは、せまい幅でも文字が折り返さないようにする */
+.bar-direction,
+.bar-export {
   white-space: nowrap;
 }
 
@@ -334,6 +337,8 @@ main {
   .fix-status,
   .print-dialog,
   .print-dialog::backdrop,
+  .export-dialog,
+  .export-dialog::backdrop,
   .direction-layer,
   main {
     display: none !important;
@@ -678,8 +683,9 @@ main {
   padding: 0;
 }
 
-/* 印刷の案内の窓。読みを直す窓と同じ色・枠で、画面の真ん中に出す */
-.print-dialog {
+/* 印刷の案内の窓と、ルビ付き PDF ができたときの窓。読みを直す窓と同じ色・枠で、画面の真ん中に出す */
+.print-dialog,
+.export-dialog {
   box-sizing: border-box;
   width: var(--print-width);
   max-width: calc(100vw - 2 * var(--fix-gap));
@@ -690,7 +696,8 @@ main {
   color: var(--bar-text);
 }
 
-.print-dialog::backdrop {
+.print-dialog::backdrop,
+.export-dialog::backdrop {
   background: var(--fix-backdrop);
 }
 
@@ -715,4 +722,48 @@ main {
   flex-wrap: wrap;
   gap: var(--fix-gap);
   justify-content: flex-end;
+}
+
+/* ルビ付き PDF ができたときの窓の、名前と知らせの色 */
+.export-name {
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+
+.export-failed {
+  color: var(--alert-text);
+}
+
+.export-alert {
+  color: var(--notice-error);
+}
+
+/* 窓の中でいちばん使うボタンは、ほかのボタンと見分けられるよう塗る（読みを直す窓の「決める」と同じ） */
+.export-primary,
+.export-primary:hover:not(:disabled) {
+  border-color: var(--focus-ring);
+  background: var(--focus-ring);
+  color: var(--fix-on-primary);
+}
+
+/* 印刷するために PDF を読み込む iframe。Chrome の PDF の表示が動くよう描く場所は残し、見えなく・押せなくする */
+.print-frame {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 見えないが、読み上げには伝える所 */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

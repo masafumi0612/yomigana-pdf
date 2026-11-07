@@ -76,9 +76,10 @@ export interface RubyPdfWriter {
   addPage(input: RubyPageInput): void;
   /**
    * 書き込んだ PDF をバイト列にする。
+   * @param title PDF の題名（/Title）。渡さなければ、もとの PDF の題名のまま
    * @returns 新しい PDF
    */
-  save(): Promise<Uint8Array>;
+  save(title?: string): Promise<Uint8Array>;
 }
 
 /** 帯の色（白） */
@@ -193,7 +194,11 @@ export async function openRubyPdf(
         operators.push(popGraphicsState());
         page.pushOperators(...operators);
       },
-      save: () => document.save(),
+      save: (title) => {
+        // 標準の表示がタブの名前に題名を出すよう、ViewerPreferences の DisplayDocTitle も付ける
+        if (title !== undefined) document.setTitle(title, { showInWindowTitleBar: true });
+        return document.save();
+      },
     },
   };
 }
