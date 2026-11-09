@@ -38,6 +38,12 @@ const PARAGRAPH_SIZE_RATIO = 1.2;
 const PARAGRAPH_GAP_EM = 2;
 /** 文の終わりの字（段落の終わりを見分けるのに使う） */
 const SENTENCE_END = /[。．！？!?」』）)]$/u;
+/** 漢字1字 */
+const KANJI_CHAR = /^\p{Script=Han}$/u;
+/** 語が行をまたいでいると見なす、前の行の字の数の下限（短い見出しや表の欄を積んだものをつながない） */
+const WRAP_MIN_GLYPHS = 4;
+/** 語が行をまたいでいると見なす、行どうしのすきまの上限（字） */
+const WRAP_GAP_EM = 1.5;
 
 /** 余白（並べた行の、どの行にも重ならない区間） */
 interface Gap {
@@ -350,10 +356,72 @@ function toParagraphs(lines: readonly TextLine[]): TextLine[][] {
  */
 export function orderParagraphs(lines: readonly TextLine[]): TextLine[][] {
   if (lines.length === 0) return [];
-  return cutRegions(lines).flatMap((region) => {
+  const paragraphs = cutRegions(lines).flatMap((region) => {
     const dominant = dominantDirection(region);
     const same = region.filter((line) => line.direction === dominant);
     const others = region.filter((line) => line.direction !== dominant);
     return [same, others].filter((group) => group.length > 0).flatMap(toParagraphs);
   });
+  return joinWrappedWords(paragraphs);
+}
+
+/**
+ * 続く2つの段落のあいだで、語が行をまたいでいるか。
+ * 前の段落が漢字で終わり、次の段落が漢字で始まり、2つの行がすぐ隣にあって行の頭がそろい、
+ * 前の行が次の行の終わりまで届くなら、折り返しで語が切れたと見なす。
+ * @param prev 前の段落の最後の行
+ * @param next 次の段落の最初の行
+ * @returns 語がまたいでいるなら true
+ */
+function isWrappedWord(prev: TextLine, next: TextLine): boolean {
+  const last = prev.glyphs.at(-1);
+  const first = next.glyphs[0];
+  if (
+    last === undefined ||
+    first === undefined ||
+    prev.direction !== next.direction ||
+    prev.glyphs.length < WRAP_MIN_GLYPHS ||
+    !KANJI_CHAR.test(last.norm) ||
+    !KANJI_CHAR.test(first.norm)
+  ) {
+    return false;
+  }
+  const size = Math.max(prev.size, next.size);
+  const gap =
+    prev.direction === 'vertical' ? prev.rect.x1 - next.rect.x2 : prev.rect.y1 - next.rect.y2;
+  const [prevStart, prevEnd] = flowSpan(prev);
+  const [nextStart, nextEnd] = flowSpan(next);
+  return (
+    size <= Math.min(prev.size, next.size) * PARAGRAPH_SIZE_RATIO &&
+    gap >= -size * LEAD_NOISE_EM &&
+    gap <= size * WRAP_GAP_EM &&
+    Math.abs(prevStart - nextStart) <= size * EDGE_NEAR_EM &&
+    prevEnd >= nextEnd - size * EDGE_NEAR_EM
+  );
+}
+
+/**
+ * 折り返しで語が切れている、続く段落をつなぐ（拡／大防止 → 拡大防止）。
+ * つながないと、切れた字だけで読むことになり、読みが違ったり付かなかったりする。
+ * @param paragraphs 読む順の段落
+ * @returns つないだ段落
+ */
+function joinWrappedWords(paragraphs: readonly TextLine[][]): TextLine[][] {
+  const joined: TextLine[][] = [];
+  for (const paragraph of paragraphs) {
+    const previous = joined.at(-1);
+    const prevLine = previous?.at(-1);
+    const nextLine = paragraph[0];
+    if (
+      previous !== undefined &&
+      prevLine !== undefined &&
+      nextLine !== undefined &&
+      isWrappedWord(prevLine, nextLine)
+    ) {
+      previous.push(...paragraph);
+    } else {
+      joined.push([...paragraph]);
+    }
+  }
+  return joined;
 }

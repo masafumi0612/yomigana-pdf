@@ -174,6 +174,43 @@ describe('orderParagraphs', () => {
     ]);
   });
 
+  /**
+   * 1行目と2行目は狭い行間、2行目と3行目は広い行間（別のかたまりになる）の3行を作る。
+   * @param first 1行目
+   * @param second 2行目
+   * @param third 3行目
+   * @returns 片
+   */
+  function wrappedItems(first: string, second: string, third: string): PdfTextItem[] {
+    return [
+      horizontalItem(first, 100, 500),
+      horizontalItem(second, 100, 500 - SIZE * 1.5),
+      horizontalItem(third, 100, 500 - SIZE * 3.7),
+    ];
+  }
+
+  it('広い行間で別のかたまりに分かれても、漢字の語が行をまたいでいるとき、つなぐ', () => {
+    const items = wrappedItems('被害の原因と対策です', '消費者被害の拡', '大防止のため');
+    expect(paragraphsOf(items)).toEqual(['h:被害の原因と対策です消費者被害の拡大防止のため']);
+  });
+
+  it('前の行が次の行の終わりまで届かないとき、漢字で終わって始まっても、つながない', () => {
+    const items = wrappedItems(
+      '被害の原因と対策です',
+      '消費者被害の拡',
+      '大防止のためにできること',
+    );
+    expect(paragraphsOf(items)).toEqual([
+      'h:被害の原因と対策です消費者被害の拡',
+      'h:大防止のためにできること',
+    ]);
+  });
+
+  it('短い表の欄が上下に積まれているとき、漢字で終わって始まっても、つながない', () => {
+    const items = wrappedItems('学科の一覧の表です', '普通', '総合');
+    expect(paragraphsOf(items)).toEqual(['h:学科の一覧の表です普通', 'h:総合']);
+  });
+
   it('1本の行の途中だけに書き込む空欄があるとき、行を分けない', () => {
     const items = [
       horizontalItem('一行目の文です。一行目の文です。', 100, 500),
