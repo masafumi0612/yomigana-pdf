@@ -159,3 +159,47 @@ describe('toRuns の縦書きの片の字間', () => {
     ]);
   });
 });
+
+describe('toRuns の重ねて描いた片', () => {
+  /**
+   * ランの字をつなぐ。
+   * @param items 片
+   * @returns 字をつないだ文字列（ランの順）
+   */
+  function textOf(items: Parameters<typeof contentOf>[0]): string {
+    return toRuns(contentOf(items))
+      .map((run) => run.text)
+      .join('');
+  }
+
+  it('同じ片が同じ場所に2つあるとき、1つだけ残す', () => {
+    const item = horizontalItem('整数', 100, 500);
+    expect(textOf([item, { ...item }])).toBe('整数');
+  });
+
+  it('片の一部だけが同じ場所にもう1つあるとき、一部の片を除く（一部の片が先でも）', () => {
+    const whole = horizontalItem('再編後の学区', 100, 500);
+    const part = { ...horizontalItem('編後', 110, 500), width: 21 };
+    expect(textOf([part, whole])).toBe('再編後の学区');
+    expect(textOf([whole, part])).toBe('再編後の学区');
+  });
+
+  it('縦書きの片の一部が同じ場所にもう1つあるとき、一部の片を除く', () => {
+    const whole = verticalItem('教科書', 100, 500);
+    const part = verticalItem('科書', 100, 490);
+    expect(textOf([whole, part])).toBe('教科書');
+  });
+
+  it('同じ字でも、別の行・別の場所・大きさの違う片のときは、除かない', () => {
+    const whole = horizontalItem('整数と整数', 100, 500);
+    expect(textOf([whole, horizontalItem('整数', 100, 480)])).toBe('整数と整数整数');
+    expect(textOf([whole, horizontalItem('整数', 200, 500)])).toBe('整数と整数整数');
+    expect(textOf([whole, horizontalItem('整数', 100, 500, 7)])).toBe('整数と整数整数');
+  });
+
+  it('同じ場所でも、字が違う片のときは、除かない', () => {
+    expect(textOf([horizontalItem('整数', 100, 500), horizontalItem('小数', 100, 500)])).toBe(
+      '整数小数',
+    );
+  });
+});

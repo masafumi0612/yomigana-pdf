@@ -68,6 +68,12 @@ const CHAIN_STEP_MAX_EM = 1.3;
 const CHAIN_SIZE_RATIO = 1.25;
 /** 縦書きの並びと見なす、続く片の数の下限 */
 const MIN_CHAIN_LENGTH = 2;
+/** 重ねて描いた片と見なす、行と交わる向きの位置（横書きは基準線、縦書きは列の中心）のずれの上限（字） */
+const OVERDRAWN_CROSS_EM = 0.2;
+/** 重ねて描いた片と見なす、ほかの片の端からはみ出してよい長さ（字） */
+const OVERDRAWN_REACH_EM = 0.5;
+/** 重ねて描いた片と見なす字の大きさの比の上限 */
+const OVERDRAWN_SIZE_RATIO = 1.1;
 
 /** 字にする前の1つの片 */
 interface Piece {
@@ -77,6 +83,22 @@ interface Piece {
   readonly chars: readonly string[];
   /** 捨てない字の数 */
   readonly visible: number;
+  /** 捨てない字をつないだ文字列 */
+  readonly text: string;
+  /** 片の区間と位置 */
+  readonly extent: Extent;
+}
+
+/** 片の、字の並ぶ向きの区間と、行と交わる向きの位置 */
+interface Extent {
+  /** 字の並ぶ向きの始まり */
+  readonly start: number;
+  /** 字の並ぶ向きの終わり */
+  readonly end: number;
+  /** 行と交わる向きの位置 */
+  readonly cross: number;
+  /** 字の大きさ */
+  readonly size: number;
 }
 
 /**
@@ -96,6 +118,62 @@ export function normalizeGlyph(ch: string): string {
  */
 function isTextItem(item: PdfTextItem | PdfMarkedContent): item is PdfTextItem {
   return 'str' in item;
+}
+
+/**
+ * 片の区間と位置。縦書きの片の x は列の中心、y は上の端。横書きの片の x は左の端、y は基準線。
+ * @param item 片
+ * @param isMarked 縦書きの印があるか
+ * @returns 区間と位置
+ */
+function extentOf(item: PdfTextItem, isMarked: boolean): Extent {
+  const [a = 0, b = 0, c = 0, d = 0, x = 0, y = 0] = item.transform;
+  const size = Math.max(Math.hypot(a, b), Math.hypot(c, d));
+  return isMarked
+    ? { start: -y, end: -y + item.height, cross: x, size }
+    : { start: x, end: x + item.width, cross: y, size };
+}
+
+/**
+ * 片が、ほかの片と同じ字を同じ場所に重ねて描いたものか。
+ * 白い縁取りや太字に見せる重ね描きでは、同じ片がもう1つあるか、片の一部だけがもう1つある。
+ * 同じ向き・同じ大きさで、ほかの片の区間の中にあり、字がほかの片の字の一部なら、重ねて描いたものと見なす。
+ * 同じ字の片が2つあるときは、先の片を残す。
+ * @param piece 見る片
+ * @param other ほかの片
+ * @param isOtherFirst ほかの片が先にあるか
+ * @returns 重ねて描いたものなら true
+ */
+function isOverdrawn(piece: Piece, other: Piece, isOtherFirst: boolean): boolean {
+  const { extent } = piece;
+  const otherExtent = other.extent;
+  const size = Math.max(extent.size, otherExtent.size);
+  const reach = size * OVERDRAWN_REACH_EM;
+  return (
+    piece.isMarked === other.isMarked &&
+    size <= Math.min(extent.size, otherExtent.size) * OVERDRAWN_SIZE_RATIO &&
+    Math.abs(extent.cross - otherExtent.cross) < size * OVERDRAWN_CROSS_EM &&
+    extent.start >= otherExtent.start - reach &&
+    extent.end <= otherExtent.end + reach &&
+    (piece.text.length < other.text.length
+      ? other.text.includes(piece.text)
+      : isOtherFirst && other.text === piece.text)
+  );
+}
+
+/**
+ * 同じ字を同じ場所に重ねて描いた片を除く。除かないと、字が2回読まれ、ルビも2つ付く。
+ * @param pieces 片の順の片
+ * @returns 重ねて描いた片を除いた片（片の順）
+ */
+function withoutOverdrawn(pieces: readonly Piece[]): Piece[] {
+  return pieces.filter(
+    (piece, index) =>
+      !pieces.some(
+        (other, otherIndex) =>
+          otherIndex !== index && isOverdrawn(piece, other, otherIndex < index),
+      ),
+  );
 }
 
 /**
@@ -229,7 +307,8 @@ function chainToRuns(chain: readonly PlacedGlyph[]): TextRun[] {
 
 /**
  * pdf.js の文字の片を、位置つきの字のランにする。
- * 空白だけの片・印・回した横書きの片は捨てる。1字だけの片が真下へ続く並びは、縦書きの1つのランにする。
+ * 空白だけの片・印・回した横書きの片・同じ字を重ねて描いた片は捨てる。
+ * 1字だけの片が真下へ続く並びは、縦書きの1つのランにする。
  * @param content getTextContent() の結果
  * @returns 片の順のラン
  */
@@ -237,16 +316,24 @@ export function toRuns(content: PdfTextContent): TextRun[] {
   const pieces: Piece[] = [];
   for (const item of content.items.filter(isTextItem)) {
     const chars = Array.from(item.str);
-    const visible = chars.filter((ch) => !SKIPPED_CHAR.test(ch)).length;
+    const shown = chars.filter((ch) => !SKIPPED_CHAR.test(ch));
+    const visible = shown.length;
     const isMarked = item.dir === TOP_TO_BOTTOM || content.styles[item.fontName]?.vertical === true;
     const isRotated = Math.abs(item.transform[1] ?? 0) > ROTATION_EPSILON;
     if (visible === 0 || (isRotated && !isMarked)) continue;
-    pieces.push({ item, isMarked, chars, visible });
+    pieces.push({
+      item,
+      isMarked,
+      chars,
+      visible,
+      text: shown.join(''),
+      extent: extentOf(item, isMarked),
+    });
   }
 
   const runs: TextRun[] = [];
   let chain: PlacedGlyph[] = [];
-  for (const piece of pieces) {
+  for (const piece of withoutOverdrawn(pieces)) {
     if (piece.isMarked || piece.visible > 1) {
       runs.push(...chainToRuns(chain));
       chain = [];
