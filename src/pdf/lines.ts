@@ -42,6 +42,10 @@ const SAME_ROW_EM = 0.3;
 const ROW_GAP_EM = 1.5;
 /** 同じ行と見なす字の大きさの比の上限（これより大きく違えば見出しなどの別の行） */
 const ROW_SIZE_RATIO = 1.6;
+/** 離れていてもつなぐ字の大きさの比の上限。これより違えば、ほぼ接するときだけつなぐ（本文と横の注の列など） */
+const ROW_LOOSE_SIZE_RATIO = 1.15;
+/** 大きさの違う片を、接していると見なす左右のすきまの上限（字） */
+const ROW_TOUCH_EM = 0.3;
 
 /**
  * 2つの大きさの比（大きいほう ÷ 小さいほう）。
@@ -96,12 +100,14 @@ function isTateChuYoko(column: LineDraft, run: TextRun): boolean {
 
 /**
  * 横書きのランが、組み立て中の行に続くか。
+ * 大きさのはっきり違うランは、ほぼ接するときだけ続ける。本文と、すぐ横の小さい字の注の列を1行にしない。
  * @param row 組み立て中の行
  * @param run 横書きのラン
  * @returns 続くなら true
  */
 function continuesRow(row: LineDraft, run: TextRun): boolean {
-  const reach = row.size * ROW_GAP_EM;
+  const ratio = sizeRatio(row.size, run.size);
+  const reach = row.size * (ratio < ROW_LOOSE_SIZE_RATIO ? ROW_GAP_EM : ROW_TOUCH_EM);
   return (
     Math.abs(row.rect.y1 - run.rect.y1) < row.size * SAME_ROW_EM &&
     sizeRatio(row.size, run.size) < ROW_SIZE_RATIO &&
