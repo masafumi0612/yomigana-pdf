@@ -52,6 +52,10 @@ const SKIPPED_CHAR = /^[\s\p{Cc}\p{Cf}]$/u;
  * 1字ぶんの場所を取らせず、残りの長さを分けあう空きとして扱う（全角の空白は1字ぶん）
  */
 const GAP_CHAR = /^ $/u;
+/** 半角の字（英数字・記号・半角の片仮名）。横書きの片で、およそ半字ぶんの幅と見積もる */
+const HALF_WIDTH_CHAR = /^[!-~｡-ﾟ]$/u;
+/** 半角の字の幅の見積もり（字） */
+const HALF_WIDTH_EM = 0.5;
 /** pdf.js が縦書きのフォントの片に付ける向き */
 const TOP_TO_BOTTOM = 'ttb';
 /** 回っているかを見る、変換の行列の傾きの下限（回した横書きの字は扱わない） */
@@ -188,15 +192,16 @@ function placeGlyphs(piece: Piece, isVertical: boolean, evidence: Evidence): Pla
   const scaleX = Math.hypot(a, b);
   const scaleY = Math.hypot(c, d);
   const size = Math.max(scaleX, scaleY);
-  const count = piece.chars.length;
-  const slots = isVertical ? verticalSlots(piece.chars, piece.item.height, size) : [];
+  const slots = isVertical
+    ? verticalSlots(piece.chars, piece.item.height, size)
+    : horizontalSlots(piece.chars, piece.item.width, scaleX);
   const glyphs: PlacedGlyph[] = [];
   for (const [index, ch] of piece.chars.entries()) {
     if (SKIPPED_CHAR.test(ch)) continue;
+    const [start = 0, end = 0] = slots[index] ?? [];
     let rect: Rect;
     if (isVertical) {
       // 縦書きの片の x は列の中心、y は上の端
-      const [start = 0, end = 0] = slots[index] ?? [];
       rect = {
         x1: x - scaleX / 2,
         x2: x + scaleX / 2,
@@ -204,10 +209,9 @@ function placeGlyphs(piece: Piece, isVertical: boolean, evidence: Evidence): Pla
         y2: y - start,
       };
     } else {
-      const pitch = piece.item.width / count;
       rect = {
-        x1: x + index * pitch,
-        x2: x + (index + 1) * pitch,
+        x1: x + start,
+        x2: x + end,
         y1: y - scaleY * DESCENT_EM,
         y2: y + scaleY * ASCENT_EM,
       };
@@ -249,6 +253,37 @@ export function verticalSlots(
   let at = 0;
   for (const ch of chars) {
     const step = GAP_CHAR.test(ch) ? gapLength : solidLength;
+    slots.push([at, at + step]);
+    at += step;
+  }
+  return slots;
+}
+
+/**
+ * 横書きの片の中で、それぞれの字が左の端からどこまでを占めるかを見積もる。
+ * 全角の字は1字ぶん、半角の字は半字ぶん取り、pdf.js が入れた半角の空白は、片の長さの残りを等しく分けあう。
+ * 残りがない（字が見積もりより詰まっている）か空白がないときは、見積もりの幅の比で片の長さを分ける。
+ * @param chars 片のすべての字（空白を含む）
+ * @param length 片の長さ（横の長さ）
+ * @param size 字の大きさ（横の幅）
+ * @returns 字ごとの [左の端からの始まり, 終わり]
+ */
+export function horizontalSlots(
+  chars: readonly string[],
+  length: number,
+  size: number,
+): (readonly [number, number])[] {
+  const unitOf = (ch: string): number => (HALF_WIDTH_CHAR.test(ch) ? HALF_WIDTH_EM : 1);
+  const gaps = chars.filter((ch) => GAP_CHAR.test(ch)).length;
+  const units = chars.filter((ch) => !GAP_CHAR.test(ch)).reduce((sum, ch) => sum + unitOf(ch), 0);
+  const rest = length - units * size;
+  const hasGapRoom = gaps > 0 && units > 0 && rest >= 0;
+  const unitLength = hasGapRoom ? size : length / Math.max(units, 1);
+  const gapLength = hasGapRoom ? rest / gaps : 0;
+  const slots: (readonly [number, number])[] = [];
+  let at = 0;
+  for (const ch of chars) {
+    const step = GAP_CHAR.test(ch) ? gapLength : unitOf(ch) * unitLength;
     slots.push([at, at + step]);
     at += step;
   }

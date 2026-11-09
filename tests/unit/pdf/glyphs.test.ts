@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeGlyph, toRuns, verticalSlots } from '@/pdf/glyphs';
+import { horizontalSlots, normalizeGlyph, toRuns, verticalSlots } from '@/pdf/glyphs';
 
 import { contentOf, horizontalItem, SIZE, unmarkedColumn, verticalItem } from './make-items';
 
@@ -201,5 +201,48 @@ describe('toRuns の重ねて描いた片', () => {
     expect(textOf([horizontalItem('整数', 100, 500), horizontalItem('小数', 100, 500)])).toBe(
       '整数小数',
     );
+  });
+});
+
+describe('horizontalSlots', () => {
+  it('全角の字だけのとき、等分する', () => {
+    expect(horizontalSlots(['あ', 'い'], 24, 10)).toEqual([
+      [0, 12],
+      [12, 24],
+    ]);
+  });
+
+  it('半角の字と空白があるとき、半角は半字ぶん、全角は1字ぶん取り、空白が残りを分けあう', () => {
+    expect(horizontalSlots(['1', '.', ' ', 'ア', 'イ'], 35, 10)).toEqual([
+      [0, 5],
+      [5, 10],
+      [10, 15],
+      [15, 25],
+      [25, 35],
+    ]);
+  });
+
+  it('空白がなく半角の字が混じるとき、見積もりの幅の比で分ける', () => {
+    expect(horizontalSlots(['A', 'あ'], 12, 10)).toEqual([
+      [0, 4],
+      [4, 12],
+    ]);
+  });
+
+  it('字が見積もりより詰まっていて残りがないとき、空白は場所を取らない', () => {
+    expect(horizontalSlots(['A', ' ', 'あ'], 12, 10)).toEqual([
+      [0, 4],
+      [4, 4],
+      [4, 12],
+    ]);
+  });
+});
+
+describe('toRuns の横書きの片の字の幅', () => {
+  it('半角の数字が混じる片のとき、後ろの字も本当の位置に近くなる', () => {
+    const item = { ...horizontalItem('令和8年', 100, 500), width: 35 };
+    const [run] = toRuns(contentOf([item]));
+    expect(run?.glyphs[3]?.rect.x1).toBeCloseTo(125);
+    expect(run?.glyphs[3]?.rect.x2).toBeCloseTo(135);
   });
 });
