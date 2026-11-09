@@ -56,4 +56,14 @@ describe('buildLines', () => {
     const items = [horizontalItem('見出し', 100, 500, SIZE * 2), horizontalItem('注', 160, 500)];
     expect(linesOf(items)).toEqual(['h:注', 'h:見出し']);
   });
+
+  it('大きさのはっきり違う片が、少し離れて同じ高さに並ぶとき（本文と横の注の列）、別の行になる', () => {
+    const items = [horizontalItem('本文', 100, 500), horizontalItem('注', 128, 500, 7)];
+    expect(linesOf(items)).toEqual(['h:本文', 'h:注']);
+  });
+
+  it('大きさのはっきり違う片でも、接して並ぶとき、1つの行になる', () => {
+    const items = [horizontalItem('本文', 100, 500), horizontalItem('注', 120, 500, 7)];
+    expect(linesOf(items)).toEqual(['h:本文注']);
+  });
 });

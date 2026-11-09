@@ -14,6 +14,10 @@ const SINGLE_LINE_CUT_EM = 3;
 const EDGE_NEAR_EM = 1;
 /** 段や段組みの切れ目と見なす、余白の端で終わる（始まる）行の数の下限 */
 const MIN_EDGE_LINES = 2;
+/** 両側に行の端がそろっていれば区切る、狭い余白の下限（字）。段組みの溝が1字より狭い本 */
+const NARROW_FLOW_CUT_EM = 0.5;
+/** 狭い余白で区切るのに要る、余白で終わる行と、余白から始まる行の、それぞれの数の下限 */
+const NARROW_EDGE_LINES = 3;
 /** 行間を見積もるときに数えない、細い余白の上限（字） */
 const LEAD_NOISE_EM = 0.3;
 /** 行どうしの余白で区切る、すきまの下限（字） */
@@ -125,6 +129,7 @@ function splitAt(
 /**
  * 字の並ぶ向きの余白で区切ってよいか。2本以上の行がその余白で終わるか始まるときは、段や段組みの切れ目と見なす。
  * 1本の行だけが途切れる余白は、行の中の空欄（書き込む欄など）なので、十分に広いときだけ区切る。
+ * 1字より狭い余白は、両側にそれぞれ3本以上の行の端がそろうとき（狭い溝の段組み）だけ区切る。
  * @param lines 行
  * @param gap 余白
  * @param axis 字の並ぶ向き
@@ -133,13 +138,16 @@ function splitAt(
  */
 function isFlowCut(lines: readonly TextLine[], gap: Gap, axis: Axis, size: number): boolean {
   if (gap.length >= size * SINGLE_LINE_CUT_EM) return true;
-  if (gap.length < size * FLOW_CUT_EM) return false;
+  if (gap.length < size * NARROW_FLOW_CUT_EM) return false;
   const lo = gap.at - gap.length / 2;
   const hi = gap.at + gap.length / 2;
   const near = size * EDGE_NEAR_EM;
   const spans = lines.map((line) => span(line.rect, axis));
   const ending = spans.filter(([, end]) => end <= lo && end >= lo - near).length;
   const starting = spans.filter(([start]) => start >= hi && start <= hi + near).length;
+  if (gap.length < size * FLOW_CUT_EM) {
+    return Math.min(ending, starting) >= NARROW_EDGE_LINES;
+  }
   return Math.max(ending, starting) >= MIN_EDGE_LINES;
 }
 
@@ -187,13 +195,43 @@ function flowSpan(line: TextLine): readonly [number, number] {
     : [line.rect.x1, line.rect.x2];
 }
 
+/** 同じ位置の行をまとめた行 */
+interface Slot {
+  /** まとめた行 */
+  readonly line: TextLine;
+  /** 同じ位置のほかの行と、段組みや表の溝で分かれているか（前後と別の段落にする） */
+  readonly isSplit: boolean;
+}
+
+/**
+ * 行どうしの、字の並ぶ向きのすきまが、段組みや表の溝か。
+ * すきまが1字以上あり、ほかの2本以上の行が、すきまの端で終わるか始まるなら、溝と見なす。
+ * 1本の行だけが途切れるすきまは、書き込む空欄なので溝ではない。
+ * @param lines かたまりの行
+ * @param prev すきまの前の行
+ * @param next すきまの後ろの行
+ * @returns 溝なら true
+ */
+function isGutter(lines: readonly TextLine[], prev: TextLine, next: TextLine): boolean {
+  const size = Math.max(prev.size, next.size);
+  const lo = flowSpan(prev)[1];
+  const hi = flowSpan(next)[0];
+  if (hi - lo < size * FLOW_CUT_EM) return false;
+  const near = size * EDGE_NEAR_EM;
+  const others = lines.filter((line) => line !== prev && line !== next).map(flowSpan);
+  const ending = others.filter(([, end]) => end <= lo + near && end >= lo - near).length;
+  const starting = others.filter(([start]) => start >= hi - near && start <= hi + near).length;
+  return Math.max(ending, starting) >= MIN_EDGE_LINES;
+}
+
 /**
  * 同じ向きの行を、同じ位置（縦書きは同じ列、横書きは同じ高さ）ごとに1つの行にまとめ、読む順に並べる。
  * 列の途中の空欄（書き込む欄など）で分かれた行も、1つの行に戻る。
+ * 段組みや表の溝で分かれた行は戻さず、別の段落にする。
  * @param lines 同じ向きの行（1つ以上）
  * @returns 読む順の行
  */
-function toSlots(lines: readonly TextLine[]): TextLine[] {
+function toSlots(lines: readonly TextLine[]): Slot[] {
   // 小さいほど先に読む位置（縦書きは右の列から、横書きは上の行から）
   const position = (line: TextLine): number =>
     line.direction === 'vertical' ? -centerX(line.rect) : -centerY(line.rect);
@@ -209,14 +247,26 @@ function toSlots(lines: readonly TextLine[]): TextLine[] {
       slots.push({ anchor: line, lines: [line] });
     }
   }
-  return slots.map(({ anchor, lines: same }) => {
-    const sorted = same.toSorted((p, q) => flowSpan(p)[0] - flowSpan(q)[0]);
-    return {
-      direction: anchor.direction,
-      glyphs: sorted.flatMap((line) => line.glyphs),
-      rect: unionRect(sorted.map((line) => line.rect)),
-      size: anchor.size,
-    };
+  return slots.flatMap(({ anchor, lines: same }) => {
+    const groups: TextLine[][] = [];
+    for (const line of same.toSorted((p, q) => flowSpan(p)[0] - flowSpan(q)[0])) {
+      const group = groups.at(-1);
+      const prev = group?.at(-1);
+      if (group === undefined || prev === undefined || isGutter(lines, prev, line)) {
+        groups.push([line]);
+      } else {
+        group.push(line);
+      }
+    }
+    return groups.map((group) => ({
+      line: {
+        direction: anchor.direction,
+        glyphs: group.flatMap((line) => line.glyphs),
+        rect: unionRect(group.map((line) => line.rect)),
+        size: anchor.size,
+      },
+      isSplit: groups.length > 1,
+    }));
   });
 }
 
@@ -269,19 +319,24 @@ function isParagraphBreak(neighbors: Neighbors, start: number, end: number): boo
  */
 function toParagraphs(lines: readonly TextLine[]): TextLine[][] {
   const slots = toSlots(lines);
-  const start = Math.min(...slots.map((line) => flowSpan(line)[0]));
-  const end = Math.max(...slots.map((line) => flowSpan(line)[1]));
+  const start = Math.min(...slots.map(({ line }) => flowSpan(line)[0]));
+  const end = Math.max(...slots.map(({ line }) => flowSpan(line)[1]));
   const paragraphs: TextLine[][] = [];
   let current: TextLine[] = [];
-  for (const line of slots) {
+  let isPrevSplit = false;
+  for (const { line, isSplit } of slots) {
     const prev = current.at(-1);
     // 前の行のさらに前の行は、同じ段落のときだけ比べる（見出しなどの長さと比べない）
     const before = current.at(-2);
-    if (prev !== undefined && isParagraphBreak({ before, prev, next: line }, start, end)) {
+    if (
+      prev !== undefined &&
+      (isSplit || isPrevSplit || isParagraphBreak({ before, prev, next: line }, start, end))
+    ) {
       paragraphs.push(current);
       current = [];
     }
     current.push(line);
+    isPrevSplit = isSplit;
   }
   paragraphs.push(current);
   return paragraphs;
