@@ -2,6 +2,7 @@
 import { readCounter } from './counters';
 import readingFixesTsv from './data/reading-fixes.tsv?raw';
 import { toHiragana } from './kana';
+import { getKanjiInfo } from './kanji-data';
 import { parseTsv } from './tsv';
 import type { Token, UserDictionary, Word } from './types';
 
@@ -54,6 +55,25 @@ const SIDES: ReadonlyMap<string, FixCondition['side']> = new Map([
 /** 書き方の端が語の途中でもよいことを表す印 */
 const PARTIAL_MARK = '…';
 
+/** 漢字だけの書き方 */
+const ALL_KANJI = /^\p{Script=Han}+$/u;
+/** 促音になりうる、つ・ち で終わる音 */
+const TSU_CHI_END = /[つち]$/u;
+/** 促音になりうる、く・き で終わる音 */
+const KU_KI_END = /[くき]$/u;
+/** か行の仮名で始まる読み */
+const KA_ROW = /^[かきくけこ]/u;
+/** か行・さ行・た行の仮名で始まる読み */
+const KA_SA_TA_ROW = /^[かきくけこさしすせそたちつてと]/u;
+/** は行の仮名を、半濁音（ぱ行）にする */
+const SEMI_VOICED: ReadonlyMap<string, string> = new Map([
+  ['は', 'ぱ'],
+  ['ひ', 'ぴ'],
+  ['ふ', 'ぷ'],
+  ['へ', 'ぺ'],
+  ['ほ', 'ぽ'],
+]);
+
 /** 語の並びの、ある位置から当てはまった語 */
 interface Match {
   readonly word: Word;
@@ -85,7 +105,8 @@ export const READING_FIXES: ReadingFixTable = parseReadingFixes(readingFixesTsv)
  * 1. 利用者の辞書（いくつかの語をつないだ書き方にも当てる。いちばん長いもの）
  * 2. 数＋助数詞（一本 → いっぽん）
  * 3. よく間違える語の表（いくつかの語をつないだ書き方にも当てる。いちばん長いもの。前後の語で読みを決める行もある）
- * 4. kuromoji の読みを平仮名にしたもの
+ * 4. 読みの分からない字を含む漢字の続きに、常用漢字表の音を当てたもの（全問必答 → ぜんもんひっとう）
+ * 5. kuromoji の読みを平仮名にしたもの
  * @param tokens kuromoji の語の並び
  * @param userDictionary 利用者が直した読み・足した言葉
  * @param fixTable よく間違える語の表（テストで差しかえるため）
@@ -113,6 +134,7 @@ export function applyFixups(
           fixTable.get(surface)?.find((fix) => isConditionMet(fix.condition, tokens, start, end))
             ?.reading,
       ) ??
+      matchGuess(tokens, start) ??
       fromKuromoji(tokens, start);
     words.push(match.word);
     start = match.end;
@@ -310,6 +332,94 @@ function matchCounter(tokens: readonly Token[], start: number): Match | undefine
  */
 function isNumberToken(token: Token | undefined): boolean {
   return token?.pos === '名詞' && token.posDetails[0] === '数';
+}
+
+/**
+ * 読みの分からない語を含む、漢字の語の続きに、常用漢字表の音を当てて1語にする。
+ * kuromoji は辞書にない熟語を1字ずつに割り、読みの分かる字には訓を付ける（全問必答 → 問:とい・答:こたえ）。
+ * 読みの分からない語がある続きだけを読み直すので、犬猫 や 朝昼晩 のような、字ごとに読みの分かる語の続きは変えない。
+ * 読みの分からない語の字に音がない（常用漢字でない）ときは、当てられないので何もしない。
+ * @param tokens 語の並び
+ * @param start 探し始める位置
+ * @returns 読みを当てた語。当てられないときは undefined
+ */
+function matchGuess(tokens: readonly Token[], start: number): Match | undefined {
+  let end = start;
+  while (isGuessable(tokens[end])) {
+    end += 1;
+  }
+  const run = tokens.slice(start, end);
+  if (!run.some((token) => token.reading === '')) {
+    return undefined;
+  }
+  const readings = run.map(onReadingsOf);
+  if (readings.includes(undefined)) {
+    return undefined;
+  }
+  return {
+    word: {
+      surface: run.map((token) => token.surface).join(''),
+      reading: joinOnReadings(readings.flatMap((reading) => reading ?? [])),
+      source: 'guess',
+    },
+    end,
+  };
+}
+
+/**
+ * 読みを当てる続きに入れる語か（読みの分からない漢字の語か、漢字1字の語）。
+ * @param token 語。並びの外なら undefined
+ * @returns 入れるなら true
+ */
+function isGuessable(token: Token | undefined): boolean {
+  if (token === undefined || !ALL_KANJI.test(token.surface)) {
+    return false;
+  }
+  return token.reading === '' || Array.from(token.surface).length === 1;
+}
+
+/**
+ * 語の字ごとの音を挙げる。音のない字（枠 など）は、語の読みが分かっていれば、その読みを使う。
+ * @param token 漢字の語
+ * @returns 字ごとの読み（平仮名）。当てられないときは undefined
+ */
+function onReadingsOf(token: Token): string[] | undefined {
+  const readings: string[] = [];
+  for (const char of Array.from(token.surface)) {
+    const on = getKanjiInfo(char)?.on[0];
+    if (on !== undefined) {
+      readings.push(toHiragana(on));
+    } else if (token.reading === '') {
+      return undefined;
+    } else {
+      return [toHiragana(token.reading)];
+    }
+  }
+  return readings;
+}
+
+/**
+ * 字ごとの音をつなぐ。音の終わりが つ・ち・く・き で、次の音によっては促音にする（必答 → ひっとう、発表 → はっぴょう、学校 → がっこう）。
+ * @param readings 字ごとの音（平仮名）
+ * @returns つないだ読み
+ */
+function joinOnReadings(readings: readonly string[]): string {
+  const parts = [...readings];
+  for (const [index, current] of parts.entries()) {
+    const next = parts[index + 1];
+    if (next === undefined || current.length < 2) continue;
+    const isTsuChi = TSU_CHI_END.test(current);
+    const voiced = isTsuChi ? SEMI_VOICED.get(next.charAt(0)) : undefined;
+    if (voiced !== undefined) parts[index + 1] = voiced + next.slice(1);
+    if (
+      voiced !== undefined ||
+      (isTsuChi && KA_SA_TA_ROW.test(next)) ||
+      (KU_KI_END.test(current) && KA_ROW.test(next))
+    ) {
+      parts[index] = `${current.slice(0, -1)}っ`;
+    }
+  }
+  return parts.join('');
 }
 
 /**
