@@ -246,3 +246,28 @@ describe('toRuns の横書きの片の字の幅', () => {
     expect(run?.glyphs[3]?.rect.x2).toBeCloseTo(135);
   });
 });
+
+describe('toRuns の文字の対応表のないフォント', () => {
+  const garbled = { fontName: 'garbled' };
+
+  it('字の番号がそのまま文字になったフォントのとき、そのフォントの片を除く（短い片や、本物の漢字になった片も）', () => {
+    const runs = toRuns(
+      contentOf([
+        horizontalItem('本文の字です', 100, 500),
+        { ...horizontalItem('䝅䝇䝔䝮䜢', 100, 480), ...garbled },
+        { ...horizontalItem('足', 100, 460), ...garbled },
+      ]),
+    );
+    expect(runs.map((run) => run.text)).toEqual(['本文の字です']);
+  });
+
+  it('まず出ない字が少しだけ混じるとき、除かない', () => {
+    const runs = toRuns(contentOf([horizontalItem('㐂という字のある長い文章です', 100, 500)]));
+    expect(runs.map((run) => run.text)).toEqual(['㐂という字のある長い文章です']);
+  });
+
+  it('部首の字で書かれたフォントのとき、除かない', () => {
+    const runs = toRuns(contentOf([horizontalItem('⽇本⼈', 100, 500)]));
+    expect(runs.map((run) => run.text)).toEqual(['⽇本⼈']);
+  });
+});
