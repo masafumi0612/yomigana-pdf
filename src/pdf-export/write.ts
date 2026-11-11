@@ -40,8 +40,10 @@ export type RubyGlyphBox = Pick<
 export interface RubyPageInput {
   /** ページの位置（0 から） */
   readonly pageIndex: number;
-  /** ページの箱（pdf.js の page.view と同じ。PDF の座標） */
+  /** ページの箱（ルビの座標の基準） */
   readonly frame: PageFrame;
+  /** ルビの座標から PDF の座標への変換（ページの回転のあるページだけ） */
+  readonly toPage?: readonly [number, number, number, number, number, number] | undefined;
   /** 置くルビ */
   readonly boxes: readonly RubyGlyphBox[];
 }
@@ -163,6 +165,7 @@ export async function openRubyPdf(
         const page = pages[input.pageIndex];
         if (page === undefined || input.boxes.length === 0) return;
         const operators: PDFOperator[] = [pushGraphicsState()];
+        if (input.toPage !== undefined) operators.push(concatTransformationMatrix(...input.toPage));
         if (style.hasBand) operators.push(...bandOperators(input));
         operators.push(setFillingRgbColor(...color));
         const names = new Map<PDFRef, PDFName>();

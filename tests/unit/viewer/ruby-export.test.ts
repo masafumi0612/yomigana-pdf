@@ -46,7 +46,7 @@ function optionsOf(overrides: Partial<RubyExportOptions> = {}): RubyExportOption
     document: {
       numPages: PAGES,
       getData: () => Promise.resolve(SOURCE.slice()),
-      getPage: () => Promise.resolve({ view: [0, 0, 595, 842] }),
+      getPage: () => Promise.resolve({ view: [0, 0, 595, 842], rotate: 0 }),
     },
     layouts: {
       settings: DEFAULT_SETTINGS,
@@ -140,7 +140,7 @@ describe('exportRubyPdf', () => {
         document: {
           numPages: 1,
           getData: () => Promise.resolve(encrypted),
-          getPage: () => Promise.resolve({ view: [0, 0, 595, 842] }),
+          getPage: () => Promise.resolve({ view: [0, 0, 595, 842], rotate: 0 }),
         },
         layouts: { settings: DEFAULT_SETTINGS, layoutPage },
       }),

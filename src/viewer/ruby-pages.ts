@@ -11,9 +11,10 @@ import type { UserDictionary } from '@/text/types';
 import type { DrawRecorder } from './draw-recorder';
 import type { DrawnPage, PageLayouts } from './page-layout';
 import { RUBY_BAND_CLASS, showRubyLayer } from './ruby-layer';
-import type { PageFrame, RubyBox } from './ruby-layout';
+import type { RubyBox } from './ruby-layout';
 import { nearestFirst } from './settings-change';
 import { invertMatrix, type Matrix, multiplyMatrix, toMatrix } from './transform';
+import { textPage, uprightFrame } from './upright';
 import { storedUserDictionary, type UserDictionaryFeed } from './user-dictionary-feed';
 
 /** ページを描き終えてから、ルビの層を出すまでの時間を測る名前（performance.measure） */
@@ -30,7 +31,7 @@ export interface RubyPageView {
   /** Canvas の画素と CSS の画素の比 */
   readonly outputScale?: { readonly sx: number; readonly sy: number } | undefined;
   /** ページ */
-  readonly pdfPage: Pick<PDFPageProxy, 'getTextContent' | 'commonObjs'>;
+  readonly pdfPage: Pick<PDFPageProxy, 'getTextContent' | 'commonObjs' | 'rotate' | 'view'>;
 }
 
 /** pdf.js の pagerender・pagerendered の知らせのうち、使うところ */
@@ -163,14 +164,24 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
 
   // 置き場所を出し直したときは、前の層の要素が古いので、層を作り直す
   const showLayer = (pageNumber: number, view: RubyPageView, entry: PageEntry): void => {
-    const boxes = layouts.placeRubies(pageNumber, frameOf(view.viewport), view.pdfPage);
+    const boxes = layouts.placeRubies(
+      pageNumber,
+      uprightFrame(textPage(view.pdfPage)),
+      view.pdfPage,
+    );
     if (boxes === undefined) return;
     if (boxes !== entry.boxes) {
       entry.boxes = boxes;
       entry.layer?.remove();
       entry.layer = undefined;
     }
-    entry.layer = showRubyLayer(view.div, view.viewport, boxes, entry.layer);
+    entry.layer = showRubyLayer(
+      view.div,
+      view.viewport,
+      boxes,
+      entry.layer,
+      textPage(view.pdfPage).rotate,
+    );
   };
 
   // 向きを決め直して読み直したページの層を出し直す。描いたことのないページには出さない
@@ -304,14 +315,4 @@ export function createRubyPages(options: RubyPagesOptions): RubyPages {
 function canvasToPdfOf(view: RubyPageView): Matrix | undefined {
   const { sx, sy } = view.outputScale ?? { sx: 1, sy: 1 };
   return invertMatrix(multiplyMatrix([sx, 0, 0, sy, 0, 0], toMatrix(view.viewport.transform)));
-}
-
-/**
- * ページの箱（PDF の座標）を引く。
- * @param viewport ページの表示の大きさと向き
- * @returns ページの箱（viewBox）
- */
-function frameOf(viewport: PageViewport): PageFrame {
-  const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = viewport.viewBox;
-  return { pageX: x1, pageY: y1, pageWidth: x2 - x1, pageHeight: y2 - y1 };
 }

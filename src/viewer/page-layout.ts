@@ -22,6 +22,7 @@ import { layoutRubies, type PageFrame, type RubyBox } from './ruby-layout';
 import { type SettingsChange, settingsChange } from './settings-change';
 import { createFailedPages } from './special-cases';
 import { invertMatrix, type Matrix, toMatrix } from './transform';
+import { noteTextRotation, textPage, toUpright, uprightContent, uprightFrame } from './upright';
 import { storedUserDictionary, type UserDictionaryFeed } from './user-dictionary-feed';
 
 /** 読みの問い合わせにかかった時間を測る名前（performance.measure） */
@@ -31,7 +32,7 @@ export const READINGS_MEASURE = 'yomigana-pdf:readings';
 const OFFSCREEN_SCALE = 0.5;
 
 /** ページのうち、文と字の位置を読むのに使うところ */
-export type LayoutPdfPage = Pick<PDFPageProxy, 'getTextContent' | 'commonObjs'>;
+export type LayoutPdfPage = Pick<PDFPageProxy, 'getTextContent' | 'commonObjs' | 'rotate' | 'view'>;
 
 /** ページのうち、画面に出していないページを自分で描いて置き場所を出すのに使うところ */
 export type DrawablePdfPage = LayoutPdfPage & Pick<PDFPageProxy, 'view' | 'getViewport' | 'render'>;
@@ -280,7 +281,9 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
     entry: LayoutEntry,
   ): Promise<PageData | undefined> => {
     const current = entries;
-    const [content] = await Promise.all([pdfPage.getTextContent(), loadingDictionary]);
+    const [raw] = await Promise.all([pdfPage.getTextContent(), loadingDictionary]);
+    noteTextRotation(pdfPage, raw);
+    const content = uprightContent(raw, textPage(pdfPage));
     const page = redirected(extractPageText(content), content, forced);
     options.onPageText?.(pageNumber, page.blocks.length > 0);
     const { level } = settings;
@@ -387,7 +390,9 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
   ): Promise<void> => {
     const entry = entries.get(pageNumber);
     if (entry?.resolved === undefined || entry.pdfPage === undefined) return;
-    const rebuild = createBlockRebuilder(await entry.pdfPage.getTextContent());
+    const rebuild = createBlockRebuilder(
+      uprightContent(await entry.pdfPage.getTextContent(), textPage(entry.pdfPage)),
+    );
     for (;;) {
       const data = entry.resolved;
       if (entries.get(pageNumber) !== entry) return;
@@ -421,7 +426,11 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
       const current = entries;
       const entry = entryOf(pageNumber);
       if (drawn !== undefined && drawn.draws.length > 0 && entry.exact === undefined) {
-        entry.drawn = toDrawnBoxes(drawn.draws, drawn.canvasToPdf);
+        const toPage =
+          entry.pdfPage === undefined
+            ? drawn.canvasToPdf
+            : toUpright(drawn.canvasToPdf, textPage(entry.pdfPage));
+        entry.drawn = toDrawnBoxes(drawn.draws, toPage);
         entry.exact = snapGlyphs(data.page.blocks, entry.drawn);
         entry.boxes = undefined;
       }
@@ -470,7 +479,7 @@ export function createPageLayouts(options: PageLayoutsOptions): PageLayouts {
       if (current !== entries) return undefined;
       const resolved = await layouts.resolve(pageNumber, data, drawn, () => current === entries);
       if (resolved === undefined) return undefined;
-      return layouts.placeRubies(pageNumber, frameOfPage(pdfPage), pdfPage);
+      return layouts.placeRubies(pageNumber, uprightFrame(textPage(pdfPage)), pdfPage);
     },
 
     hasDrawn(pageNumber) {
@@ -580,16 +589,6 @@ function realFontName(pdfPage: LayoutPdfPage, fontName: string): string | undefi
   if (!pdfPage.commonObjs.has(fontName)) return undefined;
   const font = pdfPage.commonObjs.get(fontName) as { name?: unknown } | undefined;
   return typeof font?.name === 'string' ? font.name : undefined;
-}
-
-/**
- * ページの箱（PDF の座標）を引く。
- * @param pdfPage ページ
- * @returns ページの箱（pdf.js の view）
- */
-function frameOfPage(pdfPage: Pick<PDFPageProxy, 'view'>): PageFrame {
-  const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = pdfPage.view;
-  return { pageX: x1, pageY: y1, pageWidth: x2 - x1, pageHeight: y2 - y1 };
 }
 
 /**

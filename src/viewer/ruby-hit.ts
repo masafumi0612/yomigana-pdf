@@ -5,6 +5,7 @@ import type { PageViewport } from 'pdfjs-dist';
 import type { RubyBox } from './ruby-layout';
 import type { RubyPages, RubyPageView } from './ruby-pages';
 import { type Box, toMatrix, transformBox } from './transform';
+import { fromUpright, textPage } from './upright';
 
 /** 画面の上の点（clientX・clientY と同じ座標） */
 export interface ScreenPoint {
@@ -130,7 +131,13 @@ export function findRuby(
     // ルビの層は紙面の入れ物（.canvasWrapper）の左上を原点に置く
     const wrapper = view.div.querySelector('.canvasWrapper') ?? view.div;
     const origin = wrapper.getBoundingClientRect();
-    return placeRubies(pageNumber, options.pages.rubiesOf(pageNumber), view.viewport, origin);
+    const transform = fromUpright(toMatrix(view.viewport.transform), textPage(view.pdfPage));
+    return placeRubies(
+      pageNumber,
+      options.pages.rubiesOf(pageNumber),
+      { transform: [...transform] },
+      origin,
+    );
   });
   return pickRuby(rubies, point, search);
 }
