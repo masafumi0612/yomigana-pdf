@@ -123,6 +123,12 @@ describe('textPage', () => {
     expect(textPage(page).rotate).toBe(90);
   });
 
+  it('字が逆さに入っている 180 度のページのとき、ページの回転を使う', () => {
+    const page = { rotate: 180, view: VIEW };
+    noteTextRotation(page, contentOf([-SIZE, 0, 0, -SIZE, 500, 600]));
+    expect(textPage(page).rotate).toBe(180);
+  });
+
   it('字がまっすぐ入っているページのとき、回転がないものとして扱う', () => {
     const page = { rotate: 90, view: VIEW };
     noteTextRotation(page, contentOf([SIZE, 0, 0, SIZE, 100, 200]));

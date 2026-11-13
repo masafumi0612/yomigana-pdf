@@ -30,8 +30,8 @@ const HALF_TURN = 180;
 const THREE_QUARTER_TURN = 270;
 
 /**
- * ページの字が横倒しに入っているかを覚える。
- * /Rotate のあるページのふつうの作りは、字を横倒しに入れ、ページごと回して正しい向きに見せる。
+ * ページの字が横倒し（か逆さ）に入っているかを覚える。
+ * /Rotate のあるページのふつうの作りは、字を横倒しか逆さに入れ、ページごと回して正しい向きに見せる。
  * 字がまっすぐ入っているページは、表示では字が横倒しになる。これは表示の向きに直さず、今までどおり扱う。
  * @param page ページ
  * @param content getTextContent() の結果
@@ -41,7 +41,9 @@ export function noteTextRotation(page: object, content: PdfTextContent): void {
   let straight = 0;
   for (const item of content.items) {
     if (!('str' in item)) continue;
-    if (Math.abs(item.transform[1] ?? 0) > SIDEWAYS_EPSILON) sideways += item.str.length;
+    const [a = 0, b = 0] = item.transform;
+    // b が 0 でなければ横倒し、a が負なら逆さ（180 度）
+    if (Math.abs(b) > SIDEWAYS_EPSILON || a < 0) sideways += item.str.length;
     else straight += item.str.length;
   }
   storedSideways.set(page, sideways > straight);

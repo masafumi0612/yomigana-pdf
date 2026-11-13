@@ -110,17 +110,24 @@ function isAbove(measured: RubyAndBase): boolean {
 }
 
 /**
- * テスト用 PDF の1ページ目を、横倒しに入れて「90 度回して表示」の指定を付けた PDF を作る。
+ * テスト用 PDF の1ページ目を、横倒し（か逆さ）に入れて「回して表示」の指定を付けた PDF を作る。
  * @param file test-pdfs/out からの PDF の名前
+ * @param rotate 回して表示する角度（90 か 180）
  * @returns 作った PDF
  */
-async function rotatedPdf(file: string): Promise<Buffer> {
+async function rotatedPdf(file: string, rotate: 90 | 180): Promise<Buffer> {
   const document = await PDFDocument.create();
   const [source] = await document.embedPdf(await readFile(join(TEST_PDF_DIR, file)), [0]);
   if (source === undefined) throw new Error('ページを読めませんでした');
-  const page = document.addPage([source.height, source.width]);
-  page.drawPage(source, { x: source.height, y: 0, rotate: degrees(90) });
-  page.setRotation(degrees(90));
+  if (rotate === 90) {
+    const page = document.addPage([source.height, source.width]);
+    page.drawPage(source, { x: source.height, y: 0, rotate: degrees(90) });
+    page.setRotation(degrees(90));
+  } else {
+    const page = document.addPage([source.width, source.height]);
+    page.drawPage(source, { x: source.width, y: source.height, rotate: degrees(180) });
+    page.setRotation(degrees(180));
+  }
   return Buffer.from(await document.save());
 }
 
@@ -128,8 +135,9 @@ async function rotatedPdf(file: string): Promise<Buffer> {
  * リーダーを開き、ページに回転の指定がある PDF を選ぶ。
  * @param page 画面
  * @param extensionId 入れた拡張の ID
+ * @param rotate 回して表示する角度
  */
-async function openRotated(page: Page, extensionId: string): Promise<void> {
+async function openRotated(page: Page, extensionId: string, rotate: 90 | 180 = 90): Promise<void> {
   await page.goto(`chrome-extension://${extensionId}/viewer.html`);
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'ファイルを開く' }).click();
@@ -138,18 +146,23 @@ async function openRotated(page: Page, extensionId: string): Promise<void> {
   ).setFiles({
     name: 'rotated.pdf',
     mimeType: 'application/pdf',
-    buffer: await rotatedPdf('horizontal-print.pdf'),
+    buffer: await rotatedPdf('horizontal-print.pdf', rotate),
   });
 }
 
-test('ページに回転の指定があるとき、横書きのルビが字の上に出る', async ({ page, extensionId }) => {
-  await openRotated(page, extensionId);
-  await expect(rubyLayer(page, 1).locator('[data-base="筒"]')).toHaveText('とう', {
-    timeout: FIRST_RUBY_TIMEOUT_MS,
-  });
+for (const rotate of [90, 180] as const) {
+  test(`ページに ${String(rotate)} 度の回転の指定があるとき、横書きのルビが字の上に出る`, async ({
+    page,
+    extensionId,
+  }) => {
+    await openRotated(page, extensionId, rotate);
+    await expect(rubyLayer(page, 1).locator('[data-base="筒"]')).toHaveText('とう', {
+      timeout: FIRST_RUBY_TIMEOUT_MS,
+    });
 
-  expect(isAbove(await measureRuby(page, 1, '筒'))).toBe(true);
-});
+    expect(isAbove(await measureRuby(page, 1, '筒'))).toBe(true);
+  });
+}
 
 test('テスト用 PDF を開いたとき、ルビの層が出て、画面の読み上げからは外れる', async ({
   page,
