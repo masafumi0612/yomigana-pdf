@@ -78,6 +78,14 @@ const OVERDRAWN_CROSS_EM = 0.2;
 const OVERDRAWN_REACH_EM = 0.5;
 /** 重ねて描いた片と見なす字の大きさの比の上限 */
 const OVERDRAWN_SIZE_RATIO = 1.1;
+/**
+ * 日本語の PDF にまず出ない字（ギリシャ・キリル文字より後の言語の字、CJK 拡張 A）。
+ * 文字の対応表のないフォントでは、フォントの中の字の番号がそのまま文字になり、この範囲の字が多く出る。
+ * 部首の字（U+2F00〜）は、正しい文字の PDF でも使われるので入れない
+ */
+const UNEXPECTED_CHAR = /[Ԁ-῿Ⰰ-ⷿ㐀-䶿]/u;
+/** 文字の対応表のないフォントと見なす、まず出ない字の割合の下限 */
+const GARBLED_FONT_RATIO = 0.3;
 
 /** 字にする前の1つの片 */
 interface Piece {
@@ -163,6 +171,28 @@ function isOverdrawn(piece: Piece, other: Piece, isOtherFirst: boolean): boolean
       ? other.text.includes(piece.text)
       : isOtherFirst && other.text === piece.text)
   );
+}
+
+/**
+ * 文字の対応表のないフォントの片を除く。字の形は正しいが、取り出した文字は字の番号なので、
+ * たまたま本物の漢字になった字に、関係のないルビが付いてしまう。フォントごとに見るので、短い片も除ける。
+ * @param pieces 片の順の片
+ * @returns 文字の対応表のあるフォントの片（片の順）
+ */
+function withoutGarbledFonts(pieces: readonly Piece[]): Piece[] {
+  const counts = new Map<string, { all: number; unexpected: number }>();
+  for (const piece of pieces) {
+    const count = counts.get(piece.item.fontName) ?? { all: 0, unexpected: 0 };
+    for (const ch of piece.text) {
+      count.all += 1;
+      if (UNEXPECTED_CHAR.test(ch)) count.unexpected += 1;
+    }
+    counts.set(piece.item.fontName, count);
+  }
+  return pieces.filter((piece) => {
+    const count = counts.get(piece.item.fontName);
+    return count === undefined || count.unexpected < count.all * GARBLED_FONT_RATIO;
+  });
 }
 
 /**
@@ -342,7 +372,7 @@ function chainToRuns(chain: readonly PlacedGlyph[]): TextRun[] {
 
 /**
  * pdf.js の文字の片を、位置つきの字のランにする。
- * 空白だけの片・印・回した横書きの片・同じ字を重ねて描いた片は捨てる。
+ * 空白だけの片・印・回した横書きの片・文字の対応表のないフォントの片・同じ字を重ねて描いた片は捨てる。
  * 1字だけの片が真下へ続く並びは、縦書きの1つのランにする。
  * @param content getTextContent() の結果
  * @returns 片の順のラン
@@ -368,7 +398,7 @@ export function toRuns(content: PdfTextContent): TextRun[] {
 
   const runs: TextRun[] = [];
   let chain: PlacedGlyph[] = [];
-  for (const piece of withoutOverdrawn(pieces)) {
+  for (const piece of withoutOverdrawn(withoutGarbledFonts(pieces))) {
     if (piece.isMarked || piece.visible > 1) {
       runs.push(...chainToRuns(chain));
       chain = [];
