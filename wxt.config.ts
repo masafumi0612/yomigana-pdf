@@ -13,7 +13,8 @@ const SAMPLE_PDF = join(import.meta.dirname, 'test-pdfs', 'out', 'sample.pdf');
 const PDFJS_DIR = join(import.meta.dirname, 'node_modules', 'pdfjs-dist');
 /**
  * pdf.js が読むデータ。外から読まずに済むよう、ビルドで node_modules から拡張に写す。
- * wasm は、wasm が使えないとき用の JS と、PDF の中のスクリプトを動かす部品（quickjs）を入れない
+ * wasm は、wasm が使えないとき用の JS と、PDF の中のスクリプトを動かす部品（quickjs）を入れない。
+ * そのため、manifest の CSP で wasm を認める（content_security_policy）
  */
 const PDFJS_ASSET_DIRS = ['cmaps', 'standard_fonts', 'iccs', 'wasm'];
 const isPdfjsAssetIncluded = (file: string): boolean =>
@@ -44,6 +45,11 @@ export default defineConfig({
     optional_host_permissions: ['<all_urls>'],
     // 他のサイトの PDF の移し先として、ページ全体や枠の中でリーダーを開けるようにする
     web_accessible_resources: [{ resources: ['viewer.html'], matches: ['<all_urls>'] }],
+    // pdf.js は、白黒の画像（JBIG2）・JPEG 2000 の画像・色の変換（ICC）を wasm で読む。
+    // 拡張の決まりの CSP は wasm を認めないので、wasm だけを足す（ほかは決まりのまま）
+    content_security_policy: {
+      extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
+    },
     // 拡張のアイコン。小さな枠（popup）は付けず、押したら設定の画面を開く（background.ts）。
     // icons は WXT が public/icon/<大きさ>.png から入れるが、action の絵は popup がないと
     // 入れてくれないので、ここで同じ PNG を指す
