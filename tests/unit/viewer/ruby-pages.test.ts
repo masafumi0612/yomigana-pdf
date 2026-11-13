@@ -32,6 +32,8 @@ const view: RubyPageView = {
   viewport: { viewBox: [0, 0, 600, 800] } as unknown as PageViewport,
   // 使うところだけを持つ、ページのにせもの
   pdfPage: {
+    rotate: 0,
+    view: [0, 0, 600, 800],
     getTextContent: () => Promise.resolve(CONTENT),
     commonObjs: { has: () => false, get: () => undefined },
   } as unknown as RubyPageView['pdfPage'],

@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { PDFDocument, PDFName, PDFRawStream } from 'pdf-lib';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
@@ -231,6 +231,29 @@ describe('openRubyPdf', () => {
     const saved = await PDFDocument.load(await opened.value.save());
 
     expect(saved.getTitle()).toBe((await PDFDocument.load(SOURCE)).getTitle());
+  });
+
+  it('ルビの座標からページの座標への変換を渡したとき、その変換の中でルビを書く', async () => {
+    const opened = await openRubyPdf(SOURCE, STYLE, FONTS);
+    if (!opened.ok) throw new Error(opened.error);
+    opened.value.addPage({
+      pageIndex: 0,
+      frame: { pageX: 0, pageY: 0, pageWidth: 595, pageHeight: 842 },
+      toPage: [0, 1, -1, 0, 600, 0],
+      boxes: [boxOf('かさ', 100, 100, false)],
+    });
+    const saved = await opened.value.save();
+    const document = await getDocument({
+      data: saved,
+      cMapUrl: CMAP_DIR,
+      cMapPacked: true,
+      verbosity: 0,
+    }).promise;
+    const { fnArray, argsArray } = await (await document.getPage(1)).getOperatorList();
+    const transforms = fnArray.flatMap((fn, index) =>
+      fn === OPS.transform ? [Array.from(argsArray[index] as number[])] : [],
+    );
+    expect(transforms).toContainEqual([0, 1, -1, 0, 600, 0]);
   });
 
   it('ページの数を返す', async () => {

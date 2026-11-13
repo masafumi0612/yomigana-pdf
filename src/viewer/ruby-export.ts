@@ -10,7 +10,7 @@ import type { Result } from '@/result';
 import { RUBY_COLORS } from '@/settings/model';
 
 import type { PageLayouts } from './page-layout';
-import type { PageFrame } from './ruby-layout';
+import { fromUprightMatrix, textPage, uprightFrame } from './upright';
 
 /** 作れなかった理由。encrypted は暗号化した PDF、unreadable は書き込むために読めない PDF、aborted は止めたとき */
 export type RubyExportError = 'encrypted' | 'unreadable' | 'aborted';
@@ -27,7 +27,7 @@ export interface RubyExport {
 export interface RubyExportOptions {
   /** 開いている PDF */
   readonly document: Pick<PDFDocumentProxy, 'numPages' | 'getData'> & {
-    getPage(pageNumber: number): Promise<Pick<PDFPageProxy, 'view'>>;
+    getPage(pageNumber: number): Promise<Pick<PDFPageProxy, 'view' | 'rotate'>>;
   };
   /** ページのルビの置き場所を出す部品（画面と同じもの） */
   readonly layouts: Pick<PageLayouts, 'layoutPage' | 'settings'>;
@@ -82,8 +82,13 @@ export async function exportRubyPdf(
     if (boxes === undefined) {
       failedPages.push(pageNumber);
     } else {
-      const { view } = await document.getPage(pageNumber);
-      writer.addPage({ pageIndex: pageNumber - 1, frame: frameOf(view), boxes });
+      const page = await document.getPage(pageNumber);
+      writer.addPage({
+        pageIndex: pageNumber - 1,
+        frame: uprightFrame(textPage(page)),
+        toPage: fromUprightMatrix(textPage(page)),
+        boxes,
+      });
     }
     options.onProgress?.(pageNumber, total);
   }
@@ -110,14 +115,4 @@ async function fetchBytes(url: string): Promise<Uint8Array> {
   if (!response.ok)
     throw new Error(`ルビのフォントを読めませんでした（${String(response.status)}）`);
   return new Uint8Array(await response.arrayBuffer());
-}
-
-/**
- * ページの箱（pdf.js の view）を、RubyBox の基準の箱にする。
- * @param view ページの箱（PDF の座標）
- * @returns ページの箱
- */
-function frameOf(view: readonly number[]): PageFrame {
-  const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = view;
-  return { pageX: x1, pageY: y1, pageWidth: x2 - x1, pageHeight: y2 - y1 };
 }

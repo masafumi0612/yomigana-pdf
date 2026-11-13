@@ -87,6 +87,7 @@ function setUp(
   // 使うところだけを持つ、ページのにせもの
   const page = {
     view: [0, 0, 600, PAGE_HEIGHT],
+    rotate: 0,
     getTextContent: () => Promise.resolve(CONTENT),
     commonObjs: { has: () => false, get: () => undefined },
     getViewport: ({ scale }: { scale: number }) => ({

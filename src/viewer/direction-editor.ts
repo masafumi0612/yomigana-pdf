@@ -12,6 +12,7 @@ import type { Direction, TextBlock } from '@/pdf/types';
 import type { PageLayouts } from './page-layout';
 import type { RubyPages, RubyPageView } from './ruby-pages';
 import { toMatrix, transformBox } from './transform';
+import { fromUpright, textPage } from './upright';
 
 /** 向きを直す層の class */
 export const DIRECTION_LAYER_CLASS = 'direction-layer';
@@ -205,7 +206,10 @@ export function createDirectionEditor(options: DirectionEditorOptions): Directio
   ): HTMLDivElement => {
     const { viewport } = view;
     // 今の向きと倍率の紙面の上の箱。倍率で割って、倍率 1 のときの長さにしておく
-    const box = transformBox(toMatrix(viewport.transform), block.rect);
+    const box = transformBox(
+      fromUpright(toMatrix(viewport.transform), textPage(view.pdfPage)),
+      block.rect,
+    );
     const frame = document.createElement('div');
     frame.className = BLOCK_CLASS;
     frame.dataset.page = String(pageNumber);

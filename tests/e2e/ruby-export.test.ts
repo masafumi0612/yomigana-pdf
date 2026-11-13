@@ -33,12 +33,15 @@ interface Case {
   readonly file: string;
   /** 向きと箱をずらす書き換え（中身を (120, 80) ずらし、CropBox を内側に寄せ、右へ 270 度回す） */
   readonly isShifted?: boolean;
+  /** 字を横倒しに入れて、ページを 90 度回して表示する PDF に書き換えるなら true */
+  readonly isSideways?: boolean;
 }
 
 const CASES: readonly Case[] = [
   { name: '縦書きの PDF', file: 'vertical-story.pdf' },
   { name: '横書きの PDF', file: 'horizontal-print.pdf' },
   { name: 'ページの箱がずれて回してある PDF', file: 'mixed-direction.pdf', isShifted: true },
+  { name: '字を横倒しに入れて回してある PDF', file: 'horizontal-print.pdf', isSideways: true },
 ];
 
 /**
@@ -55,6 +58,21 @@ async function shiftAndRotate(bytes: Uint8Array): Promise<Uint8Array> {
     page.setCropBox(120 + 25, 80 + 35, width - 50, height - 70);
     page.setRotation(degrees(270));
   }
+  return document.save();
+}
+
+/**
+ * 見本の PDF の1ページ目を、横倒しに入れて「90 度回して表示」の指定を付けた PDF に書き換える。
+ * @param bytes もとの PDF
+ * @returns 書き換えた PDF
+ */
+async function sideways(bytes: Uint8Array): Promise<Uint8Array> {
+  const document = await PDFDocument.create();
+  const [source] = await document.embedPdf(bytes, [0]);
+  if (source === undefined) throw new Error('ページを読めませんでした');
+  const page = document.addPage([source.height, source.width]);
+  page.drawPage(source, { x: source.height, y: 0, rotate: degrees(90) });
+  page.setRotation(degrees(90));
   return document.save();
 }
 
@@ -251,7 +269,9 @@ for (const testCase of CASES) {
   }) => {
     test.setTimeout(TEST_TIMEOUT_MS);
     const original = new Uint8Array(await readFile(join(TEST_PDF_DIR, testCase.file)));
-    const input = testCase.isShifted === true ? await shiftAndRotate(original) : original;
+    let input: Uint8Array = original;
+    if (testCase.isShifted === true) input = await shiftAndRotate(original);
+    if (testCase.isSideways === true) input = await sideways(original);
     const dir = await mkdtemp(join(tmpdir(), 'yomigana-export-'));
     try {
       const inputPath = join(dir, 'input.pdf');

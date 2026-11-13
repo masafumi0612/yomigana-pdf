@@ -1,7 +1,11 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
 import type { Locator, Page } from '@playwright/test';
+import { degrees, PDFDocument } from 'pdf-lib';
 
 import { EXPECTATIONS } from '../../scripts/test-pdfs/expectations';
-import { expect, openFromFile, test } from './fixtures';
+import { expect, openFromFile, test, TEST_PDF_DIR } from './fixtures';
 
 /** 辞書の読み込みを含めて、最初のルビが出るまで待つ時間の上限（ミリ秒） */
 const FIRST_RUBY_TIMEOUT_MS = 15_000;
@@ -103,6 +107,61 @@ function isAbove(measured: RubyAndBase): boolean {
     middle > base.left &&
     middle < base.right
   );
+}
+
+/**
+ * テスト用 PDF の1ページ目を、横倒し（か逆さ）に入れて「回して表示」の指定を付けた PDF を作る。
+ * @param file test-pdfs/out からの PDF の名前
+ * @param rotate 回して表示する角度（90 か 180）
+ * @returns 作った PDF
+ */
+async function rotatedPdf(file: string, rotate: 90 | 180): Promise<Buffer> {
+  const document = await PDFDocument.create();
+  const [source] = await document.embedPdf(await readFile(join(TEST_PDF_DIR, file)), [0]);
+  if (source === undefined) throw new Error('ページを読めませんでした');
+  if (rotate === 90) {
+    const page = document.addPage([source.height, source.width]);
+    page.drawPage(source, { x: source.height, y: 0, rotate: degrees(90) });
+    page.setRotation(degrees(90));
+  } else {
+    const page = document.addPage([source.width, source.height]);
+    page.drawPage(source, { x: source.width, y: source.height, rotate: degrees(180) });
+    page.setRotation(degrees(180));
+  }
+  return Buffer.from(await document.save());
+}
+
+/**
+ * リーダーを開き、ページに回転の指定がある PDF を選ぶ。
+ * @param page 画面
+ * @param extensionId 入れた拡張の ID
+ * @param rotate 回して表示する角度
+ */
+async function openRotated(page: Page, extensionId: string, rotate: 90 | 180 = 90): Promise<void> {
+  await page.goto(`chrome-extension://${extensionId}/viewer.html`);
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'ファイルを開く' }).click();
+  await (
+    await chooser
+  ).setFiles({
+    name: 'rotated.pdf',
+    mimeType: 'application/pdf',
+    buffer: await rotatedPdf('horizontal-print.pdf', rotate),
+  });
+}
+
+for (const rotate of [90, 180] as const) {
+  test(`ページに ${String(rotate)} 度の回転の指定があるとき、横書きのルビが字の上に出る`, async ({
+    page,
+    extensionId,
+  }) => {
+    await openRotated(page, extensionId, rotate);
+    await expect(rubyLayer(page, 1).locator('[data-base="筒"]')).toHaveText('とう', {
+      timeout: FIRST_RUBY_TIMEOUT_MS,
+    });
+
+    expect(isAbove(await measureRuby(page, 1, '筒'))).toBe(true);
+  });
 }
 
 test('テスト用 PDF を開いたとき、ルビの層が出て、画面の読み上げからは外れる', async ({
@@ -277,6 +336,23 @@ for (const { name, file, base, ruby, side } of ROTATION_CASES) {
     }
   });
 }
+
+test('ページに回転の指定がある PDF を回したとき、ルビが回したあとの親字の同じ側に付いてくる', async ({
+  page,
+  extensionId,
+}) => {
+  await openRotated(page, extensionId);
+  await expect(rubyLayer(page, 1).locator('[data-base="筒"]')).toHaveText('とう', {
+    timeout: FIRST_RUBY_TIMEOUT_MS,
+  });
+
+  for (const turns of [1, 2, 3]) {
+    await page.getByRole('button', { name: '右に回す' }).click();
+    await expect
+      .poll(async () => sideOf(await measureRuby(page, 1, '筒')), { timeout: 10_000 })
+      .toBe(CLOCKWISE[turns]);
+  }
+});
 
 test('回すボタンをキーボードで押したとき、紙面が回る', async ({ page, extensionId }) => {
   await openFromFile(page, extensionId, 'horizontal-print.pdf');

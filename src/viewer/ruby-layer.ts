@@ -17,6 +17,10 @@ const VERTICAL_CLASS = 'ruby-vertical';
 const SERIF_CLASS = 'ruby-serif';
 /** 字を親字の長さに均等に並べるルビの class。字ごとに子の要素にする */
 const SPREAD_CLASS = 'ruby-spread';
+/** 1回転の角度 */
+const FULL_TURN = 360;
+/** 半回転の角度 */
+const HALF_TURN = 180;
 
 /**
  * ページにルビの層を出す。前に出した層がまだページにあれば、それを使い、大きさと向きだけ合わせ直す。
@@ -24,6 +28,7 @@ const SPREAD_CLASS = 'ruby-spread';
  * @param viewport ページの今の表示の大きさと向き
  * @param boxes 置くルビ
  * @param previous 前に出した層
+ * @param pageRotate ページの回転（/Rotate）。層の中は表示の向きの座標なので、回すのは利用者が回した分だけにする
  * @returns 出した層
  */
 export function showRubyLayer(
@@ -31,6 +36,7 @@ export function showRubyLayer(
   viewport: PageViewport,
   boxes: readonly RubyBox[],
   previous: HTMLDivElement | undefined,
+  pageRotate = 0,
 ): HTMLDivElement {
   const wrapper = pageDiv.querySelector('.canvasWrapper') ?? pageDiv;
   let layer = previous;
@@ -43,7 +49,24 @@ export function showRubyLayer(
     wrapper.append(layer);
   }
   setLayerDimensions(layer, viewport);
+  if (pageRotate % FULL_TURN !== 0) alignToUpright(layer, viewport, pageRotate);
   return layer;
+}
+
+/**
+ * ページの回転（/Rotate）のあるページで、層の大きさと向きを、表示の向きの座標に合わせる。
+ * @param layer 層
+ * @param viewport ページの今の表示の大きさと向き
+ * @param pageRotate ページの回転
+ */
+function alignToUpright(layer: HTMLDivElement, viewport: PageViewport, pageRotate: number): void {
+  const userRotation = (viewport.rotation - pageRotate + FULL_TURN) % FULL_TURN;
+  layer.setAttribute('data-main-rotation', String(userRotation));
+  if (pageRotate % HALF_TURN === 0) return;
+  const { style } = layer;
+  const { width, height } = style;
+  style.width = height;
+  style.height = width;
 }
 
 /**
