@@ -56,6 +56,22 @@ test('ファイルを選んだとき、紙面と文字の層が出る', async ({
   await expect(firstPage.locator('.textLayer')).toContainText(VERTICAL_STORY.word);
 });
 
+// pdf.js は白黒の画像（JBIG2）などを wasm で読む。CSP で止められると、その画像だけが出ない
+test('リーダーの画面のとき、pdf.js の画像を読む wasm を読み込める', async ({
+  page,
+  extensionId,
+}) => {
+  await page.goto(`chrome-extension://${extensionId}/viewer.html`);
+
+  const isCompiled = await page.evaluate(async () => {
+    const response = await fetch('wasm/jbig2.wasm');
+    await WebAssembly.compile(await response.arrayBuffer());
+    return true;
+  });
+
+  expect(isCompiled).toBe(true);
+});
+
 test('URL を渡したとき、その PDF の紙面と文字の層が出る', async ({ page, extensionId }) => {
   const pdfUrl = `${pdfOrigin}/${HORIZONTAL_PRINT.file}`;
   await page.goto(
